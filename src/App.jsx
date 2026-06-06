@@ -6,6 +6,7 @@ import AuthPage from './pages/AuthPage.jsx'
 import CreateRoom from './pages/CreateRoom.jsx'
 import Home from './pages/Home.jsx'
 import JoinRoom from './pages/JoinRoom.jsx'
+import RoomLobby from './pages/RoomLobby.jsx'
 import {
   getOrCreateUserProfile,
   getUsernameFromUser,
@@ -13,7 +14,7 @@ import {
 
 function App() {
   const [user, setUser] = useState(null)
-  const [username, setUsername] = useState('')
+  const [userProfile, setUserProfile] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
 
   useEffect(() => {
@@ -24,7 +25,7 @@ function App() {
       setUser(currentUser)
 
       if (!currentUser) {
-        setUsername('')
+        setUserProfile(null)
         setAuthLoading(false)
         return
       }
@@ -33,11 +34,15 @@ function App() {
         const profile = await getOrCreateUserProfile(currentUser)
 
         if (requestId === authRequestId) {
-          setUsername(profile.username || getUsernameFromUser(currentUser))
+          setUserProfile(profile)
         }
       } catch {
         if (requestId === authRequestId) {
-          setUsername(getUsernameFromUser(currentUser))
+          setUserProfile({
+            uid: currentUser.uid,
+            username: getUsernameFromUser(currentUser),
+            displayName: getUsernameFromUser(currentUser),
+          })
         }
       } finally {
         if (requestId === authRequestId) {
@@ -46,7 +51,7 @@ function App() {
       }
     }, () => {
       setUser(null)
-      setUsername('')
+      setUserProfile(null)
       setAuthLoading(false)
     })
 
@@ -77,9 +82,16 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Home username={username} />} />
-        <Route path="/create-room" element={<CreateRoom />} />
+        <Route
+          path="/"
+          element={<Home username={userProfile?.username || 'trainer'} />}
+        />
+        <Route
+          path="/create-room"
+          element={<CreateRoom currentUser={user} userProfile={userProfile} />}
+        />
         <Route path="/join-room" element={<JoinRoom />} />
+        <Route path="/room/:roomCode" element={<RoomLobby />} />
       </Routes>
     </BrowserRouter>
   )

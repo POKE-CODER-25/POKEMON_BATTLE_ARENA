@@ -387,6 +387,60 @@ h1 {
   padding-block: 42px;
 }
 
+.room-action {
+  max-width: 360px;
+  margin: 30px auto 0;
+}
+
+.room-action .game-button {
+  width: 100%;
+}
+
+.room-error {
+  min-height: 22px;
+  margin-top: 14px;
+  color: #fca5a5;
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.room-back-link {
+  margin-top: 14px;
+}
+
+.lobby-card {
+  width: min(100%, 520px);
+  border-top: 3px solid var(--yellow);
+}
+
+.lobby-title {
+  font-size: clamp(2rem, 7vw, 3rem);
+}
+
+.room-code {
+  margin: 24px auto 0;
+  padding: 14px 18px;
+  color: var(--yellow);
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid #475569;
+  border-radius: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: clamp(2rem, 9vw, 3rem);
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  line-height: 1;
+}
+
+.waiting-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin: 24px 0 0;
+  color: var(--muted);
+  font-weight: 700;
+}
+
 .placeholder-card {
   padding-block: 58px;
 }
