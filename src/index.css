@@ -404,6 +404,47 @@ h1 {
   line-height: 1.4;
 }
 
+.join-room-form {
+  display: grid;
+  max-width: 360px;
+  margin: 28px auto 0;
+  text-align: left;
+}
+
+.join-room-form label {
+  margin-bottom: 7px;
+  color: #dbeafe;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.join-room-form input {
+  width: 100%;
+  min-height: 54px;
+  margin-bottom: 14px;
+  padding: 0 14px;
+  color: var(--yellow);
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid #475569;
+  border-radius: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  text-align: center;
+  text-transform: uppercase;
+  outline: none;
+}
+
+.join-room-form input:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.14);
+}
+
+.join-room-form .game-button {
+  width: 100%;
+}
+
 .room-back-link {
   margin-top: 14px;
 }
@@ -439,6 +480,39 @@ h1 {
   margin: 24px 0 0;
   color: var(--muted);
   font-weight: 700;
+}
+
+.player-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 24px;
+  text-align: left;
+}
+
+.player-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 16px;
+  color: var(--muted);
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(100, 116, 139, 0.38);
+  border-radius: 10px;
+}
+
+.player-row strong {
+  overflow: hidden;
+  color: #f8fafc;
+  text-overflow: ellipsis;
+}
+
+.opponent-joined {
+  color: #86efac;
+}
+
+.lobby-error {
+  margin-top: 24px;
 }
 
 .placeholder-card {

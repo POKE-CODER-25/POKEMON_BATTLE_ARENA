@@ -74,3 +74,64 @@ export async function createRoom(currentUser, userProfile) {
 
   throw new Error('Could not generate a unique room code. Please try again.')
 }
+
+export async function joinRoom(roomCode, currentUser, userProfile) {
+  const normalizedRoomCode = roomCode.trim().toUpperCase()
+
+  if (!normalizedRoomCode) {
+    throw new Error('Enter a room code.')
+  }
+
+  if (!currentUser) {
+    throw new Error('You must be logged in to join a room.')
+  }
+
+  if (!userProfile) {
+    throw new Error('Your trainer profile is not available.')
+  }
+
+  const username = userProfile.username?.trim()
+
+  if (!username) {
+    throw new Error('Your trainer profile is missing a username.')
+  }
+
+  const roomReference = doc(db, 'rooms', normalizedRoomCode)
+
+  await runTransaction(db, async (transaction) => {
+    const roomSnapshot = await transaction.get(roomReference)
+
+    if (!roomSnapshot.exists()) {
+      throw new Error('Room not found')
+    }
+
+    const room = roomSnapshot.data()
+
+    if (room.status !== 'waiting') {
+      throw new Error('Room already started')
+    }
+
+    if (room.hostUid === currentUser.uid) {
+      throw new Error('You cannot join your own room as a guest')
+    }
+
+    if (room.guestUid) {
+      throw new Error('Room is full')
+    }
+
+    transaction.update(roomReference, {
+      guestUid: currentUser.uid,
+      guestUsername: username,
+      [`players.${currentUser.uid}`]: {
+        uid: currentUser.uid,
+        username,
+        role: 'guest',
+        ready: false,
+        joinedAt: serverTimestamp(),
+      },
+      updatedAt: serverTimestamp(),
+    })
+  })
+
+  return normalizedRoomCode
+}
