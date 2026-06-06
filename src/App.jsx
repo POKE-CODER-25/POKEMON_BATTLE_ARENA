@@ -3,6 +3,7 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { auth } from './firebase.js'
 import AuthPage from './pages/AuthPage.jsx'
+import BattleArena from './pages/BattleArena.jsx'
 import CreateRoom from './pages/CreateRoom.jsx'
 import DraftPage from './pages/DraftPage.jsx'
 import Home from './pages/Home.jsx'
@@ -102,6 +103,10 @@ function App() {
         <Route
           path="/draft/:roomCode"
           element={<DraftPage currentUser={user} />}
+        />
+        <Route
+          path="/battle/:roomCode"
+          element={<BattleArena currentUser={user} />}
         />
       </Routes>
     </BrowserRouter>

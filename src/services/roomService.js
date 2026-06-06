@@ -617,9 +617,11 @@ export async function markPlayerBattleReady(roomCode, currentUser) {
   }
 
   const roomReference = doc(db, 'rooms', roomCode.trim().toUpperCase())
+  const battleStateReference = doc(roomReference, 'battle', 'state')
 
   return runTransaction(db, async (transaction) => {
     const roomSnapshot = await transaction.get(roomReference)
+    const battleStateSnapshot = await transaction.get(battleStateReference)
 
     if (!roomSnapshot.exists()) {
       throw new Error('Room not found')
@@ -636,6 +638,15 @@ export async function markPlayerBattleReady(roomCode, currentUser) {
     }
 
     if (room.status === 'battle_setup') {
+      if (!battleStateSnapshot.exists()) {
+        const timestamp = serverTimestamp()
+
+        transaction.set(
+          battleStateReference,
+          createInitialBattleState(timestamp),
+        )
+      }
+
       return 'battle_setup'
     }
 
@@ -658,6 +669,33 @@ export async function markPlayerBattleReady(roomCode, currentUser) {
       updatedAt: timestamp,
     })
 
+    if (bothReady && !battleStateSnapshot.exists()) {
+      transaction.set(
+        battleStateReference,
+        createInitialBattleState(timestamp),
+      )
+    }
+
     return bothReady ? 'battle_setup' : 'battle_ready'
   })
+}
+
+function createInitialBattleState(timestamp) {
+  return {
+    round: 1,
+    maxNormalRounds: 6,
+    tiebreakRound: 7,
+    hostScore: 0,
+    guestScore: 0,
+    hostUsedPokemon: [],
+    guestUsedPokemon: [],
+    hostSubmittedPokemon: null,
+    guestSubmittedPokemon: null,
+    phase: 'choose_pokemon',
+    roundResults: [],
+    winner: null,
+    isTieBreaker: false,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  }
 }

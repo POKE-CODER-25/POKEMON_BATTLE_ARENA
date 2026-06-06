@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { db } from '../firebase.js'
 import {
   advancePlayerDraft,
@@ -20,6 +20,7 @@ function ClosedPokeball() {
 
 function DraftPage({ currentUser }) {
   const { roomCode = '' } = useParams()
+  const navigate = useNavigate()
   const displayRoomCode = roomCode.toUpperCase()
   const [room, setRoom] = useState(null)
   const [draftTeam, setDraftTeam] = useState(null)
@@ -86,6 +87,12 @@ function DraftPage({ currentUser }) {
       },
     )
   }, [currentUser?.uid, displayRoomCode])
+
+  useEffect(() => {
+    if (room?.status === 'battle_setup') {
+      navigate(`/battle/${displayRoomCode}`, { replace: true })
+    }
+  }, [displayRoomCode, navigate, room?.status])
 
   useEffect(() => {
     if (!currentUser?.uid) {
