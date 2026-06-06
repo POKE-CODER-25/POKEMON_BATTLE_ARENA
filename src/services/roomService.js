@@ -5,6 +5,15 @@ const ROOM_CODE_CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
 const ROOM_CODE_LENGTH = 6
 const MAX_CODE_ATTEMPTS = 5
 
+export const DRAFT_ROUND_NAMES = {
+  1: 'Starters',
+  2: 'Support 1',
+  3: 'Fan Favorites',
+  4: 'Pseudo Legendaries',
+  5: 'Legendaries & Mythicals',
+  6: 'Support 2',
+}
+
 export function generateRoomCode() {
   let roomCode = ''
 
@@ -209,9 +218,24 @@ export async function startDraft(roomCode, currentUser) {
       throw new Error('Both trainers must be ready before starting the draft.')
     }
 
+    const timestamp = serverTimestamp()
+
     transaction.update(roomReference, {
       status: 'draft',
-      updatedAt: serverTimestamp(),
+      draft: {
+        currentRound: 1,
+        totalRounds: 6,
+        phase: 'round_intro',
+        roundName: DRAFT_ROUND_NAMES[1],
+        completedPlayers: [],
+        startedAt: timestamp,
+        updatedAt: timestamp,
+      },
+      teams: {
+        [room.hostUid]: [],
+        [room.guestUid]: [],
+      },
+      updatedAt: timestamp,
     })
   })
 }

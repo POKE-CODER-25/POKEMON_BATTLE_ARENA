@@ -99,7 +99,10 @@ function App() {
           path="/room/:roomCode"
           element={<RoomLobby currentUser={user} />}
         />
-        <Route path="/draft/:roomCode" element={<DraftPage />} />
+        <Route
+          path="/draft/:roomCode"
+          element={<DraftPage currentUser={user} />}
+        />
       </Routes>
     </BrowserRouter>
   )

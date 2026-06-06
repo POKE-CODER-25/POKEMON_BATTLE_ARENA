@@ -590,124 +590,88 @@ h1 {
   color: var(--muted);
 }
 
-.draft-players {
+.draft-room-code {
   display: grid;
-  gap: 8px;
-  min-width: 220px;
-  padding: 14px 16px;
+  gap: 4px;
+  min-width: 180px;
+  padding: 12px 16px;
   color: var(--muted);
   background: rgba(15, 23, 42, 0.65);
   border: 1px solid rgba(100, 116, 139, 0.38);
   border-radius: 12px;
+  text-align: right;
 }
 
-.draft-players strong {
-  color: #f8fafc;
+.draft-room-code span {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
-.draft-error {
-  color: #fca5a5;
+.draft-room-code strong {
+  color: var(--yellow);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 1.35rem;
+  letter-spacing: 0.12em;
 }
 
-.pokemon-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.pokemon-card {
-  position: relative;
-  min-width: 0;
-  padding: 14px;
-  overflow: hidden;
-  background: rgba(20, 28, 48, 0.96);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+.draft-state-panel {
+  margin-bottom: 24px;
+  padding: 22px;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 16px;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
 }
 
-.pokemon-image-wrap {
+.draft-state-error {
+  color: #fca5a5;
+  border-color: rgba(248, 113, 113, 0.35);
+  text-align: center;
+}
+
+.draft-round-heading,
+.draft-team-summary {
   display: grid;
-  aspect-ratio: 1;
-  margin-bottom: 10px;
-  place-items: center;
-  background: radial-gradient(circle, rgba(96, 165, 250, 0.12), transparent 68%);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
 }
 
-.pokemon-image-wrap img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+.draft-round-heading > div,
+.draft-team-summary > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 13px 14px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(100, 116, 139, 0.3);
+  border-radius: 10px;
 }
 
-.pokemon-card h2 {
-  margin: 0;
+.draft-round-heading span,
+.draft-team-summary span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.draft-round-heading strong,
+.draft-team-summary strong {
   overflow: hidden;
   color: #f8fafc;
-  font-size: 1rem;
-  line-height: 1.3;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.tier-badge {
-  position: absolute;
-  z-index: 1;
-  top: 10px;
-  right: 10px;
-  padding: 4px 7px;
-  color: #0f172a;
-  background: #cbd5e1;
-  border-radius: 999px;
-  font-size: 0.65rem;
-  font-weight: 900;
+.draft-team-summary {
+  margin-top: 12px;
 }
 
-.tier-s {
-  background: #facc15;
-}
-
-.tier-a {
-  background: #86efac;
-}
-
-.tier-b {
-  background: #93c5fd;
-}
-
-.type-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-top: 9px;
-}
-
-.type-badge {
-  padding: 3px 7px;
-  color: #e2e8f0;
-  background: #334155;
-  border-radius: 999px;
-  font-size: 0.66rem;
+.draft-placeholder-message {
+  margin: 18px 0 0;
+  color: #93c5fd;
   font-weight: 800;
+  text-align: center;
 }
-
-.type-fire { background: #9a3412; }
-.type-water { background: #1d4ed8; }
-.type-grass { background: #166534; }
-.type-electric { background: #a16207; }
-.type-ice { background: #0e7490; }
-.type-fighting { background: #991b1b; }
-.type-poison { background: #7e22ce; }
-.type-ground { background: #92400e; }
-.type-flying { background: #4338ca; }
-.type-psychic { background: #be185d; }
-.type-bug { background: #4d7c0f; }
-.type-rock { background: #78716c; }
-.type-ghost { background: #581c87; }
-.type-dragon { background: #3730a3; }
-.type-dark { background: #292524; }
-.type-steel { background: #475569; }
-.type-fairy { background: #be185d; }
 
 .draft-back-link {
   margin: 30px 0 0;
@@ -771,9 +735,6 @@ h1 {
     width: min(76vw, 580px);
   }
 
-  .pokemon-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 560px) {
@@ -842,19 +803,16 @@ h1 {
     padding: 24px 20px;
   }
 
-  .draft-players {
+  .draft-room-code {
     min-width: 0;
+    text-align: left;
   }
 
-  .pokemon-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+  .draft-round-heading,
+  .draft-team-summary {
+    grid-template-columns: 1fr;
   }
 
-  .pokemon-card {
-    padding: 10px;
-    border-radius: 12px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

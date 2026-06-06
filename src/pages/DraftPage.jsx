@@ -1,37 +1,9 @@
 import { useEffect, useState } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { Link, useParams } from 'react-router-dom'
-import { pokemonPool } from '../data/pokemonPool.js'
 import { db } from '../firebase.js'
 
-function PokemonCard({ pokemon }) {
-  return (
-    <article className="pokemon-card">
-      <span className={`tier-badge tier-${pokemon.tier.toLowerCase()}`}>
-        Tier {pokemon.tier}
-      </span>
-      <div className="pokemon-image-wrap">
-        <img
-          src={pokemon.sprite}
-          alt={pokemon.name}
-          loading="lazy"
-          width="150"
-          height="150"
-        />
-      </div>
-      <h2>{pokemon.name}</h2>
-      <div className="type-list">
-        {pokemon.types.map((type) => (
-          <span className={`type-badge type-${type.toLowerCase()}`} key={type}>
-            {type}
-          </span>
-        ))}
-      </div>
-    </article>
-  )
-}
-
-function DraftPage() {
+function DraftPage({ currentUser }) {
   const { roomCode = '' } = useParams()
   const displayRoomCode = roomCode.toUpperCase()
   const [room, setRoom] = useState(null)
@@ -63,6 +35,16 @@ function DraftPage() {
     return unsubscribe
   }, [displayRoomCode])
 
+  const isRoomPlayer = Boolean(room?.players?.[currentUser?.uid])
+  const currentUsername = room?.players?.[currentUser?.uid]?.username
+  const opponentUid =
+    room?.hostUid === currentUser?.uid ? room?.guestUid : room?.hostUid
+  const yourTeamCount = room?.teams?.[currentUser?.uid]?.length ?? 0
+  const opponentTeamCount = room?.teams?.[opponentUid]?.length ?? 0
+  const draftStateMissing = Boolean(
+    room?.status === 'draft' && !room?.draft,
+  )
+
   return (
     <main className="page-shell draft-page-shell">
       <section className="draft-container">
@@ -70,26 +52,78 @@ function DraftPage() {
           <div>
             <p className="eyebrow">Room {displayRoomCode}</p>
             <h1>Draft Arena</h1>
-            <p className="draft-coming-soon">Draft system coming next</p>
+            <p className="draft-coming-soon">
+              Pok&eacute;ball choices coming next
+            </p>
           </div>
 
-          <div className="draft-players">
-            {isLoading && <span>Loading trainers...</span>}
-            {room && (
-              <>
-                <span><strong>Host:</strong> {room.hostUsername}</span>
-                <span><strong>Guest:</strong> {room.guestUsername || 'Waiting...'}</span>
-              </>
-            )}
-            {errorMessage && <span className="draft-error">{errorMessage}</span>}
+          <div className="draft-room-code">
+            <span>Room Code</span>
+            <strong>{displayRoomCode}</strong>
           </div>
         </header>
 
-        <div className="pokemon-grid">
-          {pokemonPool.map((pokemon) => (
-            <PokemonCard pokemon={pokemon} key={pokemon.id} />
-          ))}
-        </div>
+        {isLoading && (
+          <div className="draft-state-panel">Loading draft state...</div>
+        )}
+
+        {!isLoading && errorMessage && (
+          <div className="draft-state-panel draft-state-error" role="alert">
+            {errorMessage}
+          </div>
+        )}
+
+        {!isLoading && draftStateMissing && (
+          <div className="draft-state-panel draft-state-error" role="alert">
+            Draft state not initialized.
+          </div>
+        )}
+
+        {!isLoading && room?.draft && isRoomPlayer && (
+          <section className="draft-state-panel">
+            <div className="draft-round-heading">
+              <div>
+                <span>Current Round</span>
+                <strong>
+                  {room.draft.currentRound} / {room.draft.totalRounds}
+                </strong>
+              </div>
+              <div>
+                <span>Round Name</span>
+                <strong>{room.draft.roundName}</strong>
+              </div>
+              <div>
+                <span>Phase</span>
+                <strong>{room.draft.phase}</strong>
+              </div>
+            </div>
+
+            <div className="draft-team-summary">
+              <div>
+                <span>Your Trainer</span>
+                <strong>{currentUsername}</strong>
+              </div>
+              <div>
+                <span>Your Team</span>
+                <strong>{yourTeamCount} / 6</strong>
+              </div>
+              <div>
+                <span>Opponent Team</span>
+                <strong>{opponentTeamCount} / 6</strong>
+              </div>
+            </div>
+
+            <p className="draft-placeholder-message">
+              Pok&eacute;ball choices coming next
+            </p>
+          </section>
+        )}
+
+        {!isLoading && room?.draft && !isRoomPlayer && (
+          <div className="draft-state-panel draft-state-error" role="alert">
+            You are not a player in this room.
+          </div>
+        )}
 
         <Link className="back-link draft-back-link" to={`/room/${displayRoomCode}`}>
           &larr; Back to Lobby
