@@ -3,6 +3,28 @@ import { doc, onSnapshot } from 'firebase/firestore'
 import { Link, useParams } from 'react-router-dom'
 import { db } from '../firebase.js'
 
+const ROUND_WINS_NEEDED = 4
+
+function RoundScoreRow({ label, score }) {
+  return (
+    <div className="round-score-row">
+      <span>{label}</span>
+      <div
+        className="round-score-dots"
+        aria-label={`${label}: ${score} of ${ROUND_WINS_NEEDED} rounds won`}
+      >
+        {Array.from({ length: ROUND_WINS_NEEDED }, (_, index) => (
+          <span
+            className={index < score ? 'is-won' : ''}
+            key={`${label}-round-${index + 1}`}
+            aria-hidden="true"
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function BattleArena({ currentUser }) {
   const { roomCode = '' } = useParams()
   const displayRoomCode = roomCode.toUpperCase()
@@ -76,16 +98,24 @@ function BattleArena({ currentUser }) {
   const isLoading = roomLoading || battleLoading || teamLoading
   const isRoomPlayer = Boolean(room?.players?.[currentUser?.uid])
   const yourTeamCount = draftTeam?.picks?.length ?? 0
+  const isHost = room?.hostUid === currentUser?.uid
+  const yourScore = isHost
+    ? battleState?.hostScore ?? 0
+    : battleState?.guestScore ?? 0
+  const opponentScore = isHost
+    ? battleState?.guestScore ?? 0
+    : battleState?.hostScore ?? 0
 
   return (
-    <main className="page-shell draft-page-shell">
+    <main className="page-shell draft-page-shell battle-arena-page">
       <section className="draft-container battle-arena-container">
-        <header className="draft-header">
+        <header className="draft-header battle-arena-header">
           <div>
-            <p className="eyebrow">Battle Setup</p>
-            <h1>Battle Arena</h1>
+            <p className="eyebrow">Trainer Showdown</p>
+            <h1>&#9876; Battle Arena</h1>
             <p className="draft-coming-soon">
-              Choose phase foundation is ready.
+              Round {battleState?.round ?? 1} Begins &mdash; Choose Your
+              Pok&eacute;mon
             </p>
           </div>
 
@@ -140,23 +170,58 @@ function BattleArena({ currentUser }) {
                   </strong>
                 </div>
                 <div>
-                  <span>Score</span>
+                  <span>Trainer Score</span>
                   <strong>
-                    Host {battleState.hostScore} - Guest{' '}
-                    {battleState.guestScore}
+                    {yourScore} - {opponentScore}
                   </strong>
                 </div>
                 <div>
-                  <span>Phase</span>
-                  <strong>{battleState.phase}</strong>
+                  <span>Battle Phase</span>
+                  <strong>Choose Pok&eacute;mon</strong>
                 </div>
+              </div>
+
+              <div className="round-score">
+                <h2>&#9876; Round Score</h2>
+                <RoundScoreRow label="You" score={yourScore} />
+                <RoundScoreRow label="Opponent" score={opponentScore} />
               </div>
             </section>
 
             <section className="battle-arena-summary">
-              <div className="battle-arena-team-count">
-                <span>Your Team</span>
-                <strong>{yourTeamCount} Pok&eacute;mon</strong>
+              <div className="battle-arena-your-team">
+                <div className="battle-section-heading">
+                  <div>
+                    <p className="eyebrow">Your Team</p>
+                    <h2>Choose Your Fighter</h2>
+                  </div>
+                  <span>{yourTeamCount} / 6</span>
+                </div>
+
+                <div className="battle-selection-grid">
+                  {draftTeam?.picks?.map((pokemon) => (
+                    <button
+                      className="battle-selection-card"
+                      type="button"
+                      key={pokemon.id}
+                      disabled
+                    >
+                      <img
+                        src={pokemon.sprite}
+                        alt={pokemon.name}
+                        width="120"
+                        height="120"
+                      />
+                      <strong>{pokemon.name}</strong>
+                      <div className="battle-type-list">
+                        {pokemon.types.map((type) => (
+                          <span key={type}>{type}</span>
+                        ))}
+                      </div>
+                      <small>Available</small>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="opponent-hidden-team">
