@@ -135,3 +135,83 @@ export async function joinRoom(roomCode, currentUser, userProfile) {
 
   return normalizedRoomCode
 }
+
+export async function togglePlayerReady(roomCode, currentUser) {
+  if (!currentUser) {
+    throw new Error('You must be logged in to change ready status.')
+  }
+
+  const normalizedRoomCode = roomCode.trim().toUpperCase()
+  const roomReference = doc(db, 'rooms', normalizedRoomCode)
+
+  await runTransaction(db, async (transaction) => {
+    const roomSnapshot = await transaction.get(roomReference)
+
+    if (!roomSnapshot.exists()) {
+      throw new Error('Room not found')
+    }
+
+    const room = roomSnapshot.data()
+    const currentPlayer = room.players?.[currentUser.uid]
+
+    if (!currentPlayer) {
+      throw new Error('You are not a player in this room.')
+    }
+
+    if (!['waiting', 'ready'].includes(room.status)) {
+      throw new Error('Ready status cannot be changed after the draft starts.')
+    }
+
+    const nextReady = !currentPlayer.ready
+    const hostReady =
+      room.hostUid === currentUser.uid
+        ? nextReady
+        : Boolean(room.players?.[room.hostUid]?.ready)
+    const guestReady =
+      room.guestUid === currentUser.uid
+        ? nextReady
+        : Boolean(room.players?.[room.guestUid]?.ready)
+    const bothReady = Boolean(room.guestUid && hostReady && guestReady)
+
+    transaction.update(roomReference, {
+      [`players.${currentUser.uid}.ready`]: nextReady,
+      status: bothReady ? 'ready' : 'waiting',
+      updatedAt: serverTimestamp(),
+    })
+  })
+}
+
+export async function startDraft(roomCode, currentUser) {
+  if (!currentUser) {
+    throw new Error('You must be logged in to start the draft.')
+  }
+
+  const normalizedRoomCode = roomCode.trim().toUpperCase()
+  const roomReference = doc(db, 'rooms', normalizedRoomCode)
+
+  await runTransaction(db, async (transaction) => {
+    const roomSnapshot = await transaction.get(roomReference)
+
+    if (!roomSnapshot.exists()) {
+      throw new Error('Room not found')
+    }
+
+    const room = roomSnapshot.data()
+
+    if (room.hostUid !== currentUser.uid) {
+      throw new Error('Only the host can start the draft.')
+    }
+
+    const hostReady = Boolean(room.players?.[room.hostUid]?.ready)
+    const guestReady = Boolean(room.players?.[room.guestUid]?.ready)
+
+    if (room.status !== 'ready' || !hostReady || !guestReady) {
+      throw new Error('Both trainers must be ready before starting the draft.')
+    }
+
+    transaction.update(roomReference, {
+      status: 'draft',
+      updatedAt: serverTimestamp(),
+    })
+  })
+}

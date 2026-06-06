@@ -94,7 +94,10 @@ function App() {
           path="/join-room"
           element={<JoinRoom currentUser={user} userProfile={userProfile} />}
         />
-        <Route path="/room/:roomCode" element={<RoomLobby />} />
+        <Route
+          path="/room/:roomCode"
+          element={<RoomLobby currentUser={user} />}
+        />
       </Routes>
     </BrowserRouter>
   )
