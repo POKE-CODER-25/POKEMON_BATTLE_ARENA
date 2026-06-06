@@ -1,5 +1,11 @@
 import { doc, runTransaction, serverTimestamp } from 'firebase/firestore'
-import { pokemonPool } from '../data/pokemonPool.js'
+import {
+  fanFavoritesPool,
+  legendaryPools,
+  pseudoLegendaryPool,
+  starterPools,
+  supportPool,
+} from '../data/draftPools.js'
 import { db } from '../firebase.js'
 
 const ROOM_CODE_CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -15,44 +21,6 @@ export const DRAFT_ROUND_NAMES = {
   5: 'Legendaries & Mythicals',
   6: 'Support 2',
 }
-
-const ROUND_CATEGORIES = {
-  2: ['Competitive Pick', 'Wildcard'],
-  3: ['Fan Favorite'],
-  4: ['Pseudo-Legendary'],
-  5: ['Legendary'],
-  6: ['Competitive Pick', 'Wildcard'],
-}
-
-const STARTER_POOLS = {
-  Fire: [
-    { id: 6, name: 'Charizard', types: ['Fire', 'Flying'] },
-    { id: 257, name: 'Blaziken', types: ['Fire', 'Fighting'] },
-    { id: 392, name: 'Infernape', types: ['Fire', 'Fighting'] },
-    { id: 727, name: 'Incineroar', types: ['Fire', 'Dark'] },
-    { id: 500, name: 'Emboar', types: ['Fire', 'Fighting'] },
-    { id: 815, name: 'Cinderace', types: ['Fire'] },
-  ],
-  Water: [
-    { id: 9, name: 'Blastoise', types: ['Water'] },
-    { id: 260, name: 'Swampert', types: ['Water', 'Ground'] },
-    { id: 395, name: 'Empoleon', types: ['Water', 'Steel'] },
-    { id: 658, name: 'Greninja', types: ['Water', 'Dark'] },
-    { id: 818, name: 'Inteleon', types: ['Water'] },
-    { id: 503, name: 'Samurott', types: ['Water'] },
-    { id: 730, name: 'Primarina', types: ['Water', 'Fairy'] },
-  ],
-  Grass: [
-    { id: 3, name: 'Venusaur', types: ['Grass', 'Poison'] },
-    { id: 254, name: 'Sceptile', types: ['Grass'] },
-    { id: 812, name: 'Rillaboom', types: ['Grass'] },
-    { id: 724, name: 'Decidueye', types: ['Grass', 'Ghost'] },
-    { id: 389, name: 'Torterra', types: ['Grass', 'Ground'] },
-  ],
-}
-
-const artwork = (id) =>
-  `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`
 
 function shuffle(items) {
   const shuffled = [...items]
@@ -72,18 +40,10 @@ function generateInitialStarterOptions() {
   const hostOptions = []
   const guestOptions = []
 
-  Object.entries(STARTER_POOLS).forEach(([element, pool]) => {
+  Object.entries(starterPools).forEach(([element, pool]) => {
     const [hostPokemon, guestPokemon] = shuffle(pool)
-    hostOptions.push({
-      ...hostPokemon,
-      element,
-      sprite: artwork(hostPokemon.id),
-    })
-    guestOptions.push({
-      ...guestPokemon,
-      element,
-      sprite: artwork(guestPokemon.id),
-    })
+    hostOptions.push({ ...hostPokemon, element })
+    guestOptions.push({ ...guestPokemon, element })
   })
 
   return {
@@ -92,25 +52,54 @@ function generateInitialStarterOptions() {
   }
 }
 
-function generatePlayerOptions(round, draftTeam) {
-  const categories = ROUND_CATEGORIES[round]
-  const pickedIds = new Set((draftTeam.picks || []).map((pick) => pick.id))
-  const shownSupportIds = new Set(draftTeam.shownSupportIds || [])
-  const isSupportRound = round === 2 || round === 6
+function getRolePool(pool, role) {
+  const parity = role === 'host' ? 0 : 1
+  return pool.filter((_, index) => index % 2 === parity)
+}
 
-  const available = pokemonPool.filter((pokemon) => {
-    if (!categories.includes(pokemon.category) || pickedIds.has(pokemon.id)) {
-      return false
-    }
+function chooseFromPool(pool, excludedIds, count = 3) {
+  const available = pool.filter((pokemon) => !excludedIds.has(pokemon.id))
 
-    return !isSupportRound || !shownSupportIds.has(pokemon.id)
-  })
-
-  if (available.length < 3) {
-    throw new Error(`Not enough Pokemon available for round ${round}.`)
+  if (available.length < count) {
+    throw new Error('Not enough Pokemon remain for this draft round.')
   }
 
-  return shuffle(available).slice(0, 3)
+  return shuffle(available).slice(0, count)
+}
+
+function generateLegendaryOptions(role, pickedIds) {
+  const options = ['S', 'A', 'B'].map((tier) => {
+    const rolePool = getRolePool(legendaryPools[tier], role)
+    return chooseFromPool(rolePool, pickedIds, 1)[0]
+  })
+
+  return shuffle(options)
+}
+
+function generatePlayerOptions(round, draftTeam, role) {
+  const pickedIds = new Set((draftTeam.picks || []).map((pick) => pick.id))
+  const shownSupportIds = new Set(draftTeam.shownSupportIds || [])
+
+  if (round === 5) {
+    return generateLegendaryOptions(role, pickedIds)
+  }
+
+  const roundPools = {
+    2: supportPool,
+    3: fanFavoritesPool,
+    4: pseudoLegendaryPool,
+    6: supportPool,
+  }
+  const excludedIds = new Set(pickedIds)
+
+  if (round === 2 || round === 6) {
+    shownSupportIds.forEach((id) => excludedIds.add(id))
+  }
+
+  return chooseFromPool(
+    getRolePool(roundPools[round], role),
+    excludedIds,
+  )
 }
 
 function createOptionDocument(uid, round, options, timestamp) {
@@ -517,7 +506,8 @@ export async function advancePlayerDraft(roomCode, currentUser) {
     }
 
     const nextRound = draftTeam.currentRound + 1
-    const nextOptions = generatePlayerOptions(nextRound, draftTeam)
+    const role = room.hostUid === currentUser.uid ? 'host' : 'guest'
+    const nextOptions = generatePlayerOptions(nextRound, draftTeam, role)
     const isSupportRound = nextRound === 2 || nextRound === 6
     const shownSupportIds = isSupportRound
       ? [
