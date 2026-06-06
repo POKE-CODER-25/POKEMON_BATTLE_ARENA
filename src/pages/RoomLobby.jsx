@@ -138,10 +138,18 @@ function RoomLobby({ currentUser }) {
             )}
 
             {draftStarted && (
-              <p className="waiting-message opponent-joined">
-                <span className="status-dot" />
-                Draft started!
-              </p>
+              <div className="lobby-actions">
+                <p className="waiting-message opponent-joined">
+                  <span className="status-dot" />
+                  Draft started!
+                </p>
+                <Link
+                  className="game-button game-button-primary"
+                  to={`/draft/${displayRoomCode}`}
+                >
+                  Enter Draft
+                </Link>
+              </div>
             )}
 
             {currentPlayer && !draftStarted && (

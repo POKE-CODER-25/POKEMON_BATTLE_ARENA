@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { auth } from './firebase.js'
 import AuthPage from './pages/AuthPage.jsx'
 import CreateRoom from './pages/CreateRoom.jsx'
+import DraftPage from './pages/DraftPage.jsx'
 import Home from './pages/Home.jsx'
 import JoinRoom from './pages/JoinRoom.jsx'
 import RoomLobby from './pages/RoomLobby.jsx'
@@ -98,6 +99,7 @@ function App() {
           path="/room/:roomCode"
           element={<RoomLobby currentUser={user} />}
         />
+        <Route path="/draft/:roomCode" element={<DraftPage />} />
       </Routes>
     </BrowserRouter>
   )
