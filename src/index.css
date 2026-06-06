@@ -837,6 +837,157 @@ h1 {
   margin: 22px auto 0;
 }
 
+.battle-ready-panel {
+  padding: 26px;
+  background: var(--panel);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-top: 3px solid var(--yellow);
+  border-radius: 18px;
+}
+
+.battle-ready-heading {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.battle-ready-heading h2 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: clamp(2rem, 6vw, 3rem);
+}
+
+.battle-ready-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+  gap: 24px;
+}
+
+.battle-ready-columns h3 {
+  margin: 0 0 14px;
+  color: #f8fafc;
+  font-size: 0.82rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.battle-team-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.battle-team-card {
+  display: grid;
+  min-width: 0;
+  padding: 12px;
+  place-items: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.68);
+  border: 1px solid rgba(100, 116, 139, 0.38);
+  border-radius: 12px;
+  text-align: center;
+}
+
+.battle-team-card img {
+  width: 100%;
+  max-width: 120px;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+
+.battle-team-card strong {
+  max-width: 100%;
+  overflow: hidden;
+  color: #f8fafc;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.battle-type-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+}
+
+.battle-type-list span {
+  padding: 3px 7px;
+  color: #dbeafe;
+  background: #334155;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+
+.opponent-hidden-team {
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(100, 116, 139, 0.3);
+  border-radius: 14px;
+  text-align: center;
+}
+
+.opponent-hidden-team p {
+  margin: -6px 0 18px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.opponent-pokeball-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  justify-items: center;
+}
+
+.opponent-pokeball {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  border: 5px solid #111827;
+  border-radius: 50%;
+  background: linear-gradient(
+    to bottom,
+    #ef4444 0 44%,
+    #111827 44% 56%,
+    #f8fafc 56%
+  );
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+}
+
+.opponent-pokeball span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  border: 5px solid #111827;
+  border-radius: 50%;
+  background: #f8fafc;
+  transform: translate(-50%, -50%);
+}
+
+.battle-ready-action {
+  display: grid;
+  gap: 10px;
+  max-width: 430px;
+  margin: 28px auto 0;
+  text-align: center;
+}
+
+.battle-ready-action .game-button {
+  width: 100%;
+  min-height: 62px;
+  text-transform: uppercase;
+}
+
+.battle-ready-action p {
+  margin: 0;
+  color: #93c5fd;
+  font-weight: 700;
+}
+
 .draft-back-link {
   margin: 30px 0 0;
 }
@@ -975,6 +1126,14 @@ h1 {
   .draft-round-heading,
   .draft-team-summary {
     grid-template-columns: 1fr;
+  }
+
+  .battle-ready-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .battle-team-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .starter-options {

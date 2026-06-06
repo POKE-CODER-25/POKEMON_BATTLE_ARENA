@@ -592,13 +592,72 @@ export async function completePlayerDraft(roomCode, currentUser) {
       updatedAt: timestamp,
     })
     transaction.update(roomReference, {
-      status: bothCompleted ? 'team_preview' : 'draft',
+      status: bothCompleted ? 'battle_ready' : 'draft',
       'draft.completedPlayers': nextCompletedPlayers,
       'draft.phase': bothCompleted ? 'complete' : 'active',
+      ...(bothCompleted
+        ? {
+            battleReady: {
+              hostReady: false,
+              guestReady: false,
+            },
+          }
+        : {}),
       'draft.updatedAt': timestamp,
       updatedAt: timestamp,
     })
 
-    return bothCompleted ? 'team_preview' : 'draft'
+    return bothCompleted ? 'battle_ready' : 'draft'
+  })
+}
+
+export async function markPlayerBattleReady(roomCode, currentUser) {
+  if (!currentUser) {
+    throw new Error('You must be logged in to enter the battle arena.')
+  }
+
+  const roomReference = doc(db, 'rooms', roomCode.trim().toUpperCase())
+
+  return runTransaction(db, async (transaction) => {
+    const roomSnapshot = await transaction.get(roomReference)
+
+    if (!roomSnapshot.exists()) {
+      throw new Error('Room not found')
+    }
+
+    const room = roomSnapshot.data()
+
+    if (!room.players?.[currentUser.uid]) {
+      throw new Error('You are not a player in this room.')
+    }
+
+    if (!['battle_ready', 'battle_setup'].includes(room.status)) {
+      throw new Error('The battle-ready screen is not active.')
+    }
+
+    if (room.status === 'battle_setup') {
+      return 'battle_setup'
+    }
+
+    const isHost = room.hostUid === currentUser.uid
+    const hostReady = isHost
+      ? true
+      : Boolean(room.battleReady?.hostReady)
+    const guestReady = isHost
+      ? Boolean(room.battleReady?.guestReady)
+      : true
+    const bothReady = hostReady && guestReady
+    const timestamp = serverTimestamp()
+
+    transaction.update(roomReference, {
+      status: bothReady ? 'battle_setup' : 'battle_ready',
+      battleReady: {
+        hostReady,
+        guestReady,
+      },
+      updatedAt: timestamp,
+    })
+
+    return bothReady ? 'battle_setup' : 'battle_ready'
   })
 }

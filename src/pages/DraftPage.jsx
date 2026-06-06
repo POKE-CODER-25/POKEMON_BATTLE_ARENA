@@ -7,6 +7,7 @@ import {
   completePlayerDraft,
   DRAFT_ROUND_NAMES,
   lockDraftPick,
+  markPlayerBattleReady,
 } from '../services/roomService.js'
 
 function ClosedPokeball() {
@@ -166,6 +167,20 @@ function DraftPage({ currentUser }) {
     }
   }
 
+  async function handleBattleReady() {
+    setPendingAction('battle-ready')
+    setSelectionError('')
+
+    try {
+      await markPlayerBattleReady(displayRoomCode, currentUser)
+    } catch (error) {
+      setPendingAction('')
+      setSelectionError(
+        error.message || 'Could not enter the battle arena.',
+      )
+    }
+  }
+
   const isRoomPlayer = Boolean(room?.players?.[currentUser?.uid])
   const currentUsername = room?.players?.[currentUser?.uid]?.username
   const opponentUid =
@@ -181,8 +196,15 @@ function DraftPage({ currentUser }) {
     Boolean(lockedSelection) || pendingSelectedIndex !== null
   const teamComplete = yourTeamCount === 6
   const waitingForOpponent =
-    Boolean(draftTeam?.completed) && room?.status !== 'team_preview'
-  const bothPlayersComplete = room?.status === 'team_preview'
+    Boolean(draftTeam?.completed) && room?.status === 'draft'
+  const battleReadyScreen = ['battle_ready', 'battle_setup'].includes(
+    room?.status,
+  )
+  const isHost = room?.hostUid === currentUser?.uid
+  const currentPlayerBattleReady = isHost
+    ? Boolean(room?.battleReady?.hostReady)
+    : Boolean(room?.battleReady?.guestReady)
+  const bothPlayersBattleReady = room?.status === 'battle_setup'
   const optionsMatchCurrentRound = optionsRound === currentRound
 
   return (
@@ -191,9 +213,11 @@ function DraftPage({ currentUser }) {
         <header className="draft-header">
           <div>
             <p className="eyebrow">Room {displayRoomCode}</p>
-            <h1>Draft Arena</h1>
+            <h1>{battleReadyScreen ? 'Battle Ready' : 'Draft Arena'}</h1>
             <p className="draft-coming-soon">
-              Draft privately at your own pace.
+              {battleReadyScreen
+                ? 'Review your team before entering the arena.'
+                : 'Draft privately at your own pace.'}
             </p>
           </div>
 
@@ -213,39 +237,43 @@ function DraftPage({ currentUser }) {
           </div>
         )}
 
-        {!isLoading && !privateStateLoading && draftTeam && isRoomPlayer && (
-          <section className="draft-state-panel">
-            <div className="draft-round-heading">
-              <div>
-                <span>Your Round</span>
-                <strong>{Math.min(currentRound, 6)} / 6</strong>
+        {!isLoading &&
+          !privateStateLoading &&
+          draftTeam &&
+          isRoomPlayer &&
+          !battleReadyScreen && (
+            <section className="draft-state-panel">
+              <div className="draft-round-heading">
+                <div>
+                  <span>Your Round</span>
+                  <strong>{Math.min(currentRound, 6)} / 6</strong>
+                </div>
+                <div>
+                  <span>Round Name</span>
+                  <strong>{roundName}</strong>
+                </div>
+                <div>
+                  <span>Phase</span>
+                  <strong>{room?.draft?.phase || 'active'}</strong>
+                </div>
               </div>
-              <div>
-                <span>Round Name</span>
-                <strong>{roundName}</strong>
-              </div>
-              <div>
-                <span>Phase</span>
-                <strong>{room?.draft?.phase || 'active'}</strong>
-              </div>
-            </div>
 
-            <div className="draft-team-summary">
-              <div>
-                <span>Your Trainer</span>
-                <strong>{currentUsername}</strong>
+              <div className="draft-team-summary">
+                <div>
+                  <span>Your Trainer</span>
+                  <strong>{currentUsername}</strong>
+                </div>
+                <div>
+                  <span>Your Team</span>
+                  <strong>{yourTeamCount} / 6</strong>
+                </div>
+                <div>
+                  <span>Opponent Team</span>
+                  <strong>{opponentTeamCount} / 6</strong>
+                </div>
               </div>
-              <div>
-                <span>Your Team</span>
-                <strong>{yourTeamCount} / 6</strong>
-              </div>
-              <div>
-                <span>Opponent Team</span>
-                <strong>{opponentTeamCount} / 6</strong>
-              </div>
-            </div>
-          </section>
-        )}
+            </section>
+          )}
 
         {!isLoading && room?.draft && !isRoomPlayer && (
           <div className="draft-state-panel draft-state-error" role="alert">
@@ -339,14 +367,16 @@ function DraftPage({ currentUser }) {
             <section className="draft-complete-panel">
               <p className="eyebrow">Six Picks Locked</p>
               <h2>Your Team Is Complete</h2>
-              <p>Your opponent still cannot see your Pokémon.</p>
+              <p>Your opponent still cannot see your Pok&eacute;mon.</p>
               <button
                 className="game-button game-button-primary draft-complete-button"
                 type="button"
                 onClick={handleGoToBattle}
                 disabled={pendingAction === 'complete'}
               >
-                {pendingAction === 'complete' ? 'Finishing Draft...' : 'Go to Battle'}
+                {pendingAction === 'complete'
+                  ? 'Finishing Draft...'
+                  : 'Go to Battle'}
               </button>
               {selectionError && (
                 <p className="starter-selection-error" role="alert">
@@ -363,10 +393,87 @@ function DraftPage({ currentUser }) {
           </section>
         )}
 
-        {bothPlayersComplete && (
-          <section className="draft-complete-panel">
-            <p className="eyebrow">Both Teams Ready</p>
-            <h2>Team Preview Coming Next</h2>
+        {battleReadyScreen && draftTeam && (
+          <section className="battle-ready-panel">
+            <div className="battle-ready-heading">
+              <p className="eyebrow">Both Drafts Complete</p>
+              <h2>Battle Ready</h2>
+            </div>
+
+            <div className="battle-ready-columns">
+              <div>
+                <h3>Your Team</h3>
+                <div className="battle-team-grid">
+                  {draftTeam.picks.map((pokemon) => (
+                    <article className="battle-team-card" key={pokemon.id}>
+                      <img
+                        src={pokemon.sprite}
+                        alt={pokemon.name}
+                        width="120"
+                        height="120"
+                      />
+                      <strong>{pokemon.name}</strong>
+                      <div className="battle-type-list">
+                        {pokemon.types.map((type) => (
+                          <span key={type}>{type}</span>
+                        ))}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </div>
+
+              <div className="opponent-hidden-team">
+                <h3>Opponent Team</h3>
+                <p>Hidden Until Battle</p>
+                <div className="opponent-pokeball-grid">
+                  {Array.from({ length: 6 }, (_, index) => (
+                    <div
+                      className="opponent-pokeball"
+                      key={`opponent-pokeball-${index + 1}`}
+                      aria-label={`Hidden opponent Pokemon ${index + 1}`}
+                    >
+                      <span />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="battle-ready-action">
+              <button
+                className="game-button game-button-primary"
+                type="button"
+                onClick={handleBattleReady}
+                disabled={
+                  currentPlayerBattleReady ||
+                  bothPlayersBattleReady ||
+                  pendingAction === 'battle-ready'
+                }
+              >
+                {bothPlayersBattleReady
+                  ? 'Battle Setup Ready'
+                  : currentPlayerBattleReady
+                    ? 'Ready for Battle'
+                    : pendingAction === 'battle-ready'
+                      ? 'Entering Arena...'
+                      : 'Enter Battle Arena'}
+              </button>
+
+              {currentPlayerBattleReady && !bothPlayersBattleReady && (
+                <p>Waiting for opponent...</p>
+              )}
+
+              {bothPlayersBattleReady && (
+                <p>Both trainers are ready. Battle setup is next.</p>
+              )}
+
+              {selectionError && (
+                <p className="starter-selection-error" role="alert">
+                  {selectionError}
+                </p>
+              )}
+            </div>
           </section>
         )}
 
