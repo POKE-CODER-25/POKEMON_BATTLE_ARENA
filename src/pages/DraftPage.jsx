@@ -4,7 +4,7 @@ import { Link, useParams } from 'react-router-dom'
 import { db } from '../firebase.js'
 import {
   ensureRoundOneStarterOptions,
-  lockRoundOneStarterPick,
+  lockDraftPick,
 } from '../services/roomService.js'
 
 function ClosedPokeball() {
@@ -97,6 +97,7 @@ function DraftPage({ currentUser }) {
             : null,
         )
         setPendingSelectedIndex(null)
+        setSelectionError('')
         setOptionsLoading(false)
         console.info(
           `Received ${options.length} private starter options for room ${displayRoomCode}`,
@@ -118,7 +119,7 @@ function DraftPage({ currentUser }) {
     setPendingSelectedIndex(selectedIndex)
 
     try {
-      await lockRoundOneStarterPick(
+      await lockDraftPick(
         displayRoomCode,
         currentUser,
         selectedIndex,
@@ -142,6 +143,7 @@ function DraftPage({ currentUser }) {
     lockedSelection?.selectedIndex ?? pendingSelectedIndex
   const choicesRevealed =
     Boolean(lockedSelection) || pendingSelectedIndex !== null
+  const draftComplete = room?.status === 'draft_complete'
 
   return (
     <main className="page-shell draft-page-shell">
@@ -150,7 +152,11 @@ function DraftPage({ currentUser }) {
           <div>
             <p className="eyebrow">Room {displayRoomCode}</p>
             <h1>Draft Arena</h1>
-            <p className="draft-coming-soon">Choose one Pok&eacute;ball by luck.</p>
+            <p className="draft-coming-soon">
+              {draftComplete
+                ? 'All six rounds are complete.'
+                : 'Choose one Pok&eacute;ball by luck.'}
+            </p>
           </div>
 
           <div className="draft-room-code">
@@ -221,11 +227,21 @@ function DraftPage({ currentUser }) {
           </div>
         )}
 
+        {!isLoading && draftComplete && isRoomPlayer && (
+          <section className="draft-complete-panel">
+            <p className="eyebrow">Six Rounds Complete</p>
+            <h2>Draft Complete</h2>
+            <p>Both trainers have completed their teams.</p>
+          </section>
+        )}
+
         {!isLoading &&
-          room?.draft?.currentRound === 1 &&
+          room?.status === 'draft' &&
+          room?.draft?.currentRound >= 1 &&
+          room?.draft?.currentRound <= 6 &&
           isRoomPlayer && (
             <section className="starter-choice-panel">
-              <h2>Choose Your Starter Pok&eacute;ball</h2>
+              <h2>Choose Your {room.draft.roundName} Pok&eacute;ball</h2>
 
               {optionsLoading && (
                 <p className="starter-help">Preparing your private choices...</p>

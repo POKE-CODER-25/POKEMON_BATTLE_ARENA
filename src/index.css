@@ -800,6 +800,27 @@ h1 {
   font-size: 0.85rem;
 }
 
+.draft-complete-panel {
+  margin-bottom: 24px;
+  padding: 38px 24px;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid rgba(134, 239, 172, 0.35);
+  border-top: 3px solid #22c55e;
+  border-radius: 16px;
+  text-align: center;
+}
+
+.draft-complete-panel h2 {
+  margin: 0;
+  color: #86efac;
+  font-size: clamp(2rem, 6vw, 3rem);
+}
+
+.draft-complete-panel p:last-child {
+  margin: 12px 0 0;
+}
+
 .draft-back-link {
   margin: 30px 0 0;
 }
