@@ -5,13 +5,14 @@ import { db } from '../firebase.js'
 const ROOM_CODE_CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
 const ROOM_CODE_LENGTH = 6
 const MAX_CODE_ATTEMPTS = 5
+const TOTAL_DRAFT_ROUNDS = 6
 
 export const DRAFT_ROUND_NAMES = {
   1: 'Starters',
   2: 'Support 1',
-  3: 'Fan Favourites',
+  3: 'Fan Favorites',
   4: 'Pseudo Legendaries',
-  5: 'Legendaries/Mythicals',
+  5: 'Legendaries & Mythicals',
   6: 'Support 2',
 }
 
@@ -67,7 +68,7 @@ function shuffle(items) {
   return shuffled
 }
 
-function generateStarterOptions() {
+function generateInitialStarterOptions() {
   const hostOptions = []
   const guestOptions = []
 
@@ -91,26 +92,25 @@ function generateStarterOptions() {
   }
 }
 
-function generateCategoryOptions(round) {
+function generatePlayerOptions(round, draftTeam) {
   const categories = ROUND_CATEGORIES[round]
-  const roundPool = shuffle(
-    pokemonPool.filter((pokemon) => categories.includes(pokemon.category)),
-  )
+  const pickedIds = new Set((draftTeam.picks || []).map((pick) => pick.id))
+  const shownSupportIds = new Set(draftTeam.shownSupportIds || [])
+  const isSupportRound = round === 2 || round === 6
 
-  if (roundPool.length < 6) {
-    throw new Error(`Not enough Pokemon configured for round ${round}.`)
+  const available = pokemonPool.filter((pokemon) => {
+    if (!categories.includes(pokemon.category) || pickedIds.has(pokemon.id)) {
+      return false
+    }
+
+    return !isSupportRound || !shownSupportIds.has(pokemon.id)
+  })
+
+  if (available.length < 3) {
+    throw new Error(`Not enough Pokemon available for round ${round}.`)
   }
 
-  return {
-    hostOptions: roundPool.slice(0, 3),
-    guestOptions: roundPool.slice(3, 6),
-  }
-}
-
-function generateRoundOptions(round) {
-  return round === 1
-    ? generateStarterOptions()
-    : generateCategoryOptions(round)
+  return shuffle(available).slice(0, 3)
 }
 
 function createOptionDocument(uid, round, options, timestamp) {
@@ -123,27 +123,6 @@ function createOptionDocument(uid, round, options, timestamp) {
     locked: false,
     createdAt: timestamp,
   }
-}
-
-function setRoundOptionDocuments(
-  transaction,
-  roomReference,
-  room,
-  round,
-) {
-  const { hostOptions, guestOptions } = generateRoundOptions(round)
-  const timestamp = serverTimestamp()
-
-  transaction.set(
-    doc(roomReference, 'draftOptions', room.hostUid),
-    createOptionDocument(room.hostUid, round, hostOptions, timestamp),
-  )
-  transaction.set(
-    doc(roomReference, 'draftOptions', room.guestUid),
-    createOptionDocument(room.guestUid, round, guestOptions, timestamp),
-  )
-
-  console.info(`Generated Round ${round} options for room ${room.roomCode}`)
 }
 
 export function generateRoomCode() {
@@ -347,16 +326,14 @@ export async function startDraft(roomCode, currentUser) {
     }
 
     const timestamp = serverTimestamp()
+    const { hostOptions, guestOptions } = generateInitialStarterOptions()
 
     transaction.update(roomReference, {
       status: 'draft',
       draft: {
-        currentRound: 1,
-        totalRounds: 6,
-        phase: 'round_intro',
-        roundName: DRAFT_ROUND_NAMES[1],
+        totalRounds: TOTAL_DRAFT_ROUNDS,
+        phase: 'active',
         completedPlayers: [],
-        optionsInitialized: true,
         startedAt: timestamp,
         updatedAt: timestamp,
       },
@@ -369,50 +346,29 @@ export async function startDraft(roomCode, currentUser) {
     transaction.set(doc(roomReference, 'draftTeams', room.hostUid), {
       uid: room.hostUid,
       picks: [],
+      currentRound: 1,
+      completed: false,
+      shownSupportIds: [],
       updatedAt: timestamp,
     })
     transaction.set(doc(roomReference, 'draftTeams', room.guestUid), {
       uid: room.guestUid,
       picks: [],
+      currentRound: 1,
+      completed: false,
+      shownSupportIds: [],
       updatedAt: timestamp,
     })
-    setRoundOptionDocuments(transaction, roomReference, room, 1)
-  })
-}
+    transaction.set(
+      doc(roomReference, 'draftOptions', room.hostUid),
+      createOptionDocument(room.hostUid, 1, hostOptions, timestamp),
+    )
+    transaction.set(
+      doc(roomReference, 'draftOptions', room.guestUid),
+      createOptionDocument(room.guestUid, 1, guestOptions, timestamp),
+    )
 
-export async function ensureRoundOneStarterOptions(roomCode, currentUser) {
-  if (!currentUser) {
-    throw new Error('You must be logged in to generate draft options.')
-  }
-
-  const roomReference = doc(db, 'rooms', roomCode.trim().toUpperCase())
-
-  return runTransaction(db, async (transaction) => {
-    const roomSnapshot = await transaction.get(roomReference)
-
-    if (!roomSnapshot.exists()) {
-      throw new Error('Room not found')
-    }
-
-    const room = roomSnapshot.data()
-
-    if (
-      room.hostUid !== currentUser.uid ||
-      room.status !== 'draft' ||
-      room.draft?.currentRound !== 1 ||
-      room.draft?.optionsInitialized ||
-      room.draft?.starterOptionsInitialized
-    ) {
-      return false
-    }
-
-    setRoundOptionDocuments(transaction, roomReference, room, 1)
-    transaction.update(roomReference, {
-      'draft.optionsInitialized': true,
-      'draft.updatedAt': serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    })
-    return true
+    console.info(`Generated Round 1 options for room ${room.roomCode}`)
   })
 }
 
@@ -431,7 +387,7 @@ export async function lockDraftPick(roomCode, currentUser, selectedIndex) {
     'draftOptions',
     currentUser.uid,
   )
-  const privateTeamReference = doc(
+  const draftTeamReference = doc(
     roomReference,
     'draftTeams',
     currentUser.uid,
@@ -440,29 +396,29 @@ export async function lockDraftPick(roomCode, currentUser, selectedIndex) {
   return runTransaction(db, async (transaction) => {
     const roomSnapshot = await transaction.get(roomReference)
     const optionsSnapshot = await transaction.get(optionsReference)
-    const privateTeamSnapshot = await transaction.get(privateTeamReference)
+    const draftTeamSnapshot = await transaction.get(draftTeamReference)
 
     if (!roomSnapshot.exists()) {
       throw new Error('Room not found')
     }
 
-    if (!optionsSnapshot.exists()) {
-      throw new Error('Draft options are not ready.')
+    if (!optionsSnapshot.exists() || !draftTeamSnapshot.exists()) {
+      throw new Error('Draft state is not ready.')
     }
 
     const room = roomSnapshot.data()
     const optionData = optionsSnapshot.data()
-    const currentRound = room.draft?.currentRound
+    const draftTeam = draftTeamSnapshot.data()
 
     if (!room.players?.[currentUser.uid]) {
       throw new Error('You are not a player in this room.')
     }
 
-    if (room.status !== 'draft' || !currentRound) {
+    if (room.status !== 'draft' || draftTeam.completed) {
       throw new Error('Draft selection is no longer active.')
     }
 
-    if (optionData.round !== currentRound) {
+    if (optionData.round !== draftTeam.currentRound) {
       throw new Error('These options belong to a different round.')
     }
 
@@ -476,80 +432,183 @@ export async function lockDraftPick(roomCode, currentUser, selectedIndex) {
       throw new Error('Invalid Pokeball choice.')
     }
 
-    const currentTeam = room.teams?.[currentUser.uid] || []
-    const privatePicks = privateTeamSnapshot.exists()
-      ? privateTeamSnapshot.data().picks || []
-      : []
+    if (draftTeam.picks.some((pick) => pick.id === selectedPokemon.id)) {
+      throw new Error('This Pokemon is already on your team.')
+    }
+
+    const timestamp = serverTimestamp()
+    const nextPicks = [
+      ...draftTeam.picks,
+      {
+        ...selectedPokemon,
+        round: draftTeam.currentRound,
+        roundName: DRAFT_ROUND_NAMES[draftTeam.currentRound],
+      },
+    ]
+    const currentTeamMarkers = room.teams?.[currentUser.uid] || []
+
+    transaction.update(optionsReference, {
+      selectedPokemon,
+      selectedIndex,
+      locked: true,
+      lockedAt: timestamp,
+    })
+    transaction.update(draftTeamReference, {
+      picks: nextPicks,
+      updatedAt: timestamp,
+    })
+    transaction.update(roomReference, {
+      [`teams.${currentUser.uid}`]: [
+        ...currentTeamMarkers,
+        { round: draftTeam.currentRound, locked: true },
+      ],
+      'draft.updatedAt': timestamp,
+      updatedAt: timestamp,
+    })
+
+    return selectedPokemon
+  })
+}
+
+export async function advancePlayerDraft(roomCode, currentUser) {
+  if (!currentUser) {
+    throw new Error('You must be logged in to continue drafting.')
+  }
+
+  const roomReference = doc(db, 'rooms', roomCode.trim().toUpperCase())
+  const optionsReference = doc(
+    roomReference,
+    'draftOptions',
+    currentUser.uid,
+  )
+  const draftTeamReference = doc(
+    roomReference,
+    'draftTeams',
+    currentUser.uid,
+  )
+
+  return runTransaction(db, async (transaction) => {
+    const roomSnapshot = await transaction.get(roomReference)
+    const optionsSnapshot = await transaction.get(optionsReference)
+    const draftTeamSnapshot = await transaction.get(draftTeamReference)
+
+    if (!roomSnapshot.exists()) {
+      throw new Error('Room not found')
+    }
+
+    if (!optionsSnapshot.exists() || !draftTeamSnapshot.exists()) {
+      throw new Error('Draft state is not ready.')
+    }
+
+    const room = roomSnapshot.data()
+    const optionData = optionsSnapshot.data()
+    const draftTeam = draftTeamSnapshot.data()
+
+    if (room.status !== 'draft' || draftTeam.completed) {
+      throw new Error('Draft progression is no longer active.')
+    }
+
+    if (!optionData.locked || optionData.round !== draftTeam.currentRound) {
+      throw new Error('Choose a Pokeball before continuing.')
+    }
+
+    if (draftTeam.picks.length >= TOTAL_DRAFT_ROUNDS) {
+      throw new Error('Your team is already complete.')
+    }
+
+    const nextRound = draftTeam.currentRound + 1
+    const nextOptions = generatePlayerOptions(nextRound, draftTeam)
+    const isSupportRound = nextRound === 2 || nextRound === 6
+    const shownSupportIds = isSupportRound
+      ? [
+          ...(draftTeam.shownSupportIds || []),
+          ...nextOptions.map((pokemon) => pokemon.id),
+        ]
+      : draftTeam.shownSupportIds || []
+    const timestamp = serverTimestamp()
+
+    transaction.set(
+      optionsReference,
+      createOptionDocument(
+        currentUser.uid,
+        nextRound,
+        nextOptions,
+        timestamp,
+      ),
+    )
+    transaction.update(draftTeamReference, {
+      currentRound: nextRound,
+      shownSupportIds,
+      updatedAt: timestamp,
+    })
+    transaction.update(roomReference, {
+      'draft.updatedAt': timestamp,
+      updatedAt: timestamp,
+    })
+
+    console.info(
+      `Generated Round ${nextRound} options for player ${currentUser.uid}`,
+    )
+    return nextRound
+  })
+}
+
+export async function completePlayerDraft(roomCode, currentUser) {
+  if (!currentUser) {
+    throw new Error('You must be logged in to finish drafting.')
+  }
+
+  const roomReference = doc(db, 'rooms', roomCode.trim().toUpperCase())
+  const draftTeamReference = doc(
+    roomReference,
+    'draftTeams',
+    currentUser.uid,
+  )
+
+  return runTransaction(db, async (transaction) => {
+    const roomSnapshot = await transaction.get(roomReference)
+    const draftTeamSnapshot = await transaction.get(draftTeamReference)
+
+    if (!roomSnapshot.exists()) {
+      throw new Error('Room not found')
+    }
+
+    if (!draftTeamSnapshot.exists()) {
+      throw new Error('Draft team not found.')
+    }
+
+    const room = roomSnapshot.data()
+    const draftTeam = draftTeamSnapshot.data()
+
+    if (draftTeam.picks.length !== TOTAL_DRAFT_ROUNDS) {
+      throw new Error('Complete all six picks before continuing.')
+    }
+
+    if (draftTeam.completed) {
+      return room.status
+    }
+
     const completedPlayers = room.draft?.completedPlayers || []
     const nextCompletedPlayers = completedPlayers.includes(currentUser.uid)
       ? completedPlayers
       : [...completedPlayers, currentUser.uid]
-    const bothPlayersCompleted =
+    const bothCompleted =
       nextCompletedPlayers.includes(room.hostUid) &&
       nextCompletedPlayers.includes(room.guestUid)
     const timestamp = serverTimestamp()
 
-    transaction.set(privateTeamReference, {
-      uid: currentUser.uid,
-      picks: [
-        ...privatePicks,
-        {
-          ...selectedPokemon,
-          round: currentRound,
-          roundName: room.draft.roundName,
-        },
-      ],
+    transaction.update(draftTeamReference, {
+      completed: true,
       updatedAt: timestamp,
     })
-
-    const roomUpdates = {
-      [`teams.${currentUser.uid}`]: [
-        ...currentTeam,
-        { round: currentRound, locked: true },
-      ],
+    transaction.update(roomReference, {
+      status: bothCompleted ? 'team_preview' : 'draft',
       'draft.completedPlayers': nextCompletedPlayers,
+      'draft.phase': bothCompleted ? 'complete' : 'active',
       'draft.updatedAt': timestamp,
       updatedAt: timestamp,
-    }
-
-    if (!bothPlayersCompleted) {
-      transaction.update(optionsReference, {
-        selectedPokemon,
-        selectedIndex,
-        locked: true,
-        lockedAt: timestamp,
-      })
-      transaction.update(roomReference, roomUpdates)
-      return selectedPokemon
-    }
-
-    if (currentRound === room.draft.totalRounds) {
-      transaction.update(optionsReference, {
-        selectedPokemon,
-        selectedIndex,
-        locked: true,
-        lockedAt: timestamp,
-      })
-      transaction.update(roomReference, {
-        ...roomUpdates,
-        status: 'draft_complete',
-        'draft.phase': 'draft_complete',
-        'draft.completedAt': timestamp,
-      })
-      return selectedPokemon
-    }
-
-    const nextRound = currentRound + 1
-    setRoundOptionDocuments(transaction, roomReference, room, nextRound)
-    transaction.update(roomReference, {
-      ...roomUpdates,
-      'draft.currentRound': nextRound,
-      'draft.roundName': DRAFT_ROUND_NAMES[nextRound],
-      'draft.phase': 'round_intro',
-      'draft.completedPlayers': [],
-      'draft.optionsInitialized': true,
     })
 
-    return selectedPokemon
+    return bothCompleted ? 'team_preview' : 'draft'
   })
 }

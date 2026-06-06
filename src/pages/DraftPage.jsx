@@ -3,7 +3,9 @@ import { doc, onSnapshot } from 'firebase/firestore'
 import { Link, useParams } from 'react-router-dom'
 import { db } from '../firebase.js'
 import {
-  ensureRoundOneStarterOptions,
+  advancePlayerDraft,
+  completePlayerDraft,
+  DRAFT_ROUND_NAMES,
   lockDraftPick,
 } from '../services/roomService.js'
 
@@ -19,11 +21,14 @@ function DraftPage({ currentUser }) {
   const { roomCode = '' } = useParams()
   const displayRoomCode = roomCode.toUpperCase()
   const [room, setRoom] = useState(null)
-  const [starterOptions, setStarterOptions] = useState([])
+  const [draftTeam, setDraftTeam] = useState(null)
+  const [draftOptions, setDraftOptions] = useState([])
+  const [optionsRound, setOptionsRound] = useState(null)
   const [lockedSelection, setLockedSelection] = useState(null)
   const [pendingSelectedIndex, setPendingSelectedIndex] = useState(null)
+  const [pendingAction, setPendingAction] = useState('')
   const [isLoading, setIsLoading] = useState(true)
-  const [optionsLoading, setOptionsLoading] = useState(true)
+  const [privateStateLoading, setPrivateStateLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
   const [selectionError, setSelectionError] = useState('')
 
@@ -51,18 +56,35 @@ function DraftPage({ currentUser }) {
   }, [displayRoomCode])
 
   useEffect(() => {
-    if (
-      room?.status !== 'draft' ||
-      room?.draft?.currentRound !== 1 ||
-      !currentUser?.uid
-    ) {
-      return
+    if (!currentUser?.uid) {
+      return undefined
     }
 
-    ensureRoundOneStarterOptions(displayRoomCode, currentUser).catch((error) => {
-      setErrorMessage(error.message || 'Could not initialize starter options.')
-    })
-  }, [currentUser, displayRoomCode, room?.draft?.currentRound, room?.status])
+    return onSnapshot(
+      doc(
+        db,
+        'rooms',
+        displayRoomCode,
+        'draftTeams',
+        currentUser.uid,
+      ),
+      (teamSnapshot) => {
+        if (!teamSnapshot.exists()) {
+          setDraftTeam(null)
+          setPrivateStateLoading(false)
+          setErrorMessage('Your private draft state is not initialized.')
+          return
+        }
+
+        setDraftTeam(teamSnapshot.data())
+        setPrivateStateLoading(false)
+      },
+      () => {
+        setPrivateStateLoading(false)
+        setErrorMessage('Could not load your private draft state.')
+      },
+    )
+  }, [currentUser?.uid, displayRoomCode])
 
   useEffect(() => {
     if (!currentUser?.uid) {
@@ -79,15 +101,13 @@ function DraftPage({ currentUser }) {
       ),
       (optionsSnapshot) => {
         if (!optionsSnapshot.exists()) {
-          setStarterOptions([])
-          setOptionsLoading(true)
+          setDraftOptions([])
           return
         }
 
         const optionData = optionsSnapshot.data()
-        const options = optionData.options || []
-
-        setStarterOptions(options)
+        setDraftOptions(optionData.options || [])
+        setOptionsRound(optionData.round)
         setLockedSelection(
           optionData.locked
             ? {
@@ -97,20 +117,16 @@ function DraftPage({ currentUser }) {
             : null,
         )
         setPendingSelectedIndex(null)
+        setPendingAction('')
         setSelectionError('')
-        setOptionsLoading(false)
-        console.info(
-          `Received ${options.length} private starter options for room ${displayRoomCode}`,
-        )
       },
       () => {
-        setOptionsLoading(false)
-        setErrorMessage('Could not load your starter options.')
+        setErrorMessage('Could not load your private draft options.')
       },
     )
   }, [currentUser?.uid, displayRoomCode])
 
-  async function handleStarterPick(selectedIndex) {
+  async function handlePick(selectedIndex) {
     if (lockedSelection || pendingSelectedIndex !== null) {
       return
     }
@@ -119,16 +135,34 @@ function DraftPage({ currentUser }) {
     setPendingSelectedIndex(selectedIndex)
 
     try {
-      await lockDraftPick(
-        displayRoomCode,
-        currentUser,
-        selectedIndex,
-      )
+      await lockDraftPick(displayRoomCode, currentUser, selectedIndex)
     } catch (error) {
       setPendingSelectedIndex(null)
-      setSelectionError(
-        error.message || 'Could not lock your starter choice.',
-      )
+      setSelectionError(error.message || 'Could not lock your choice.')
+    }
+  }
+
+  async function handleNextRound() {
+    setPendingAction('next')
+    setSelectionError('')
+
+    try {
+      await advancePlayerDraft(displayRoomCode, currentUser)
+    } catch (error) {
+      setPendingAction('')
+      setSelectionError(error.message || 'Could not start the next round.')
+    }
+  }
+
+  async function handleGoToBattle() {
+    setPendingAction('complete')
+    setSelectionError('')
+
+    try {
+      await completePlayerDraft(displayRoomCode, currentUser)
+    } catch (error) {
+      setPendingAction('')
+      setSelectionError(error.message || 'Could not complete your draft.')
     }
   }
 
@@ -136,14 +170,20 @@ function DraftPage({ currentUser }) {
   const currentUsername = room?.players?.[currentUser?.uid]?.username
   const opponentUid =
     room?.hostUid === currentUser?.uid ? room?.guestUid : room?.hostUid
-  const yourTeamCount = room?.teams?.[currentUser?.uid]?.length ?? 0
+  const yourTeamCount = draftTeam?.picks?.length ?? 0
   const opponentTeamCount = room?.teams?.[opponentUid]?.length ?? 0
-  const draftStateMissing = Boolean(room?.status === 'draft' && !room?.draft)
+  const currentRound =
+    draftTeam?.currentRound ?? Math.min((draftTeam?.picks?.length ?? 0) + 1, 6)
+  const roundName = DRAFT_ROUND_NAMES[currentRound]
   const selectedIndex =
     lockedSelection?.selectedIndex ?? pendingSelectedIndex
   const choicesRevealed =
     Boolean(lockedSelection) || pendingSelectedIndex !== null
-  const draftComplete = room?.status === 'draft_complete'
+  const teamComplete = yourTeamCount === 6
+  const waitingForOpponent =
+    Boolean(draftTeam?.completed) && room?.status !== 'team_preview'
+  const bothPlayersComplete = room?.status === 'team_preview'
+  const optionsMatchCurrentRound = optionsRound === currentRound
 
   return (
     <main className="page-shell draft-page-shell">
@@ -153,9 +193,7 @@ function DraftPage({ currentUser }) {
             <p className="eyebrow">Room {displayRoomCode}</p>
             <h1>Draft Arena</h1>
             <p className="draft-coming-soon">
-              {draftComplete
-                ? 'All six rounds are complete.'
-                : 'Choose one Pok&eacute;ball by luck.'}
+              Draft privately at your own pace.
             </p>
           </div>
 
@@ -165,7 +203,7 @@ function DraftPage({ currentUser }) {
           </div>
         </header>
 
-        {isLoading && (
+        {(isLoading || privateStateLoading) && (
           <div className="draft-state-panel">Loading draft state...</div>
         )}
 
@@ -175,28 +213,20 @@ function DraftPage({ currentUser }) {
           </div>
         )}
 
-        {!isLoading && draftStateMissing && (
-          <div className="draft-state-panel draft-state-error" role="alert">
-            Draft state not initialized.
-          </div>
-        )}
-
-        {!isLoading && room?.draft && isRoomPlayer && (
+        {!isLoading && !privateStateLoading && draftTeam && isRoomPlayer && (
           <section className="draft-state-panel">
             <div className="draft-round-heading">
               <div>
-                <span>Current Round</span>
-                <strong>
-                  {room.draft.currentRound} / {room.draft.totalRounds}
-                </strong>
+                <span>Your Round</span>
+                <strong>{Math.min(currentRound, 6)} / 6</strong>
               </div>
               <div>
                 <span>Round Name</span>
-                <strong>{room.draft.roundName}</strong>
+                <strong>{roundName}</strong>
               </div>
               <div>
                 <span>Phase</span>
-                <strong>{room.draft.phase}</strong>
+                <strong>{room?.draft?.phase || 'active'}</strong>
               </div>
             </div>
 
@@ -214,10 +244,6 @@ function DraftPage({ currentUser }) {
                 <strong>{opponentTeamCount} / 6</strong>
               </div>
             </div>
-
-            <p className="draft-placeholder-message">
-              Choose carefully. Your first click is final.
-            </p>
           </section>
         )}
 
@@ -227,84 +253,122 @@ function DraftPage({ currentUser }) {
           </div>
         )}
 
-        {!isLoading && draftComplete && isRoomPlayer && (
-          <section className="draft-complete-panel">
-            <p className="eyebrow">Six Rounds Complete</p>
-            <h2>Draft Complete</h2>
-            <p>Both trainers have completed their teams.</p>
-          </section>
-        )}
-
-        {!isLoading &&
-          room?.status === 'draft' &&
-          room?.draft?.currentRound >= 1 &&
-          room?.draft?.currentRound <= 6 &&
-          isRoomPlayer && (
+        {!privateStateLoading &&
+          draftTeam &&
+          !draftTeam.completed &&
+          (!teamComplete || lockedSelection) && (
             <section className="starter-choice-panel">
-              <h2>Choose Your {room.draft.roundName} Pok&eacute;ball</h2>
+              <h2>Choose Your {roundName} Pok&eacute;ball</h2>
+              <p className="starter-help">
+                Your first click is final for this round.
+              </p>
 
-              {optionsLoading && (
+              {!optionsMatchCurrentRound && (
                 <p className="starter-help">Preparing your private choices...</p>
               )}
 
-              {!optionsLoading && starterOptions.length === 3 && (
-                <>
-                  <div className="starter-options">
-                    {starterOptions.map((pokemon, index) => (
-                      <button
-                        className={`starter-option ${
-                          choicesRevealed ? 'is-revealed' : ''
-                        } ${selectedIndex === index ? 'is-selected' : ''}`}
-                        type="button"
-                        key={pokemon.id}
-                        onClick={() => handleStarterPick(index)}
-                        disabled={choicesRevealed}
-                      >
-                        {!choicesRevealed && (
-                          <>
-                            <ClosedPokeball />
-                            <span>Pok&eacute;ball {index + 1}</span>
-                          </>
-                        )}
+              {optionsMatchCurrentRound && draftOptions.length === 3 && (
+                <div className="starter-options">
+                  {draftOptions.map((pokemon, index) => (
+                    <button
+                      className={`starter-option ${
+                        choicesRevealed ? 'is-revealed' : ''
+                      } ${selectedIndex === index ? 'is-selected' : ''}`}
+                      type="button"
+                      key={pokemon.id}
+                      onClick={() => handlePick(index)}
+                      disabled={choicesRevealed}
+                    >
+                      {!choicesRevealed && (
+                        <>
+                          <ClosedPokeball />
+                          <span>Pok&eacute;ball {index + 1}</span>
+                        </>
+                      )}
 
-                        {choicesRevealed && (
-                          <>
-                            <img
-                              src={pokemon.sprite}
-                              alt={pokemon.name}
-                              width="150"
-                              height="150"
-                            />
-                            <strong>{pokemon.name}</strong>
-                            <span>{pokemon.types.join(' / ')}</span>
-                            {selectedIndex === index && (
-                              <span className="selected-pick-label">
-                                Your Pick
-                              </span>
-                            )}
-                          </>
-                        )}
-                      </button>
-                    ))}
-                  </div>
+                      {choicesRevealed && (
+                        <>
+                          <img
+                            src={pokemon.sprite}
+                            alt={pokemon.name}
+                            width="150"
+                            height="150"
+                          />
+                          <strong>{pokemon.name}</strong>
+                          <span>{pokemon.types.join(' / ')}</span>
+                          {selectedIndex === index && (
+                            <span className="selected-pick-label">
+                              Your Pick
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
 
-                  {choicesRevealed && (
-                    <p className="starter-locked-message">
-                      {lockedSelection
-                        ? `${lockedSelection.selectedPokemon.name} is locked in.`
-                        : 'Locking your starter...'}
-                    </p>
-                  )}
+              {lockedSelection && !teamComplete && (
+                <div className="draft-next-area">
+                  <p className="starter-locked-message">
+                    {lockedSelection.selectedPokemon.name} is locked in.
+                  </p>
+                  <button
+                    className="game-button game-button-primary"
+                    type="button"
+                    onClick={handleNextRound}
+                    disabled={pendingAction === 'next'}
+                  >
+                    {pendingAction === 'next' ? 'Loading Next Round...' : 'Next'}
+                  </button>
+                </div>
+              )}
 
-                  {selectionError && (
-                    <p className="starter-selection-error" role="alert">
-                      {selectionError}
-                    </p>
-                  )}
-                </>
+              {selectionError && (
+                <p className="starter-selection-error" role="alert">
+                  {selectionError}
+                </p>
               )}
             </section>
           )}
+
+        {!privateStateLoading &&
+          draftTeam &&
+          teamComplete &&
+          !draftTeam.completed && (
+            <section className="draft-complete-panel">
+              <p className="eyebrow">Six Picks Locked</p>
+              <h2>Your Team Is Complete</h2>
+              <p>Your opponent still cannot see your Pokémon.</p>
+              <button
+                className="game-button game-button-primary draft-complete-button"
+                type="button"
+                onClick={handleGoToBattle}
+                disabled={pendingAction === 'complete'}
+              >
+                {pendingAction === 'complete' ? 'Finishing Draft...' : 'Go to Battle'}
+              </button>
+              {selectionError && (
+                <p className="starter-selection-error" role="alert">
+                  {selectionError}
+                </p>
+              )}
+            </section>
+          )}
+
+        {waitingForOpponent && (
+          <section className="draft-complete-panel">
+            <p className="eyebrow">Your Draft Is Complete</p>
+            <h2>Waiting for opponent to finish drafting...</h2>
+          </section>
+        )}
+
+        {bothPlayersComplete && (
+          <section className="draft-complete-panel">
+            <p className="eyebrow">Both Teams Ready</p>
+            <h2>Team Preview Coming Next</h2>
+          </section>
+        )}
 
         <Link className="back-link draft-back-link" to={`/room/${displayRoomCode}`}>
           &larr; Back to Lobby

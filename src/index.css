@@ -800,6 +800,17 @@ h1 {
   font-size: 0.85rem;
 }
 
+.draft-next-area {
+  display: grid;
+  gap: 14px;
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+.draft-next-area .game-button {
+  width: 100%;
+}
+
 .draft-complete-panel {
   margin-bottom: 24px;
   padding: 38px 24px;
@@ -819,6 +830,11 @@ h1 {
 
 .draft-complete-panel p:last-child {
   margin: 12px 0 0;
+}
+
+.draft-complete-button {
+  width: min(100%, 360px);
+  margin: 22px auto 0;
 }
 
 .draft-back-link {
