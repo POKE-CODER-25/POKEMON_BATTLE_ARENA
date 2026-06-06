@@ -673,6 +673,133 @@ h1 {
   text-align: center;
 }
 
+.starter-choice-panel {
+  margin-bottom: 24px;
+  padding: 24px;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 16px;
+  text-align: center;
+}
+
+.starter-choice-panel h2 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 1.35rem;
+}
+
+.starter-help {
+  margin: 16px 0 0;
+}
+
+.starter-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  max-width: 820px;
+  margin: 24px auto 0;
+}
+
+.starter-option {
+  display: grid;
+  min-height: 230px;
+  padding: 18px;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  color: #cbd5e1;
+  background: rgba(15, 23, 42, 0.72);
+  border: 2px solid #334155;
+  border-radius: 16px;
+  font-weight: 800;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.starter-option:not(:disabled):hover {
+  border-color: #64748b;
+  transform: translateY(-2px);
+}
+
+.starter-option:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.starter-option.is-selected {
+  background: rgba(250, 204, 21, 0.08);
+  border-color: var(--yellow);
+  box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.18);
+}
+
+.starter-option img {
+  width: 150px;
+  height: 150px;
+  object-fit: contain;
+}
+
+.starter-option strong {
+  color: #f8fafc;
+  font-size: 1.05rem;
+}
+
+.starter-option > span:last-child {
+  font-size: 0.78rem;
+}
+
+.selected-pick-label {
+  padding: 4px 8px;
+  color: #172033;
+  background: var(--yellow);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.draft-pokeball {
+  position: relative;
+  width: 112px;
+  height: 112px;
+  overflow: hidden;
+  border: 9px solid #111827;
+  border-radius: 50%;
+  background: linear-gradient(
+    to bottom,
+    #ef4444 0 44%,
+    #111827 44% 56%,
+    #f8fafc 56%
+  );
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+}
+
+.draft-pokeball span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 32px;
+  height: 32px;
+  border: 7px solid #111827;
+  border-radius: 50%;
+  background: #f8fafc;
+  transform: translate(-50%, -50%);
+}
+
+.starter-locked-message {
+  margin: 20px 0 0;
+  color: #86efac;
+  font-weight: 800;
+}
+
+.starter-selection-error {
+  margin: 12px 0 0;
+  color: #fca5a5;
+  font-size: 0.85rem;
+}
+
 .draft-back-link {
   margin: 30px 0 0;
 }
@@ -811,6 +938,14 @@ h1 {
   .draft-round-heading,
   .draft-team-summary {
     grid-template-columns: 1fr;
+  }
+
+  .starter-options {
+    grid-template-columns: 1fr;
+  }
+
+  .starter-option {
+    min-height: 190px;
   }
 
 }

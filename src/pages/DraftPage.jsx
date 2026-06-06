@@ -2,16 +2,33 @@ import { useEffect, useState } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { Link, useParams } from 'react-router-dom'
 import { db } from '../firebase.js'
+import {
+  ensureRoundOneStarterOptions,
+  lockRoundOneStarterPick,
+} from '../services/roomService.js'
+
+function ClosedPokeball() {
+  return (
+    <div className="draft-pokeball" aria-hidden="true">
+      <span />
+    </div>
+  )
+}
 
 function DraftPage({ currentUser }) {
   const { roomCode = '' } = useParams()
   const displayRoomCode = roomCode.toUpperCase()
   const [room, setRoom] = useState(null)
+  const [starterOptions, setStarterOptions] = useState([])
+  const [lockedSelection, setLockedSelection] = useState(null)
+  const [pendingSelectedIndex, setPendingSelectedIndex] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [optionsLoading, setOptionsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
+  const [selectionError, setSelectionError] = useState('')
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
+    return onSnapshot(
       doc(db, 'rooms', displayRoomCode),
       (roomSnapshot) => {
         if (!roomSnapshot.exists()) {
@@ -31,9 +48,88 @@ function DraftPage({ currentUser }) {
         setIsLoading(false)
       },
     )
-
-    return unsubscribe
   }, [displayRoomCode])
+
+  useEffect(() => {
+    if (
+      room?.status !== 'draft' ||
+      room?.draft?.currentRound !== 1 ||
+      !currentUser?.uid
+    ) {
+      return
+    }
+
+    ensureRoundOneStarterOptions(displayRoomCode, currentUser).catch((error) => {
+      setErrorMessage(error.message || 'Could not initialize starter options.')
+    })
+  }, [currentUser, displayRoomCode, room?.draft?.currentRound, room?.status])
+
+  useEffect(() => {
+    if (!currentUser?.uid) {
+      return undefined
+    }
+
+    return onSnapshot(
+      doc(
+        db,
+        'rooms',
+        displayRoomCode,
+        'draftOptions',
+        currentUser.uid,
+      ),
+      (optionsSnapshot) => {
+        if (!optionsSnapshot.exists()) {
+          setStarterOptions([])
+          setOptionsLoading(true)
+          return
+        }
+
+        const optionData = optionsSnapshot.data()
+        const options = optionData.options || []
+
+        setStarterOptions(options)
+        setLockedSelection(
+          optionData.locked
+            ? {
+                selectedIndex: optionData.selectedIndex,
+                selectedPokemon: optionData.selectedPokemon,
+              }
+            : null,
+        )
+        setPendingSelectedIndex(null)
+        setOptionsLoading(false)
+        console.info(
+          `Received ${options.length} private starter options for room ${displayRoomCode}`,
+        )
+      },
+      () => {
+        setOptionsLoading(false)
+        setErrorMessage('Could not load your starter options.')
+      },
+    )
+  }, [currentUser?.uid, displayRoomCode])
+
+  async function handleStarterPick(selectedIndex) {
+    if (lockedSelection || pendingSelectedIndex !== null) {
+      return
+    }
+
+    setSelectionError('')
+    setPendingSelectedIndex(selectedIndex)
+
+    try {
+      await lockRoundOneStarterPick(
+        displayRoomCode,
+        currentUser,
+        selectedIndex,
+      )
+    } catch (error) {
+      setPendingSelectedIndex(null)
+      setSelectionError(
+        error.message || 'Could not lock your starter choice.',
+      )
+    }
+  }
 
   const isRoomPlayer = Boolean(room?.players?.[currentUser?.uid])
   const currentUsername = room?.players?.[currentUser?.uid]?.username
@@ -41,9 +137,11 @@ function DraftPage({ currentUser }) {
     room?.hostUid === currentUser?.uid ? room?.guestUid : room?.hostUid
   const yourTeamCount = room?.teams?.[currentUser?.uid]?.length ?? 0
   const opponentTeamCount = room?.teams?.[opponentUid]?.length ?? 0
-  const draftStateMissing = Boolean(
-    room?.status === 'draft' && !room?.draft,
-  )
+  const draftStateMissing = Boolean(room?.status === 'draft' && !room?.draft)
+  const selectedIndex =
+    lockedSelection?.selectedIndex ?? pendingSelectedIndex
+  const choicesRevealed =
+    Boolean(lockedSelection) || pendingSelectedIndex !== null
 
   return (
     <main className="page-shell draft-page-shell">
@@ -52,9 +150,7 @@ function DraftPage({ currentUser }) {
           <div>
             <p className="eyebrow">Room {displayRoomCode}</p>
             <h1>Draft Arena</h1>
-            <p className="draft-coming-soon">
-              Pok&eacute;ball choices coming next
-            </p>
+            <p className="draft-coming-soon">Choose one Pok&eacute;ball by luck.</p>
           </div>
 
           <div className="draft-room-code">
@@ -114,7 +210,7 @@ function DraftPage({ currentUser }) {
             </div>
 
             <p className="draft-placeholder-message">
-              Pok&eacute;ball choices coming next
+              Choose carefully. Your first click is final.
             </p>
           </section>
         )}
@@ -124,6 +220,75 @@ function DraftPage({ currentUser }) {
             You are not a player in this room.
           </div>
         )}
+
+        {!isLoading &&
+          room?.draft?.currentRound === 1 &&
+          isRoomPlayer && (
+            <section className="starter-choice-panel">
+              <h2>Choose Your Starter Pok&eacute;ball</h2>
+
+              {optionsLoading && (
+                <p className="starter-help">Preparing your private choices...</p>
+              )}
+
+              {!optionsLoading && starterOptions.length === 3 && (
+                <>
+                  <div className="starter-options">
+                    {starterOptions.map((pokemon, index) => (
+                      <button
+                        className={`starter-option ${
+                          choicesRevealed ? 'is-revealed' : ''
+                        } ${selectedIndex === index ? 'is-selected' : ''}`}
+                        type="button"
+                        key={pokemon.id}
+                        onClick={() => handleStarterPick(index)}
+                        disabled={choicesRevealed}
+                      >
+                        {!choicesRevealed && (
+                          <>
+                            <ClosedPokeball />
+                            <span>Pok&eacute;ball {index + 1}</span>
+                          </>
+                        )}
+
+                        {choicesRevealed && (
+                          <>
+                            <img
+                              src={pokemon.sprite}
+                              alt={pokemon.name}
+                              width="150"
+                              height="150"
+                            />
+                            <strong>{pokemon.name}</strong>
+                            <span>{pokemon.types.join(' / ')}</span>
+                            {selectedIndex === index && (
+                              <span className="selected-pick-label">
+                                Your Pick
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {choicesRevealed && (
+                    <p className="starter-locked-message">
+                      {lockedSelection
+                        ? `${lockedSelection.selectedPokemon.name} is locked in.`
+                        : 'Locking your starter...'}
+                    </p>
+                  )}
+
+                  {selectionError && (
+                    <p className="starter-selection-error" role="alert">
+                      {selectionError}
+                    </p>
+                  )}
+                </>
+              )}
+            </section>
+          )}
 
         <Link className="back-link draft-back-link" to={`/room/${displayRoomCode}`}>
           &larr; Back to Lobby
