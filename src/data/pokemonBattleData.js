@@ -770,3 +770,143 @@ export const legendaryPokemon = [
     ],
   }),
 ]
+
+export const pseudoPokemon = [
+  pokemon({
+    id: 445,
+    name: 'Garchomp',
+    category: POKEMON_CATEGORIES.PSEUDO,
+    score: 89,
+    types: ['Dragon', 'Ground'],
+    priority: PRIORITY.normal,
+    traitEffects: [
+      'If the opponent has a 2x type advantage against Garchomp, Garchomp gains +3',
+      'If the opponent has a 4x type advantage against Garchomp, Garchomp gains +5',
+    ],
+    traits: [
+      trait(
+        'Apex Predator',
+        'If the opponent has a 2x type advantage against Garchomp, Garchomp gains +3. If the opponent has a 4x type advantage against Garchomp, Garchomp gains +5.',
+        PRIORITY.normal,
+        [
+          'If the opponent has a 2x type advantage against Garchomp, Garchomp gains +3',
+          'If the opponent has a 4x type advantage against Garchomp, Garchomp gains +5',
+        ],
+      ),
+    ],
+  }),
+  pokemon({
+    id: 149,
+    name: 'Dragonite',
+    category: POKEMON_CATEGORIES.PSEUDO,
+    score: 88,
+    types: ['Dragon', 'Flying'],
+    priority: PRIORITY.normal,
+    traitEffects: ['If Dragonite loses, the next ally Pokemon gains +3'],
+    traits: [
+      trait(
+        'Guardian Dragon',
+        'If Dragonite loses, the next ally Pokemon gains +3.',
+        PRIORITY.normal,
+        ['If Dragonite loses, the next ally Pokemon gains +3'],
+      ),
+    ],
+  }),
+  pokemon({
+    id: 376,
+    name: 'Metagross',
+    category: POKEMON_CATEGORIES.PSEUDO,
+    score: 87,
+    types: ['Steel', 'Psychic'],
+    priority: PRIORITY.normal,
+    traitEffects: [
+      'Metagross gains enough points to tie the opponent',
+      'Maximum gain is +3',
+    ],
+    traits: [
+      trait(
+        'Supercomputer',
+        'Metagross gains enough points to tie the opponent. Maximum gain is +3.',
+        PRIORITY.normal,
+        [
+          'Metagross gains enough points to tie the opponent',
+          'Maximum gain is +3',
+        ],
+      ),
+    ],
+  }),
+  pokemon({
+    id: 887,
+    name: 'Dragapult',
+    category: POKEMON_CATEGORIES.PSEUDO,
+    score: 86,
+    types: ['Dragon', 'Ghost'],
+    priority: PRIORITY.normal,
+    traitEffects: [
+      'If Dragapult wins, the opponent cannot gain type bonus next round',
+    ],
+    traits: [
+      trait(
+        'Phantom Launch',
+        'If Dragapult wins, the opponent cannot gain type bonus next round.',
+        PRIORITY.normal,
+        ['If Dragapult wins, the opponent cannot gain type bonus next round'],
+      ),
+    ],
+  }),
+  pokemon({
+    id: 373,
+    name: 'Salamence',
+    category: POKEMON_CATEGORIES.PSEUDO,
+    score: 85,
+    types: ['Dragon', 'Flying'],
+    priority: PRIORITY.normal,
+    traitEffects: ['If the opponent score is higher, Salamence gains +4'],
+    traits: [
+      trait(
+        'Berserker Wings',
+        'If the opponent score is higher, Salamence gains +4.',
+        PRIORITY.normal,
+        ['If the opponent score is higher, Salamence gains +4'],
+      ),
+    ],
+  }),
+  pokemon({
+    id: 784,
+    name: 'Kommo-o',
+    category: POKEMON_CATEGORIES.PSEUDO,
+    score: 84,
+    types: ['Dragon', 'Fighting'],
+    priority: PRIORITY.normal,
+    traitEffects: ['Opponent trait bonus is reduced by 3'],
+    traits: [
+      trait(
+        'Battle Armor',
+        'Opponent trait bonus is reduced by 3.',
+        PRIORITY.normal,
+        ['Opponent trait bonus is reduced by 3'],
+      ),
+    ],
+  }),
+  pokemon({
+    id: 248,
+    name: 'Tyranitar',
+    category: POKEMON_CATEGORIES.PSEUDO,
+    score: 83,
+    types: ['Rock', 'Dark'],
+    priority: PRIORITY.normal,
+    traitEffects: [
+      "If Tyranitar wins, the opponent's next Pokemon loses 2 score",
+    ],
+    traits: [
+      trait(
+        'Sandstorm King',
+        "If Tyranitar wins, the opponent's next Pokemon loses 2 score.",
+        PRIORITY.normal,
+        ["If Tyranitar wins, the opponent's next Pokemon loses 2 score"],
+      ),
+    ],
+  }),
+]
+
+export const allBattlePokemon = [...legendaryPokemon, ...pseudoPokemon]
