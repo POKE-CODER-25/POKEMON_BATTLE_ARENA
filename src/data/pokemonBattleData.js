@@ -10,6 +10,7 @@ const priorityFor = (traitLabel) =>
 const PRIORITY = {
   protected: priorityFor('Yveltal'),
   godKiller: priorityFor('Mega Rayquaza'),
+  mega: priorityFor('Mega Evolutions'),
   zamazenta: priorityFor('Zamazenta'),
   mewtwo: priorityFor('Mewtwo'),
   necrozma: priorityFor('Necrozma'),
@@ -909,4 +910,411 @@ export const pseudoPokemon = [
   }),
 ]
 
-export const allBattlePokemon = [...legendaryPokemon, ...pseudoPokemon]
+export const starterPokemon = [
+  pokemon({
+    id: 6,
+    name: 'Charizard',
+    category: POKEMON_CATEGORIES.STARTER,
+    score: 88,
+    types: ['Fire', 'Flying'],
+    priority: PRIORITY.mega,
+    traitEffects: [
+      'Blaze grants +2',
+      '50% chance to Mega Evolve',
+      'Mega Evolution grants protected +3',
+    ],
+    specialRules: [
+      'Mega bonus cannot be disabled, stolen, reduced, absorbed, or transferred',
+    ],
+    traits: [
+      trait(
+        'Blaze + Mega Evolution X',
+        'Blaze grants +2. 50% chance to Mega Evolve. Mega Evolution grants protected +3. Mega bonus cannot be disabled, stolen, reduced, absorbed, or transferred.',
+        PRIORITY.mega,
+        [
+          'Blaze grants +2',
+          '50% chance to Mega Evolve',
+          'Mega Evolution grants protected +3',
+        ],
+        [
+          'Mega bonus cannot be disabled, stolen, reduced, absorbed, or transferred',
+        ],
+      ),
+    ],
+  }),
+  pokemon({
+    id: 658,
+    name: 'Greninja',
+    category: POKEMON_CATEGORIES.STARTER,
+    score: 87,
+    types: ['Water', 'Dark'],
+    priority: PRIORITY.mega,
+    traitEffects: [
+      'Torrent grants +2',
+      '50% chance to become Ash Greninja',
+      'Ash Form grants protected +3',
+      'Ash Greninja also gains +1 for every round already won by the trainer',
+    ],
+    specialRules: [
+      'Ash bonus cannot be disabled, stolen, reduced, absorbed, or transferred',
+    ],
+    traits: [
+      trait(
+        'Torrent + Battle Bond',
+        'Torrent grants +2. 50% chance to become Ash Greninja. Ash Form grants protected +3. Ash Greninja also gains +1 for every round already won by the trainer. Ash bonus cannot be disabled, stolen, reduced, absorbed, or transferred.',
+        PRIORITY.mega,
+        [
+          'Torrent grants +2',
+          '50% chance to become Ash Greninja',
+          'Ash Form grants protected +3',
+          'Ash Greninja also gains +1 for every round already won by the trainer',
+        ],
+        [
+          'Ash bonus cannot be disabled, stolen, reduced, absorbed, or transferred',
+        ],
+      ),
+    ],
+  }),
+  pokemon({
+    id: 254,
+    name: 'Sceptile',
+    category: POKEMON_CATEGORIES.STARTER,
+    score: 86,
+    types: ['Grass'],
+    priority: PRIORITY.mega,
+    traitEffects: [
+      'Growth grants +2',
+      '50% chance to Mega Evolve',
+      'Mega Evolution grants protected +3',
+    ],
+    specialRules: [
+      'Mega bonus cannot be disabled, stolen, reduced, absorbed, or transferred',
+    ],
+    traits: [
+      trait(
+        'Growth + Mega Evolution',
+        'Growth grants +2. 50% chance to Mega Evolve. Mega Evolution grants protected +3. Mega bonus cannot be disabled, stolen, reduced, absorbed, or transferred.',
+        PRIORITY.mega,
+        [
+          'Growth grants +2',
+          '50% chance to Mega Evolve',
+          'Mega Evolution grants protected +3',
+        ],
+        [
+          'Mega bonus cannot be disabled, stolen, reduced, absorbed, or transferred',
+        ],
+      ),
+    ],
+  }),
+  pokemon({
+    id: 392,
+    name: 'Infernape',
+    category: POKEMON_CATEGORIES.STARTER,
+    score: 85,
+    types: ['Fire', 'Fighting'],
+    priority: PRIORITY.normal,
+    traitEffects: [
+      'Blaze grants +2',
+      'If opponent has higher score, Infernape gains +5',
+    ],
+    traits: [
+      trait(
+        'Blaze + Blaze of Determination',
+        'Blaze grants +2. If opponent has higher score, Infernape gains +5.',
+        PRIORITY.normal,
+        [
+          'Blaze grants +2',
+          'If opponent has higher score, Infernape gains +5',
+        ],
+      ),
+    ],
+  }),
+  pokemon({
+    id: 260,
+    name: 'Swampert',
+    category: POKEMON_CATEGORIES.STARTER,
+    score: 84,
+    types: ['Water', 'Ground'],
+    priority: PRIORITY.mega,
+    traitEffects: [
+      'Torrent grants +2',
+      '50% chance to Mega Evolve',
+      'Mega Evolution grants protected +3',
+    ],
+    specialRules: [
+      'Mega bonus cannot be disabled, stolen, reduced, absorbed, or transferred',
+    ],
+    traits: [
+      trait(
+        'Torrent + Mega Evolution',
+        'Torrent grants +2. 50% chance to Mega Evolve. Mega Evolution grants protected +3. Mega bonus cannot be disabled, stolen, reduced, absorbed, or transferred.',
+        PRIORITY.mega,
+        [
+          'Torrent grants +2',
+          '50% chance to Mega Evolve',
+          'Mega Evolution grants protected +3',
+        ],
+        [
+          'Mega bonus cannot be disabled, stolen, reduced, absorbed, or transferred',
+        ],
+      ),
+    ],
+  }),
+  pokemon({
+    id: 257,
+    name: 'Blaziken',
+    category: POKEMON_CATEGORIES.STARTER,
+    score: 83,
+    types: ['Fire', 'Fighting'],
+    priority: PRIORITY.mega,
+    traitEffects: [
+      'Blaze grants +2',
+      '50% chance to Mega Evolve',
+      'Mega Evolution grants protected +3',
+    ],
+    specialRules: [
+      'Mega bonus cannot be disabled, stolen, reduced, absorbed, or transferred',
+    ],
+    traits: [
+      trait(
+        'Blaze + Mega Evolution',
+        'Blaze grants +2. 50% chance to Mega Evolve. Mega Evolution grants protected +3. Mega bonus cannot be disabled, stolen, reduced, absorbed, or transferred.',
+        PRIORITY.mega,
+        [
+          'Blaze grants +2',
+          '50% chance to Mega Evolve',
+          'Mega Evolution grants protected +3',
+        ],
+        [
+          'Mega bonus cannot be disabled, stolen, reduced, absorbed, or transferred',
+        ],
+      ),
+    ],
+  }),
+  pokemon({
+    id: 9,
+    name: 'Blastoise',
+    category: POKEMON_CATEGORIES.STARTER,
+    score: 82,
+    types: ['Water'],
+    priority: PRIORITY.mega,
+    traitEffects: [
+      'Torrent grants +2',
+      '50% chance to Mega Evolve',
+      'Mega Evolution grants protected +3',
+    ],
+    specialRules: [
+      'Mega bonus cannot be disabled, stolen, reduced, absorbed, or transferred',
+    ],
+    traits: [
+      trait(
+        'Torrent + Mega Evolution',
+        'Torrent grants +2. 50% chance to Mega Evolve. Mega Evolution grants protected +3. Mega bonus cannot be disabled, stolen, reduced, absorbed, or transferred.',
+        PRIORITY.mega,
+        [
+          'Torrent grants +2',
+          '50% chance to Mega Evolve',
+          'Mega Evolution grants protected +3',
+        ],
+        [
+          'Mega bonus cannot be disabled, stolen, reduced, absorbed, or transferred',
+        ],
+      ),
+    ],
+  }),
+  pokemon({
+    id: 727,
+    name: 'Incineroar',
+    category: POKEMON_CATEGORIES.STARTER,
+    score: 81,
+    types: ['Fire', 'Dark'],
+    priority: PRIORITY.normal,
+    traitEffects: [
+      'Blaze grants +2',
+      "If Incineroar wins, opponent's next Pokemon loses 2 score",
+    ],
+    traits: [
+      trait(
+        'Blaze + Heel Wrestler',
+        "Blaze grants +2. If Incineroar wins, opponent's next Pokemon loses 2 score.",
+        PRIORITY.normal,
+        [
+          'Blaze grants +2',
+          "If Incineroar wins, opponent's next Pokemon loses 2 score",
+        ],
+      ),
+    ],
+  }),
+  pokemon({
+    id: 812,
+    name: 'Rillaboom',
+    category: POKEMON_CATEGORIES.STARTER,
+    score: 80,
+    types: ['Grass'],
+    priority: PRIORITY.normal,
+    traitEffects: [
+      'Growth grants +2',
+      'Opponent cannot gain more than +3 trait bonus',
+    ],
+    traits: [
+      trait(
+        'Growth + Drumbeat',
+        'Growth grants +2. Opponent cannot gain more than +3 trait bonus.',
+        PRIORITY.normal,
+        [
+          'Growth grants +2',
+          'Opponent cannot gain more than +3 trait bonus',
+        ],
+      ),
+    ],
+  }),
+  pokemon({
+    id: 818,
+    name: 'Inteleon',
+    category: POKEMON_CATEGORIES.STARTER,
+    score: 79,
+    types: ['Water'],
+    priority: PRIORITY.normal,
+    traitEffects: ['Torrent grants +2'],
+    traits: [
+      trait('Torrent', 'Torrent grants +2.', PRIORITY.normal, [
+        'Torrent grants +2',
+      ]),
+    ],
+  }),
+  pokemon({
+    id: 3,
+    name: 'Venusaur',
+    category: POKEMON_CATEGORIES.STARTER,
+    score: 78,
+    types: ['Grass', 'Poison'],
+    priority: PRIORITY.mega,
+    traitEffects: [
+      'Growth grants +2',
+      '50% chance to Mega Evolve',
+      'Mega Evolution grants protected +3',
+    ],
+    specialRules: [
+      'Mega bonus cannot be disabled, stolen, reduced, absorbed, or transferred',
+    ],
+    traits: [
+      trait(
+        'Growth + Mega Evolution',
+        'Growth grants +2. 50% chance to Mega Evolve. Mega Evolution grants protected +3. Mega bonus cannot be disabled, stolen, reduced, absorbed, or transferred.',
+        PRIORITY.mega,
+        [
+          'Growth grants +2',
+          '50% chance to Mega Evolve',
+          'Mega Evolution grants protected +3',
+        ],
+        [
+          'Mega bonus cannot be disabled, stolen, reduced, absorbed, or transferred',
+        ],
+      ),
+    ],
+  }),
+  pokemon({
+    id: 395,
+    name: 'Empoleon',
+    category: POKEMON_CATEGORIES.STARTER,
+    score: 77,
+    types: ['Water', 'Steel'],
+    priority: PRIORITY.normal,
+    traitEffects: ['Torrent grants +2'],
+    traits: [
+      trait('Torrent', 'Torrent grants +2.', PRIORITY.normal, [
+        'Torrent grants +2',
+      ]),
+    ],
+  }),
+  pokemon({
+    id: 815,
+    name: 'Cinderace',
+    category: POKEMON_CATEGORIES.STARTER,
+    score: 76,
+    types: ['Fire'],
+    priority: PRIORITY.normal,
+    traitEffects: ['Blaze grants +2'],
+    traits: [
+      trait('Blaze', 'Blaze grants +2.', PRIORITY.normal, [
+        'Blaze grants +2',
+      ]),
+    ],
+  }),
+  pokemon({
+    id: 724,
+    name: 'Decidueye',
+    category: POKEMON_CATEGORIES.STARTER,
+    score: 75,
+    types: ['Grass', 'Ghost'],
+    priority: PRIORITY.normal,
+    traitEffects: ['Growth grants +2'],
+    traits: [
+      trait('Growth', 'Growth grants +2.', PRIORITY.normal, [
+        'Growth grants +2',
+      ]),
+    ],
+  }),
+  pokemon({
+    id: 503,
+    name: 'Samurott',
+    category: POKEMON_CATEGORIES.STARTER,
+    score: 74,
+    types: ['Water'],
+    priority: PRIORITY.normal,
+    traitEffects: ['Torrent grants +2'],
+    traits: [
+      trait('Torrent', 'Torrent grants +2.', PRIORITY.normal, [
+        'Torrent grants +2',
+      ]),
+    ],
+  }),
+  pokemon({
+    id: 500,
+    name: 'Emboar',
+    category: POKEMON_CATEGORIES.STARTER,
+    score: 73,
+    types: ['Fire', 'Fighting'],
+    priority: PRIORITY.normal,
+    traitEffects: ['Blaze grants +2'],
+    traits: [
+      trait('Blaze', 'Blaze grants +2.', PRIORITY.normal, [
+        'Blaze grants +2',
+      ]),
+    ],
+  }),
+  pokemon({
+    id: 389,
+    name: 'Torterra',
+    category: POKEMON_CATEGORIES.STARTER,
+    score: 72,
+    types: ['Grass', 'Ground'],
+    priority: PRIORITY.normal,
+    traitEffects: ['Growth grants +2'],
+    traits: [
+      trait('Growth', 'Growth grants +2.', PRIORITY.normal, [
+        'Growth grants +2',
+      ]),
+    ],
+  }),
+  pokemon({
+    id: 730,
+    name: 'Primarina',
+    category: POKEMON_CATEGORIES.STARTER,
+    score: 72,
+    types: ['Water', 'Fairy'],
+    priority: PRIORITY.normal,
+    traitEffects: ['Torrent grants +2'],
+    traits: [
+      trait('Torrent', 'Torrent grants +2.', PRIORITY.normal, [
+        'Torrent grants +2',
+      ]),
+    ],
+  }),
+]
+
+export const allBattlePokemon = [
+  ...legendaryPokemon,
+  ...pseudoPokemon,
+  ...starterPokemon,
+]
