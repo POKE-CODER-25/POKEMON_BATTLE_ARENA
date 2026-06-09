@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { Link, useParams } from 'react-router-dom'
+import {
+  getDraftPickLabel,
+  getOrderedDraftPicks,
+} from '../data/draftTeamStructure.js'
 import { db } from '../firebase.js'
 
 const ROUND_WINS_NEEDED = 4
@@ -105,6 +109,7 @@ function BattleArena({ currentUser }) {
   const opponentScore = isHost
     ? battleState?.guestScore ?? 0
     : battleState?.hostScore ?? 0
+  const orderedDraftPicks = getOrderedDraftPicks(draftTeam?.picks)
 
   return (
     <main className="page-shell draft-page-shell battle-arena-page">
@@ -199,7 +204,7 @@ function BattleArena({ currentUser }) {
                 </div>
 
                 <div className="battle-selection-grid">
-                  {draftTeam?.picks?.map((pokemon) => (
+                  {orderedDraftPicks.map((pokemon) => (
                     <button
                       className="battle-selection-card"
                       type="button"
@@ -213,6 +218,7 @@ function BattleArena({ currentUser }) {
                         height="120"
                       />
                       <strong>{pokemon.name}</strong>
+                      <small>{getDraftPickLabel(pokemon)}</small>
                       <div className="battle-type-list">
                         {pokemon.types.map((type) => (
                           <span key={type}>{type}</span>

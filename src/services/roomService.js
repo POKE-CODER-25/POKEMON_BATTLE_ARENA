@@ -7,6 +7,7 @@ import {
   starterPools,
   supportPool,
 } from '../data/draftPools.js'
+import { DRAFT_ROUND_NAMES } from '../data/draftTeamStructure.js'
 import { db } from '../firebase.js'
 
 const ROOM_CODE_CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -14,14 +15,7 @@ const ROOM_CODE_LENGTH = 6
 const MAX_CODE_ATTEMPTS = 5
 const TOTAL_DRAFT_ROUNDS = 6
 
-export const DRAFT_ROUND_NAMES = {
-  1: 'Starters',
-  2: 'Support',
-  3: 'Fan Favourite A',
-  4: 'Pseudo Legendaries',
-  5: 'Legendaries',
-  6: 'Fan Favourite B',
-}
+export { DRAFT_ROUND_NAMES }
 
 function shuffle(items) {
   const shuffled = [...items]
@@ -332,7 +326,6 @@ export async function startDraft(roomCode, currentUser) {
       picks: [],
       currentRound: 1,
       completed: false,
-      shownSupportIds: [],
       updatedAt: timestamp,
     })
     transaction.set(doc(roomReference, 'draftTeams', room.guestUid), {
@@ -340,7 +333,6 @@ export async function startDraft(roomCode, currentUser) {
       picks: [],
       currentRound: 1,
       completed: false,
-      shownSupportIds: [],
       updatedAt: timestamp,
     })
     transaction.set(

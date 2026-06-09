@@ -3,6 +3,10 @@ import { doc, onSnapshot } from 'firebase/firestore'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { db } from '../firebase.js'
 import {
+  getDraftPickLabel,
+  getOrderedDraftPicks,
+} from '../data/draftTeamStructure.js'
+import {
   advancePlayerDraft,
   completePlayerDraft,
   DRAFT_ROUND_NAMES,
@@ -213,6 +217,7 @@ function DraftPage({ currentUser }) {
     : Boolean(room?.battleReady?.guestReady)
   const bothPlayersBattleReady = room?.status === 'battle_setup'
   const optionsMatchCurrentRound = optionsRound === currentRound
+  const orderedDraftPicks = getOrderedDraftPicks(draftTeam?.picks)
 
   return (
     <main className="page-shell draft-page-shell">
@@ -411,7 +416,7 @@ function DraftPage({ currentUser }) {
               <div>
                 <h3>Your Team</h3>
                 <div className="battle-team-grid">
-                  {draftTeam.picks.map((pokemon) => (
+                  {orderedDraftPicks.map((pokemon) => (
                     <article className="battle-team-card" key={pokemon.id}>
                       <img
                         src={pokemon.sprite}
@@ -420,6 +425,7 @@ function DraftPage({ currentUser }) {
                         height="120"
                       />
                       <strong>{pokemon.name}</strong>
+                      <small>{getDraftPickLabel(pokemon)}</small>
                       <div className="battle-type-list">
                         {pokemon.types.map((type) => (
                           <span key={type}>{type}</span>

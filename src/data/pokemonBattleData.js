@@ -1,4 +1,4 @@
-import { POKEMON_CATEGORIES, TRAIT_PRIORITIES } from './battleConstants'
+import { POKEMON_CATEGORIES, TRAIT_PRIORITIES } from './battleConstants.js'
 
 const priorityFor = (traitLabel) =>
   Number(
