@@ -1149,6 +1149,25 @@ h1 {
   border-radius: 12px;
   font: inherit;
   text-align: center;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.battle-selection-card:not(:disabled):hover {
+  border-color: rgba(251, 191, 36, 0.72);
+  transform: translateY(-2px);
+}
+
+.battle-selection-card.is-selected {
+  border-color: #fbbf24;
+  box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.2);
+}
+
+.battle-selection-card.is-used {
+  filter: grayscale(0.75);
 }
 
 .battle-selection-card:disabled {
@@ -1176,6 +1195,22 @@ h1 {
   font-size: 0.66rem;
   font-weight: 800;
   text-transform: uppercase;
+}
+
+.battle-lock-area {
+  display: grid;
+  margin-top: 18px;
+  justify-items: start;
+  gap: 8px;
+}
+
+.battle-lock-area p {
+  margin: 0;
+  color: #cbd5e1;
+}
+
+.battle-lock-area .battle-lock-error {
+  color: #fca5a5;
 }
 
 .draft-back-link {

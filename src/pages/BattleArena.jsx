@@ -7,6 +7,7 @@ import {
   getOrderedDraftPicks,
 } from '../data/draftTeamStructure.js'
 import { db } from '../firebase.js'
+import { lockBattlePokemon } from '../services/roomService.js'
 
 const ROUND_WINS_NEEDED = 4
 const REVEALED_BATTLE_PHASES = new Set([
@@ -45,6 +46,9 @@ function BattleArena({ currentUser }) {
   const [battleLoading, setBattleLoading] = useState(true)
   const [teamLoading, setTeamLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
+  const [selectedPokemonId, setSelectedPokemonId] = useState(null)
+  const [isLockingFighter, setIsLockingFighter] = useState(false)
+  const [lockErrorMessage, setLockErrorMessage] = useState('')
 
   useEffect(() => {
     return onSnapshot(
@@ -109,16 +113,89 @@ function BattleArena({ currentUser }) {
   const isRoomPlayer = Boolean(room?.players?.[currentUser?.uid])
   const yourTeamCount = draftTeam?.picks?.length ?? 0
   const isHost = room?.hostUid === currentUser?.uid
-  const yourScore = isHost
-    ? battleState?.hostScore ?? 0
-    : battleState?.guestScore ?? 0
-  const opponentScore = isHost
-    ? battleState?.guestScore ?? 0
-    : battleState?.hostScore ?? 0
+  const opponentUid = isHost ? room?.guestUid : room?.hostUid
+  const currentRound = battleState?.currentRound ?? battleState?.round ?? 1
+  const yourScore =
+    battleState?.playerScores?.[currentUser?.uid] ??
+    (isHost
+      ? battleState?.hostScore ?? 0
+      : battleState?.guestScore ?? 0)
+  const opponentScore =
+    battleState?.playerScores?.[opponentUid] ??
+    (isHost
+      ? battleState?.guestScore ?? 0
+      : battleState?.hostScore ?? 0)
   const orderedDraftPicks = useMemo(
     () => getOrderedDraftPicks(draftTeam?.picks),
     [draftTeam?.picks],
   )
+  const currentPlayerSelection =
+    battleState?.selections?.[currentUser?.uid] ?? null
+  const opponentHasLocked = Boolean(
+    opponentUid && battleState?.selections?.[opponentUid],
+  )
+  const currentPlayerHasLocked = Boolean(currentPlayerSelection)
+  const bothPlayersLocked = currentPlayerHasLocked && opponentHasLocked
+  const activeSelectedPokemonId =
+    currentPlayerSelection?.pokemonId ?? selectedPokemonId
+  const legacyUsedPokemon = isHost
+    ? battleState?.hostUsedPokemon
+    : battleState?.guestUsedPokemon
+  const usedPokemonIds = useMemo(() => {
+    const usedPokemon =
+      battleState?.usedPokemon?.[currentUser?.uid] ??
+      legacyUsedPokemon ??
+      []
+
+    return new Set(
+      usedPokemon.map((entry) =>
+        String(typeof entry === 'object' ? entry?.id : entry),
+      ),
+    )
+  }, [
+    battleState?.usedPokemon,
+    currentUser?.uid,
+    legacyUsedPokemon,
+  ])
+  const selectedPokemon = orderedDraftPicks.find(
+    (pokemon) => String(pokemon.id) === String(activeSelectedPokemonId),
+  )
+  const selectedPokemonIsUsed = selectedPokemon
+    ? usedPokemonIds.has(String(selectedPokemon.id))
+    : false
+  const selectionIsOpen =
+    (battleState?.phase ?? 'choose_pokemon') === 'choose_pokemon'
+
+  async function handleLockFighter() {
+    if (
+      !selectedPokemon ||
+      selectedPokemonIsUsed ||
+      currentPlayerHasLocked ||
+      isLockingFighter
+    ) {
+      return
+    }
+
+    setIsLockingFighter(true)
+    setLockErrorMessage('')
+
+    try {
+      await lockBattlePokemon(
+        displayRoomCode,
+        currentUser.uid,
+        selectedPokemon,
+      )
+    } catch (error) {
+      setLockErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'Could not lock this fighter.',
+      )
+    } finally {
+      setIsLockingFighter(false)
+    }
+  }
+
   const opponentPokemon =
     battleState &&
     REVEALED_BATTLE_PHASES.has(battleState.phase)
@@ -164,7 +241,7 @@ function BattleArena({ currentUser }) {
             <p className="eyebrow">Trainer Showdown</p>
             <h1>&#9876; Battle Arena</h1>
             <p className="draft-coming-soon">
-              Round {battleState?.round ?? 1} Begins &mdash; Choose Your
+              Round {currentRound} Begins &mdash; Choose Your
               Pok&eacute;mon
             </p>
           </div>
@@ -216,7 +293,7 @@ function BattleArena({ currentUser }) {
                 <div>
                   <span>Round</span>
                   <strong>
-                    {battleState.round} / {battleState.maxNormalRounds}
+                    {currentRound} / {battleState.maxNormalRounds}
                   </strong>
                 </div>
                 <div>
@@ -249,29 +326,85 @@ function BattleArena({ currentUser }) {
                 </div>
 
                 <div className="battle-selection-grid">
-                  {orderedDraftPicks.map((pokemon) => (
-                    <button
-                      className="battle-selection-card"
-                      type="button"
-                      key={pokemon.id}
-                      disabled
-                    >
-                      <img
-                        src={pokemon.sprite}
-                        alt={pokemon.name}
-                        width="120"
-                        height="120"
-                      />
-                      <strong>{pokemon.name}</strong>
-                      <small>{getDraftPickLabel(pokemon)}</small>
-                      <div className="battle-type-list">
-                        {pokemon.types.map((type) => (
-                          <span key={type}>{type}</span>
-                        ))}
-                      </div>
-                      <small>Available</small>
-                    </button>
-                  ))}
+                  {orderedDraftPicks.map((pokemon) => {
+                    const isUsed = usedPokemonIds.has(String(pokemon.id))
+                    const isSelected =
+                      String(pokemon.id) ===
+                      String(activeSelectedPokemonId)
+
+                    return (
+                      <button
+                        className={`battle-selection-card ${
+                          isSelected ? 'is-selected' : ''
+                        } ${isUsed ? 'is-used' : ''}`}
+                        type="button"
+                        key={pokemon.id}
+                        disabled={
+                          isUsed ||
+                          currentPlayerHasLocked ||
+                          isLockingFighter ||
+                          !selectionIsOpen
+                        }
+                        aria-pressed={isSelected}
+                        onClick={() => {
+                          setSelectedPokemonId(pokemon.id)
+                          setLockErrorMessage('')
+                        }}
+                      >
+                        <img
+                          src={pokemon.sprite}
+                          alt={pokemon.name}
+                          width="120"
+                          height="120"
+                        />
+                        <strong>{pokemon.name}</strong>
+                        <small>{getDraftPickLabel(pokemon)}</small>
+                        <div className="battle-type-list">
+                          {pokemon.types.map((type) => (
+                            <span key={type}>{type}</span>
+                          ))}
+                        </div>
+                        <small>
+                          {isUsed
+                            ? 'Already Used'
+                            : isSelected
+                              ? 'Selected'
+                              : 'Available'}
+                        </small>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <div className="battle-lock-area">
+                  <button
+                    className="game-button game-button-primary"
+                    type="button"
+                    disabled={
+                      !selectedPokemon ||
+                      selectedPokemonIsUsed ||
+                      currentPlayerHasLocked ||
+                      isLockingFighter ||
+                      !selectionIsOpen
+                    }
+                    onClick={handleLockFighter}
+                  >
+                    {isLockingFighter ? 'Locking...' : 'Lock Fighter'}
+                  </button>
+
+                  {bothPlayersLocked ? (
+                    <p>Both trainers locked. Battle reveal ready.</p>
+                  ) : currentPlayerHasLocked ? (
+                    <p>Fighter locked. Waiting for opponent...</p>
+                  ) : (
+                    <p>Select one unused Pok&eacute;mon for this round.</p>
+                  )}
+
+                  {lockErrorMessage && (
+                    <p className="battle-lock-error" role="alert">
+                      {lockErrorMessage}
+                    </p>
+                  )}
                 </div>
               </div>
 

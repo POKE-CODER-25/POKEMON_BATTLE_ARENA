@@ -617,13 +617,25 @@ export async function markPlayerBattleReady(roomCode, currentUser) {
     }
 
     if (room.status === 'battle_setup') {
-      if (!battleStateSnapshot.exists()) {
-        const timestamp = serverTimestamp()
+      const timestamp = serverTimestamp()
 
+      if (!battleStateSnapshot.exists()) {
         transaction.set(
           battleStateReference,
-          createInitialBattleState(timestamp),
+          createInitialBattleState(timestamp, room.hostUid, room.guestUid),
         )
+      } else {
+        const backfill = getBattleStateBackfill(
+          battleStateSnapshot.data(),
+          room,
+        )
+
+        if (Object.keys(backfill).length > 0) {
+          transaction.update(battleStateReference, {
+            ...backfill,
+            updatedAt: timestamp,
+          })
+        }
       }
 
       return 'battle_setup'
@@ -651,16 +663,169 @@ export async function markPlayerBattleReady(roomCode, currentUser) {
     if (bothReady && !battleStateSnapshot.exists()) {
       transaction.set(
         battleStateReference,
-        createInitialBattleState(timestamp),
+        createInitialBattleState(timestamp, room.hostUid, room.guestUid),
       )
+    } else if (bothReady) {
+      const backfill = getBattleStateBackfill(
+        battleStateSnapshot.data(),
+        room,
+      )
+
+      if (Object.keys(backfill).length > 0) {
+        transaction.update(battleStateReference, {
+          ...backfill,
+          updatedAt: timestamp,
+        })
+      }
     }
 
     return bothReady ? 'battle_setup' : 'battle_ready'
   })
 }
 
-function createInitialBattleState(timestamp) {
+function getBattleStateBackfill(battleState, room) {
+  const backfill = {}
+
+  if (battleState.currentRound === undefined) {
+    backfill.currentRound = battleState.round ?? 1
+  }
+
+  if (!battleState.selections) {
+    backfill.selections = {}
+  }
+
+  if (!battleState.usedPokemon) {
+    backfill.usedPokemon = {
+      [room.hostUid]: battleState.hostUsedPokemon ?? [],
+      [room.guestUid]: battleState.guestUsedPokemon ?? [],
+    }
+  }
+
+  if (!battleState.playerScores) {
+    backfill.playerScores = {
+      [room.hostUid]: battleState.hostScore ?? 0,
+      [room.guestUid]: battleState.guestScore ?? 0,
+    }
+  }
+
+  if (!battleState.roundResults) {
+    backfill.roundResults = []
+  }
+
+  if (!battleState.phase) {
+    backfill.phase = 'choose_pokemon'
+  }
+
+  return backfill
+}
+
+export async function lockBattlePokemon(roomCode, playerUid, pokemon) {
+  if (!playerUid) {
+    throw new Error('You must be logged in to lock a fighter.')
+  }
+
+  if (!pokemon?.id || !pokemon?.name) {
+    throw new Error('Choose a valid Pokemon before locking.')
+  }
+
+  const normalizedRoomCode = roomCode.trim().toUpperCase()
+  const roomReference = doc(db, 'rooms', normalizedRoomCode)
+  const battleStateReference = doc(roomReference, 'battle', 'state')
+  const draftTeamReference = doc(
+    roomReference,
+    'draftTeams',
+    playerUid,
+  )
+
+  return runTransaction(db, async (transaction) => {
+    const [roomSnapshot, battleStateSnapshot, draftTeamSnapshot] =
+      await Promise.all([
+        transaction.get(roomReference),
+        transaction.get(battleStateReference),
+        transaction.get(draftTeamReference),
+      ])
+
+    if (!roomSnapshot.exists()) {
+      throw new Error('Room not found')
+    }
+
+    if (!battleStateSnapshot.exists()) {
+      throw new Error('Battle state is not initialized.')
+    }
+
+    if (!draftTeamSnapshot.exists()) {
+      throw new Error('Draft team not found.')
+    }
+
+    const room = roomSnapshot.data()
+    const battleState = battleStateSnapshot.data()
+    const draftTeam = draftTeamSnapshot.data()
+
+    if (!room.players?.[playerUid]) {
+      throw new Error('You are not a player in this room.')
+    }
+
+    if (room.status !== 'battle_setup') {
+      throw new Error('The battle arena is not ready for selection.')
+    }
+
+    if ((battleState.phase ?? 'choose_pokemon') !== 'choose_pokemon') {
+      throw new Error('Pokemon selection is closed for this round.')
+    }
+
+    if (battleState.selections?.[playerUid]) {
+      throw new Error('Your fighter is already locked for this round.')
+    }
+
+    const selectedPokemon = (draftTeam.picks ?? []).find(
+      (teamPokemon) => String(teamPokemon.id) === String(pokemon.id),
+    )
+
+    if (!selectedPokemon) {
+      throw new Error('That Pokemon is not part of your drafted team.')
+    }
+
+    const isHost = room.hostUid === playerUid
+    const legacyUsedPokemon = isHost
+      ? battleState.hostUsedPokemon
+      : battleState.guestUsedPokemon
+    const usedPokemon =
+      battleState.usedPokemon?.[playerUid] ?? legacyUsedPokemon ?? []
+    const isAlreadyUsed = usedPokemon.some((usedPokemonEntry) => {
+      const usedPokemonId =
+        typeof usedPokemonEntry === 'object'
+          ? usedPokemonEntry?.id
+          : usedPokemonEntry
+
+      return String(usedPokemonId) === String(selectedPokemon.id)
+    })
+
+    if (isAlreadyUsed) {
+      throw new Error('That Pokemon has already battled.')
+    }
+
+    const timestamp = serverTimestamp()
+    const backfill = getBattleStateBackfill(battleState, room)
+
+    delete backfill.selections
+
+    transaction.update(battleStateReference, {
+      ...backfill,
+      [`selections.${playerUid}`]: {
+        pokemonId: selectedPokemon.id,
+        pokemonName: selectedPokemon.name,
+        lockedAt: timestamp,
+      },
+      updatedAt: timestamp,
+    })
+
+    return selectedPokemon.id
+  })
+}
+
+function createInitialBattleState(timestamp, hostUid, guestUid) {
   return {
+    currentRound: 1,
     round: 1,
     maxNormalRounds: 6,
     tiebreakRound: 7,
@@ -671,7 +836,16 @@ function createInitialBattleState(timestamp) {
     hostSubmittedPokemon: null,
     guestSubmittedPokemon: null,
     phase: 'choose_pokemon',
+    selections: {},
+    usedPokemon: {
+      [hostUid]: [],
+      [guestUid]: [],
+    },
     roundResults: [],
+    playerScores: {
+      [hostUid]: 0,
+      [guestUid]: 0,
+    },
     winner: null,
     isTieBreaker: false,
     createdAt: timestamp,
