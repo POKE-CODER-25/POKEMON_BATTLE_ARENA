@@ -1,8 +1,10 @@
 import { calculateRawTypeBonus } from './typeChart.js'
+import { resolvePassiveTraitBonus } from './passiveTraitResolver.js'
 
-// This file currently handles base score and raw type bonus.
-// It does not yet handle traits, form changes, final outcome effects,
-// winner calculation, Master Round, or Firestore.
+// This file currently handles base score, raw type bonus, and the passive
+// trait layer. Complex traits will be added later.
+// It does not yet handle form changes, final outcome effects, winner
+// calculation, full Master Round resolution, or Firestore.
 
 export const createInitialBattleState = ({
   pokemon,
@@ -47,8 +49,9 @@ export const calculateBasicBattleScore = ({
   trainerScore = 0,
   opponentScore = 0,
   battlefieldEffects = [],
-}) =>
-  createInitialBattleState({
+  isMasterRound = false,
+}) => {
+  const battleState = createInitialBattleState({
     pokemon,
     opponent,
     roundNumber,
@@ -56,6 +59,22 @@ export const calculateBasicBattleScore = ({
     opponentScore,
     battlefieldEffects,
   })
+  const passiveResult = resolvePassiveTraitBonus({
+    pokemon,
+    opponent,
+    roundNumber,
+    trainerScore,
+    opponentScore,
+    isMasterRound,
+  })
+
+  return {
+    ...battleState,
+    passiveBonus: passiveResult.bonus,
+    finalScore: battleState.finalScore + passiveResult.bonus,
+    logs: [...battleState.logs, ...passiveResult.logs],
+  }
+}
 
 export const calculateBasicBattlePair = ({
   pokemonA,
@@ -65,6 +84,7 @@ export const calculateBasicBattlePair = ({
   playerBScore = 0,
   battlefieldEffectsA = [],
   battlefieldEffectsB = [],
+  isMasterRound = false,
 }) => ({
   playerA: calculateBasicBattleScore({
     pokemon: pokemonA,
@@ -73,6 +93,7 @@ export const calculateBasicBattlePair = ({
     trainerScore: playerAScore,
     opponentScore: playerBScore,
     battlefieldEffects: battlefieldEffectsA,
+    isMasterRound,
   }),
   playerB: calculateBasicBattleScore({
     pokemon: pokemonB,
@@ -81,6 +102,7 @@ export const calculateBasicBattlePair = ({
     trainerScore: playerBScore,
     opponentScore: playerAScore,
     battlefieldEffects: battlefieldEffectsB,
+    isMasterRound,
   }),
 })
 
