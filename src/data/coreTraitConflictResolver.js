@@ -65,8 +65,7 @@ export const isProtectedFromTraitManipulation = (state) => {
 export const canModifyTraitBonus = (state) =>
   state.traitBonus > 0 &&
   !isPokemon(state, 'Lucario') &&
-  !isPokemon(state, 'Zamazenta') &&
-  !isProtectedFromTraitManipulation(state)
+  !isPokemon(state, 'Zamazenta')
 
 export const adjustTraitBonus = (state, amount) => ({
   ...state,

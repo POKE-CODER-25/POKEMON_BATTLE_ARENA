@@ -34,9 +34,29 @@ export const resolvePassiveTraitBonus = ({
   void opponentScore
 
   let bonus = 0
+  let manipulatableTraitBonus = 0
+  let protectedTraitBonus = 0
   const logs = []
   const appliedTraits = []
+  const traitBonusEntries = []
   const traitNames = new Set(getTraitNames(pokemon))
+
+  const addTraitBonus = (traitName, amount, isProtected = false) => {
+    bonus += amount
+
+    if (isProtected) {
+      protectedTraitBonus += amount
+    } else {
+      manipulatableTraitBonus += amount
+    }
+
+    appliedTraits.push(traitName)
+    traitBonusEntries.push({
+      traitName,
+      amount,
+      protected: isProtected,
+    })
+  }
 
   Object.entries(SIMPLE_TRAIT_BONUSES).forEach(
     ([traitName, traitBonus]) => {
@@ -44,16 +64,14 @@ export const resolvePassiveTraitBonus = ({
         return
       }
 
-      bonus += traitBonus
+      addTraitBonus(traitName, traitBonus)
       logs.push(`${traitName}: +${traitBonus}`)
-      appliedTraits.push(traitName)
     },
   )
 
   if (pokemon.name === 'Lucario') {
-    bonus += 2
+    addTraitBonus('Aura Master', 2, true)
     logs.push('Aura Master: +2 (protected)')
-    appliedTraits.push('Aura Master')
   }
 
   if (pokemon.name === 'Regigigas') {
@@ -61,13 +79,12 @@ export const resolvePassiveTraitBonus = ({
       ? 15
       : (SLOW_START_BONUSES[roundNumber] ?? 0)
 
-    bonus += slowStartBonus
-    appliedTraits.push('Slow Start')
-
     if (isMasterRound) {
+      appliedTraits.push('Slow Start')
+      addTraitBonus('Titan Awakening', slowStartBonus, true)
       logs.push('Titan Awakening: +15 (protected)')
-      appliedTraits.push('Titan Awakening')
     } else {
+      addTraitBonus('Slow Start', slowStartBonus, true)
       logs.push(`Slow Start: ${formatBonus(slowStartBonus)}`)
     }
   }
@@ -75,9 +92,8 @@ export const resolvePassiveTraitBonus = ({
   const opponentHasHigherBaseScore = opponent.score > pokemon.score
 
   if (pokemon.name === 'Infernape' && opponentHasHigherBaseScore) {
-    bonus += 5
+    addTraitBonus('Blaze of Determination', 5)
     logs.push('Blaze of Determination: +5')
-    appliedTraits.push('Blaze of Determination')
   }
 
   const scoreConditionalTraits = {
@@ -90,14 +106,16 @@ export const resolvePassiveTraitBonus = ({
 
   if (conditionalTrait && opponentHasHigherBaseScore) {
     const [traitName, traitBonus] = conditionalTrait
-    bonus += traitBonus
+    addTraitBonus(traitName, traitBonus)
     logs.push(`${traitName}: +${traitBonus}`)
-    appliedTraits.push(traitName)
   }
 
   return {
     bonus,
     logs,
     appliedTraits,
+    manipulatableTraitBonus,
+    protectedTraitBonus,
+    traitBonusEntries,
   }
 }

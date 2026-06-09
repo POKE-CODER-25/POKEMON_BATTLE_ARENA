@@ -1,4 +1,4 @@
-import { POKEMON_CATEGORIES } from './battleConstants'
+import { POKEMON_CATEGORIES } from './battleConstants.js'
 
 export const MASTER_PRIORITY_ORDER = {
   S_LEGEND: 1,

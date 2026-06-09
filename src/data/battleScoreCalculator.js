@@ -38,6 +38,9 @@ export const createInitialBattleState = ({
     passiveBonus: 0,
     typeBonus,
     traitBonus: 0,
+    protectedTraitBonus: 0,
+    appliedTraits: [],
+    traitBonusEntries: [],
     formBonus: 0,
     finalScore: baseScore + typeBonus,
     logs,
@@ -79,6 +82,10 @@ export const calculateBasicBattleScore = ({
     battlefieldBonus: battlefieldResult.battlefieldBonus,
     battlefieldPenalty: battlefieldResult.battlefieldPenalty,
     passiveBonus: passiveResult.bonus,
+    traitBonus: passiveResult.manipulatableTraitBonus,
+    protectedTraitBonus: passiveResult.protectedTraitBonus,
+    appliedTraits: passiveResult.appliedTraits,
+    traitBonusEntries: passiveResult.traitBonusEntries,
     finalScore:
       battleState.finalScore +
       passiveResult.bonus +

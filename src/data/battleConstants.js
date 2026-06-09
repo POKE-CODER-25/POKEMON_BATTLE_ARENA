@@ -50,8 +50,9 @@ export const MASTER_PRIORITY = {
   B_LEGEND: 3,
   PSEUDO: 4,
   STARTER: 5,
-  FAN_FAVOURITE: 6,
-  SUPPORT: 7,
+  FAN_FAVOURITE_A: 6,
+  FAN_FAVOURITE_B: 7,
+  SUPPORT: 8,
 }
 
 export const BATTLE_PHASES = {
