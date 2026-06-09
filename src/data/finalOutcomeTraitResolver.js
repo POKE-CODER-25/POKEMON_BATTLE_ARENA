@@ -132,9 +132,13 @@ export const resolveFinalOutcomeTraits = ({
       }
 
       winnerSide = losingSide
-      continue
+
+      // Time Warp is final.
+      // No additional final outcome traits may activate.
+      break
     }
 
+    
     break
   }
 
