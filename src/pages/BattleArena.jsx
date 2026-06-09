@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { Link, useParams } from 'react-router-dom'
+import { resolveBattleRound } from '../data/battleRoundResolver.js'
 import {
   getDraftPickLabel,
   getOrderedDraftPicks,
@@ -8,6 +9,11 @@ import {
 import { db } from '../firebase.js'
 
 const ROUND_WINS_NEEDED = 4
+const REVEALED_BATTLE_PHASES = new Set([
+  'reveal',
+  'score_breakdown',
+  'round_result',
+])
 
 function RoundScoreRow({ label, score }) {
   return (
@@ -109,7 +115,46 @@ function BattleArena({ currentUser }) {
   const opponentScore = isHost
     ? battleState?.guestScore ?? 0
     : battleState?.hostScore ?? 0
-  const orderedDraftPicks = getOrderedDraftPicks(draftTeam?.picks)
+  const orderedDraftPicks = useMemo(
+    () => getOrderedDraftPicks(draftTeam?.picks),
+    [draftTeam?.picks],
+  )
+  const opponentPokemon =
+    battleState &&
+    REVEALED_BATTLE_PHASES.has(battleState.phase)
+      ? isHost
+        ? battleState.guestSubmittedPokemon
+        : battleState.hostSubmittedPokemon
+      : null
+  const previewPokemonA = orderedDraftPicks[0]
+  const previewPokemonB = opponentPokemon ?? orderedDraftPicks[1]
+  const previewMode = opponentPokemon
+    ? 'Opponent Team Preview'
+    : 'Local Team Preview'
+  const battlePreview = useMemo(() => {
+    if (!import.meta.env.DEV || !previewPokemonA || !previewPokemonB) {
+      return null
+    }
+
+    return resolveBattleRound({
+      pokemonA: previewPokemonA,
+      pokemonB: previewPokemonB,
+      roundNumber: battleState?.round || 1,
+      playerAScore: yourScore,
+      playerBScore: opponentScore,
+      teamA: orderedDraftPicks,
+      teamB: opponentPokemon ? [opponentPokemon] : orderedDraftPicks,
+      isMasterRound: false,
+    })
+  }, [
+    battleState?.round,
+    opponentPokemon,
+    opponentScore,
+    orderedDraftPicks,
+    previewPokemonA,
+    previewPokemonB,
+    yourScore,
+  ])
 
   return (
     <main className="page-shell draft-page-shell battle-arena-page">
@@ -246,6 +291,44 @@ function BattleArena({ currentUser }) {
                 </div>
               </div>
             </section>
+
+            {import.meta.env.DEV && (
+              <section className="draft-state-panel">
+                <p className="eyebrow">Battle Engine Preview DEV ONLY</p>
+
+                {!battlePreview && (
+                  <p>Battle preview waiting for enough local team data.</p>
+                )}
+
+                {battlePreview && (
+                  <>
+                    <p>
+                      <strong>Preview Mode:</strong> {previewMode}
+                    </p>
+                    <p>
+                      <strong>Pokemon A:</strong>{' '}
+                      {battlePreview.playerAState.pokemon.name} -{' '}
+                      {battlePreview.playerAState.finalScore}
+                    </p>
+                    <p>
+                      <strong>Pokemon B:</strong>{' '}
+                      {battlePreview.playerBState.pokemon.name} -{' '}
+                      {battlePreview.playerBState.finalScore}
+                    </p>
+                    <p>
+                      <strong>Winner:</strong>{' '}
+                      {battlePreview.winnerResult.reason}
+                    </p>
+                    <strong>Logs:</strong>
+                    <ul>
+                      {battlePreview.logs.map((log, index) => (
+                        <li key={`${index}-${log}`}>{log}</li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </section>
+            )}
           </>
         )}
 
