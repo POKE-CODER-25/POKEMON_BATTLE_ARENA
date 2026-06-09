@@ -21,6 +21,18 @@ const REVEALED_BATTLE_PHASES = new Set([
   'score_breakdown',
   'round_result',
 ])
+const FINALIZED_ROUND_PHASES = new Set([
+  'round_result',
+  'master_round_pending',
+  'match_over',
+])
+
+const BATTLE_PHASE_LABELS = {
+  choose_pokemon: 'Choose Pokemon',
+  round_result: 'Round Result',
+  master_round_pending: 'Master Round Pending',
+  match_over: 'Match Over',
+}
 
 function findSelectedPokemon(selection, team = []) {
   if (!selection) {
@@ -154,16 +166,16 @@ function BattleArena({ currentUser }) {
   const isHost = room?.hostUid === currentUser?.uid
   const opponentUid = isHost ? room?.guestUid : room?.hostUid
   const currentRound = battleState?.currentRound ?? battleState?.round ?? 1
-  const yourScore =
-    battleState?.playerScores?.[currentUser?.uid] ??
-    (isHost
-      ? battleState?.hostScore ?? 0
-      : battleState?.guestScore ?? 0)
-  const opponentScore =
-    battleState?.playerScores?.[opponentUid] ??
-    (isHost
-      ? battleState?.guestScore ?? 0
-      : battleState?.hostScore ?? 0)
+  const hostScore =
+    battleState?.playerScores?.[room?.hostUid] ??
+    battleState?.hostScore ??
+    0
+  const guestScore =
+    battleState?.playerScores?.[room?.guestUid] ??
+    battleState?.guestScore ??
+    0
+  const yourScore = isHost ? hostScore : guestScore
+  const opponentScore = isHost ? guestScore : hostScore
   const orderedDraftPicks = useMemo(
     () => getOrderedDraftPicks(draftTeam?.picks),
     [draftTeam?.picks],
@@ -210,6 +222,9 @@ function BattleArena({ currentUser }) {
     : false
   const selectionIsOpen =
     (battleState?.phase ?? 'choose_pokemon') === 'choose_pokemon'
+  const battlePhase = battleState?.phase ?? 'choose_pokemon'
+  const battlePhaseLabel =
+    BATTLE_PHASE_LABELS[battlePhase] ?? 'Choose Pokemon'
   const hostBattlefieldEffects =
     battleState?.battlefieldEffects?.[room?.hostUid] ??
     EMPTY_BATTLEFIELD_EFFECTS
@@ -237,14 +252,8 @@ function BattleArena({ currentUser }) {
       pokemonA: hostPokemon,
       pokemonB: guestPokemon,
       roundNumber: currentRound,
-      playerAScore:
-        battleState?.playerScores?.[room.hostUid] ??
-        battleState?.hostScore ??
-        0,
-      playerBScore:
-        battleState?.playerScores?.[room.guestUid] ??
-        battleState?.guestScore ??
-        0,
+      playerAScore: hostScore,
+      playerBScore: guestScore,
       battlefieldEffectsA: hostBattlefieldEffects,
       battlefieldEffectsB: guestBattlefieldEffects,
       teamA: [],
@@ -255,9 +264,6 @@ function BattleArena({ currentUser }) {
       ),
     })
   }, [
-    battleState?.guestScore,
-    battleState?.hostScore,
-    battleState?.playerScores,
     bothPlayersLocked,
     currentRound,
     displayRoomCode,
@@ -267,8 +273,8 @@ function BattleArena({ currentUser }) {
     hostBattlefieldEffects,
     hostPokemon,
     hostSelection,
-    room?.guestUid,
-    room?.hostUid,
+    hostScore,
+    guestScore,
   ])
   const savedRoundResult = battleState?.roundResults?.find(
     (result) => result.roundNumber === currentRound,
@@ -301,6 +307,16 @@ function BattleArena({ currentUser }) {
           ) === String(savedPlayerBPokemonId),
       ),
   )
+  const expectedSavedPhase =
+    hostScore >= 4 || guestScore >= 4
+      ? 'match_over'
+      : hostScore === 3 && guestScore === 3
+        ? 'master_round_pending'
+        : 'round_result'
+  const savedRoundStateFinalized =
+    savedRoundUsageComplete &&
+    FINALIZED_ROUND_PHASES.has(battlePhase) &&
+    battlePhase === expectedSavedPhase
   const previewPlayerAState = canonicalBattleResult?.playerAState
   const previewPlayerBState = canonicalBattleResult?.playerBState
   const currentUserIsPlayerA = room?.hostUid === currentUser?.uid
@@ -346,7 +362,7 @@ function BattleArena({ currentUser }) {
     if (
       !bothPlayersLocked ||
       !canonicalBattleResult ||
-      savedRoundUsageComplete ||
+      savedRoundStateFinalized ||
       !room?.hostUid ||
       !room?.guestUid
     ) {
@@ -381,7 +397,7 @@ function BattleArena({ currentUser }) {
     displayRoomCode,
     room?.guestUid,
     room?.hostUid,
-    savedRoundUsageComplete,
+    savedRoundStateFinalized,
   ])
 
   async function handleLockFighter() {
@@ -419,6 +435,7 @@ function BattleArena({ currentUser }) {
       !savedRoundResult ||
       currentRound >= 6 ||
       currentPlayerContinued ||
+      battlePhase !== 'round_result' ||
       isContinuingRound
     ) {
       return
@@ -552,7 +569,7 @@ function BattleArena({ currentUser }) {
                 </div>
                 <div>
                   <span>Battle Phase</span>
-                  <strong>Choose Pok&eacute;mon</strong>
+                  <strong>{battlePhaseLabel}</strong>
                 </div>
               </div>
 
@@ -562,6 +579,34 @@ function BattleArena({ currentUser }) {
                 <RoundScoreRow label="Opponent" score={opponentScore} />
               </div>
             </section>
+
+            {battlePhase === 'match_over' && (
+              <section className="draft-state-panel match-status-panel">
+                <p className="eyebrow">Match Over</p>
+                <h2>
+                  {battleState.matchWinnerUid === currentUser.uid
+                    ? 'You won the match!'
+                    : 'You lost the match.'}
+                </h2>
+                <p>
+                  <strong>Final Score:</strong> {yourScore} -{' '}
+                  {opponentScore}
+                </p>
+                <p>
+                  <strong>Reason:</strong>{' '}
+                  {battleState.matchOverReason}
+                </p>
+              </section>
+            )}
+
+            {battlePhase === 'master_round_pending' && (
+              <section className="draft-state-panel match-status-panel">
+                <p className="eyebrow">Master Round Pending</p>
+                <h2>
+                  Score tied 3 - 3. Master Round will decide the match.
+                </h2>
+              </section>
+            )}
 
             <section className="battle-arena-summary">
               <div className="battle-arena-your-team">
@@ -719,13 +764,16 @@ function BattleArena({ currentUser }) {
                       ))}
                     </ul>
 
-                    {savedRoundResult && (
+                    {savedRoundResult &&
+                      battlePhase === 'round_result' && (
                       <p>
                         Round result saved. Ready for next round.
                       </p>
-                    )}
+                      )}
 
-                    {savedRoundResult && currentRound < 6 && (
+                    {savedRoundResult &&
+                      battlePhase === 'round_result' &&
+                      currentRound < 6 && (
                       <div className="battle-continue-area">
                         {!currentPlayerContinued && (
                           <button
@@ -744,13 +792,15 @@ function BattleArena({ currentUser }) {
                           <p>Waiting for opponent to continue...</p>
                         )}
                       </div>
-                    )}
+                      )}
 
-                    {savedRoundResult && currentRound === 6 && (
+                    {savedRoundResult &&
+                      battlePhase === 'round_result' &&
+                      currentRound === 6 && (
                       <p>
-                        Normal rounds complete. Master Round coming soon.
+                        Normal rounds complete.
                       </p>
-                    )}
+                      )}
 
                     {roundSaveError && (
                       <p className="battle-lock-error" role="alert">

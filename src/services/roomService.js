@@ -721,6 +721,14 @@ function getBattleStateBackfill(battleState, room) {
     backfill.roundContinue = {}
   }
 
+  if (battleState.matchWinnerUid === undefined) {
+    backfill.matchWinnerUid = null
+  }
+
+  if (battleState.matchOverReason === undefined) {
+    backfill.matchOverReason = null
+  }
+
   if (!battleState.phase) {
     backfill.phase = 'choose_pokemon'
   }
@@ -889,6 +897,22 @@ export async function saveBattleRoundResult({
     }
 
     if (existingResult) {
+      const playerScores = {
+        [playerAUid]:
+          battleState.playerScores?.[playerAUid] ??
+          battleState.hostScore ??
+          0,
+        [playerBUid]:
+          battleState.playerScores?.[playerBUid] ??
+          battleState.guestScore ??
+          0,
+      }
+      const matchState = getPostRoundMatchState({
+        playerAScore: playerScores[playerAUid],
+        playerBScore: playerScores[playerBUid],
+        playerAUid,
+        playerBUid,
+      })
       const playerAUsedPokemon = appendUniquePokemonId(
         currentUsedPokemon[playerAUid] ?? [],
         existingResult.playerAPokemon?.pokemonId ??
@@ -904,14 +928,23 @@ export async function saveBattleRoundResult({
           (currentUsedPokemon[playerAUid]?.length ?? 0) ||
         playerBUsedPokemon.length !==
           (currentUsedPokemon[playerBUid]?.length ?? 0)
+      const matchStateChanged =
+        battleState.phase !== matchState.phase ||
+        battleState.matchWinnerUid !== matchState.matchWinnerUid ||
+        battleState.matchOverReason !== matchState.matchOverReason
 
-      if (usageChanged) {
+      if (usageChanged || matchStateChanged) {
         transaction.update(battleStateReference, {
-          usedPokemon: {
-            ...currentUsedPokemon,
-            [playerAUid]: playerAUsedPokemon,
-            [playerBUid]: playerBUsedPokemon,
-          },
+          ...(usageChanged
+            ? {
+                usedPokemon: {
+                  ...currentUsedPokemon,
+                  [playerAUid]: playerAUsedPokemon,
+                  [playerBUid]: playerBUsedPokemon,
+                },
+              }
+            : {}),
+          ...matchState,
           updatedAt: serverTimestamp(),
         })
       }
@@ -1000,11 +1033,18 @@ export async function saveBattleRoundResult({
         playerBPokemon.id,
       ),
     }
+    const matchState = getPostRoundMatchState({
+      playerAScore: playerScores[playerAUid],
+      playerBScore: playerScores[playerBUid],
+      playerAUid,
+      playerBUid,
+    })
 
     transaction.update(battleStateReference, {
       roundResults: [...roundResults, savedResult],
       playerScores,
       usedPokemon,
+      ...matchState,
       updatedAt: serverTimestamp(),
     })
 
@@ -1067,6 +1107,10 @@ export async function continueBattleRound({
       throw new Error('Normal rounds are already complete.')
     }
 
+    if (battleState.phase !== 'round_result') {
+      throw new Error('Normal round continuation is not available.')
+    }
+
     const roundResultExists = (battleState.roundResults ?? []).some(
       (result) => result.roundNumber === roundNumber,
     )
@@ -1114,6 +1158,43 @@ export async function continueBattleRound({
   })
 }
 
+function getPostRoundMatchState({
+  playerAScore,
+  playerBScore,
+  playerAUid,
+  playerBUid,
+}) {
+  if (playerAScore >= 4) {
+    return {
+      phase: 'match_over',
+      matchWinnerUid: playerAUid,
+      matchOverReason: 'Player A reached 4 points.',
+    }
+  }
+
+  if (playerBScore >= 4) {
+    return {
+      phase: 'match_over',
+      matchWinnerUid: playerBUid,
+      matchOverReason: 'Player B reached 4 points.',
+    }
+  }
+
+  if (playerAScore === 3 && playerBScore === 3) {
+    return {
+      phase: 'master_round_pending',
+      matchWinnerUid: null,
+      matchOverReason: null,
+    }
+  }
+
+  return {
+    phase: 'round_result',
+    matchWinnerUid: null,
+    matchOverReason: null,
+  }
+}
+
 function appendUniquePokemonId(usedPokemon, pokemonId) {
   const alreadyUsed = usedPokemon.some((entry) => {
     const usedPokemonId =
@@ -1145,6 +1226,8 @@ function createInitialBattleState(timestamp, hostUid, guestUid) {
     },
     roundResults: [],
     roundContinue: {},
+    matchWinnerUid: null,
+    matchOverReason: null,
     playerScores: {
       [hostUid]: 0,
       [guestUid]: 0,
