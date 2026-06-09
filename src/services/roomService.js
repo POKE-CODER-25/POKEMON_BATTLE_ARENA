@@ -879,8 +879,39 @@ export async function saveBattleRoundResult({
     const existingResult = roundResults.find(
       (result) => result.roundNumber === roundNumber,
     )
+    const currentUsedPokemon = battleState.usedPokemon ?? {
+      [playerAUid]: battleState.hostUsedPokemon ?? [],
+      [playerBUid]: battleState.guestUsedPokemon ?? [],
+    }
 
     if (existingResult) {
+      const playerAUsedPokemon = appendUniquePokemonId(
+        currentUsedPokemon[playerAUid] ?? [],
+        existingResult.playerAPokemon?.pokemonId ??
+          existingResult.playerAPokemon?.id,
+      )
+      const playerBUsedPokemon = appendUniquePokemonId(
+        currentUsedPokemon[playerBUid] ?? [],
+        existingResult.playerBPokemon?.pokemonId ??
+          existingResult.playerBPokemon?.id,
+      )
+      const usageChanged =
+        playerAUsedPokemon.length !==
+          (currentUsedPokemon[playerAUid]?.length ?? 0) ||
+        playerBUsedPokemon.length !==
+          (currentUsedPokemon[playerBUid]?.length ?? 0)
+
+      if (usageChanged) {
+        transaction.update(battleStateReference, {
+          usedPokemon: {
+            ...currentUsedPokemon,
+            [playerAUid]: playerAUsedPokemon,
+            [playerBUid]: playerBUsedPokemon,
+          },
+          updatedAt: serverTimestamp(),
+        })
+      }
+
       return {
         saved: false,
         result: existingResult,
@@ -954,10 +985,22 @@ export async function saveBattleRoundResult({
       logs: battleResult.logs,
       createdAt: Timestamp.now(),
     }
+    const usedPokemon = {
+      ...currentUsedPokemon,
+      [playerAUid]: appendUniquePokemonId(
+        currentUsedPokemon[playerAUid] ?? [],
+        playerAPokemon.id,
+      ),
+      [playerBUid]: appendUniquePokemonId(
+        currentUsedPokemon[playerBUid] ?? [],
+        playerBPokemon.id,
+      ),
+    }
 
     transaction.update(battleStateReference, {
       roundResults: [...roundResults, savedResult],
       playerScores,
+      usedPokemon,
       updatedAt: serverTimestamp(),
     })
 
@@ -966,6 +1009,17 @@ export async function saveBattleRoundResult({
       result: savedResult,
     }
   })
+}
+
+function appendUniquePokemonId(usedPokemon, pokemonId) {
+  const alreadyUsed = usedPokemon.some((entry) => {
+    const usedPokemonId =
+      typeof entry === 'object' ? entry?.id ?? entry?.pokemonId : entry
+
+    return String(usedPokemonId) === String(pokemonId)
+  })
+
+  return alreadyUsed ? usedPokemon : [...usedPokemon, pokemonId]
 }
 
 function createInitialBattleState(timestamp, hostUid, guestUid) {

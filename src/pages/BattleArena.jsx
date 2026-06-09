@@ -270,6 +270,31 @@ function BattleArena({ currentUser }) {
   const savedRoundResult = battleState?.roundResults?.find(
     (result) => result.roundNumber === currentRound,
   )
+  const savedPlayerAPokemonId =
+    savedRoundResult?.playerAPokemon?.pokemonId ??
+    savedRoundResult?.playerAPokemon?.id
+  const savedPlayerBPokemonId =
+    savedRoundResult?.playerBPokemon?.pokemonId ??
+    savedRoundResult?.playerBPokemon?.id
+  const savedRoundUsageComplete = Boolean(
+    savedRoundResult &&
+      (battleState?.usedPokemon?.[room?.hostUid] ?? []).some(
+        (entry) =>
+          String(
+            typeof entry === 'object'
+              ? entry?.id ?? entry?.pokemonId
+              : entry,
+          ) === String(savedPlayerAPokemonId),
+      ) &&
+      (battleState?.usedPokemon?.[room?.guestUid] ?? []).some(
+        (entry) =>
+          String(
+            typeof entry === 'object'
+              ? entry?.id ?? entry?.pokemonId
+              : entry,
+          ) === String(savedPlayerBPokemonId),
+      ),
+  )
   const previewPlayerAState = canonicalBattleResult?.playerAState
   const previewPlayerBState = canonicalBattleResult?.playerBState
   const currentUserIsPlayerA = room?.hostUid === currentUser?.uid
@@ -315,7 +340,7 @@ function BattleArena({ currentUser }) {
     if (
       !bothPlayersLocked ||
       !canonicalBattleResult ||
-      savedRoundResult ||
+      savedRoundUsageComplete ||
       !room?.hostUid ||
       !room?.guestUid
     ) {
@@ -350,7 +375,7 @@ function BattleArena({ currentUser }) {
     displayRoomCode,
     room?.guestUid,
     room?.hostUid,
-    savedRoundResult,
+    savedRoundUsageComplete,
   ])
 
   async function handleLockFighter() {
@@ -553,7 +578,7 @@ function BattleArena({ currentUser }) {
                         </div>
                         <small>
                           {isUsed
-                            ? 'Already Used'
+                            ? 'Used'
                             : isSelected
                               ? 'Selected'
                               : 'Available'}
