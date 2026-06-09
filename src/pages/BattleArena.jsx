@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { Link, useParams } from 'react-router-dom'
 import { resolveBattleRound } from '../data/battleRoundResolver.js'
+import { allBattlePokemon } from '../data/pokemonBattleData.js'
 import {
   getDraftPickLabel,
   getOrderedDraftPicks,
@@ -10,11 +11,24 @@ import { db } from '../firebase.js'
 import { lockBattlePokemon } from '../services/roomService.js'
 
 const ROUND_WINS_NEEDED = 4
+const EMPTY_BATTLEFIELD_EFFECTS = []
 const REVEALED_BATTLE_PHASES = new Set([
   'reveal',
   'score_breakdown',
   'round_result',
 ])
+
+function findSelectedPokemon(selection, team = []) {
+  if (!selection) {
+    return null
+  }
+
+  const matchesSelection = (pokemon) =>
+    String(pokemon.id) === String(selection.pokemonId) ||
+    pokemon.name === selection.pokemonName
+
+  return team.find(matchesSelection) ?? allBattlePokemon.find(matchesSelection)
+}
 
 function RoundScoreRow({ label, score }) {
   return (
@@ -136,6 +150,9 @@ function BattleArena({ currentUser }) {
   )
   const currentPlayerHasLocked = Boolean(currentPlayerSelection)
   const bothPlayersLocked = currentPlayerHasLocked && opponentHasLocked
+  const opponentSelection = bothPlayersLocked
+    ? battleState.selections[opponentUid]
+    : null
   const activeSelectedPokemonId =
     currentPlayerSelection?.pokemonId ?? selectedPokemonId
   const legacyUsedPokemon = isHost
@@ -165,6 +182,50 @@ function BattleArena({ currentUser }) {
     : false
   const selectionIsOpen =
     (battleState?.phase ?? 'choose_pokemon') === 'choose_pokemon'
+  const currentPlayerBattlefieldEffects =
+    battleState?.battlefieldEffects?.[currentUser?.uid] ??
+    EMPTY_BATTLEFIELD_EFFECTS
+  const opponentBattlefieldEffects =
+    battleState?.battlefieldEffects?.[opponentUid] ??
+    EMPTY_BATTLEFIELD_EFFECTS
+  const lockedPlayerPokemon = bothPlayersLocked
+    ? findSelectedPokemon(currentPlayerSelection, orderedDraftPicks)
+    : null
+  const lockedOpponentPokemon = bothPlayersLocked
+    ? findSelectedPokemon(opponentSelection)
+    : null
+  const lockedBattlePreview = useMemo(() => {
+    if (
+      !bothPlayersLocked ||
+      !lockedPlayerPokemon ||
+      !lockedOpponentPokemon
+    ) {
+      return null
+    }
+
+    return resolveBattleRound({
+      pokemonA: lockedPlayerPokemon,
+      pokemonB: lockedOpponentPokemon,
+      roundNumber: currentRound,
+      playerAScore: yourScore,
+      playerBScore: opponentScore,
+      battlefieldEffectsA: currentPlayerBattlefieldEffects,
+      battlefieldEffectsB: opponentBattlefieldEffects,
+      teamA: orderedDraftPicks,
+      teamB: [],
+      isMasterRound: false,
+    })
+  }, [
+    bothPlayersLocked,
+    currentPlayerBattlefieldEffects,
+    currentRound,
+    lockedOpponentPokemon,
+    lockedPlayerPokemon,
+    opponentBattlefieldEffects,
+    opponentScore,
+    orderedDraftPicks,
+    yourScore,
+  ])
 
   async function handleLockFighter() {
     if (
@@ -424,6 +485,57 @@ function BattleArena({ currentUser }) {
                 </div>
               </div>
             </section>
+
+            {bothPlayersLocked && (
+              <section className="draft-state-panel battle-reveal-preview">
+                <p className="eyebrow">Battle Reveal Preview</p>
+
+                {!lockedBattlePreview && (
+                  <p>
+                    Battle reveal waiting for selected opponent fighter
+                    data.
+                  </p>
+                )}
+
+                {lockedBattlePreview && (
+                  <>
+                    <div className="battle-reveal-fighters">
+                      <div>
+                        <span>Your Fighter</span>
+                        <strong>
+                          {lockedBattlePreview.playerAState.pokemon.name}
+                        </strong>
+                        <small>
+                          Final Score:{' '}
+                          {lockedBattlePreview.playerAState.finalScore}
+                        </small>
+                      </div>
+                      <div>
+                        <span>Opponent Fighter</span>
+                        <strong>
+                          {lockedBattlePreview.playerBState.pokemon.name}
+                        </strong>
+                        <small>
+                          Final Score:{' '}
+                          {lockedBattlePreview.playerBState.finalScore}
+                        </small>
+                      </div>
+                    </div>
+
+                    <p>
+                      <strong>Winner:</strong>{' '}
+                      {lockedBattlePreview.winnerResult.reason}
+                    </p>
+                    <strong>Battle Logs:</strong>
+                    <ul>
+                      {lockedBattlePreview.logs.map((log, index) => (
+                        <li key={`${index}-${log}`}>{log}</li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </section>
+            )}
 
             {import.meta.env.DEV && (
               <section className="draft-state-panel">
