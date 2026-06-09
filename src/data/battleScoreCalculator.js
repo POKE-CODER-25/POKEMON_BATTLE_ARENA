@@ -1,5 +1,6 @@
 import { calculateRawTypeBonus } from './typeChart.js'
 import { resolvePassiveTraitBonus } from './passiveTraitResolver.js'
+import { applyBattlefieldEffects } from './battlefieldEffectsEngine.js'
 
 // This file currently handles base score, raw type bonus, and the passive
 // trait layer. Complex traits will be added later.
@@ -14,7 +15,7 @@ export const createInitialBattleState = ({
   opponentScore = 0,
   battlefieldEffects = [],
 }) => {
-  // Accepted now for API stability; battlefield scoring is implemented later.
+  // Applied by calculateBasicBattleScore after passive bonuses are resolved.
   void battlefieldEffects
 
   const baseScore = pokemon.score
@@ -33,6 +34,7 @@ export const createInitialBattleState = ({
     opponentScore,
     baseScore,
     battlefieldBonus: 0,
+    battlefieldPenalty: 0,
     passiveBonus: 0,
     typeBonus,
     traitBonus: 0,
@@ -67,12 +69,26 @@ export const calculateBasicBattleScore = ({
     opponentScore,
     isMasterRound,
   })
+  const battlefieldResult = applyBattlefieldEffects({
+    pokemon,
+    effects: battlefieldEffects,
+  })
 
   return {
     ...battleState,
+    battlefieldBonus: battlefieldResult.battlefieldBonus,
+    battlefieldPenalty: battlefieldResult.battlefieldPenalty,
     passiveBonus: passiveResult.bonus,
-    finalScore: battleState.finalScore + passiveResult.bonus,
-    logs: [...battleState.logs, ...passiveResult.logs],
+    finalScore:
+      battleState.finalScore +
+      passiveResult.bonus +
+      battlefieldResult.battlefieldBonus -
+      battlefieldResult.battlefieldPenalty,
+    logs: [
+      ...battleState.logs,
+      ...passiveResult.logs,
+      ...battlefieldResult.logs,
+    ],
   }
 }
 
