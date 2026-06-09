@@ -1,4 +1,9 @@
-import { doc, runTransaction, serverTimestamp } from 'firebase/firestore'
+import {
+  doc,
+  runTransaction,
+  serverTimestamp,
+  Timestamp,
+} from 'firebase/firestore'
 import {
   fanFavouriteAPool,
   fanFavouriteBPool,
@@ -820,6 +825,146 @@ export async function lockBattlePokemon(roomCode, playerUid, pokemon) {
     })
 
     return selectedPokemon.id
+  })
+}
+
+export async function saveBattleRoundResult({
+  roomId,
+  battleResult,
+  currentRound,
+  playerAUid,
+  playerBUid,
+}) {
+  if (!roomId || !battleResult || !playerAUid || !playerBUid) {
+    throw new Error('Battle result data is incomplete.')
+  }
+
+  const normalizedRoomCode = roomId.trim().toUpperCase()
+  const roomReference = doc(db, 'rooms', normalizedRoomCode)
+  const battleStateReference = doc(roomReference, 'battle', 'state')
+
+  return runTransaction(db, async (transaction) => {
+    const [roomSnapshot, battleStateSnapshot] = await Promise.all([
+      transaction.get(roomReference),
+      transaction.get(battleStateReference),
+    ])
+
+    if (!roomSnapshot.exists()) {
+      throw new Error('Room not found')
+    }
+
+    if (!battleStateSnapshot.exists()) {
+      throw new Error('Battle state is not initialized.')
+    }
+
+    const room = roomSnapshot.data()
+    const battleState = battleStateSnapshot.data()
+    const roundNumber = Number(currentRound)
+
+    if (
+      room.hostUid !== playerAUid ||
+      room.guestUid !== playerBUid
+    ) {
+      throw new Error('Battle player order does not match this room.')
+    }
+
+    if (
+      (battleState.currentRound ?? battleState.round ?? 1) !==
+      roundNumber
+    ) {
+      throw new Error('This battle round is no longer current.')
+    }
+
+    const roundResults = battleState.roundResults ?? []
+    const existingResult = roundResults.find(
+      (result) => result.roundNumber === roundNumber,
+    )
+
+    if (existingResult) {
+      return {
+        saved: false,
+        result: existingResult,
+      }
+    }
+
+    const playerASelection = battleState.selections?.[playerAUid]
+    const playerBSelection = battleState.selections?.[playerBUid]
+
+    if (!playerASelection || !playerBSelection) {
+      throw new Error('Both trainers must lock before saving the round.')
+    }
+
+    const playerAPokemon = battleResult.playerAState?.pokemon
+    const playerBPokemon = battleResult.playerBState?.pokemon
+
+    if (
+      String(playerAPokemon?.id) !==
+        String(playerASelection.pokemonId) ||
+      String(playerBPokemon?.id) !==
+        String(playerBSelection.pokemonId)
+    ) {
+      throw new Error('Battle result does not match the locked fighters.')
+    }
+
+    const pointAwardedTo =
+      battleResult.winnerResult?.pointAwardedTo ?? null
+    const playerScores = {
+      [playerAUid]:
+        battleState.playerScores?.[playerAUid] ??
+        battleState.hostScore ??
+        0,
+      [playerBUid]:
+        battleState.playerScores?.[playerBUid] ??
+        battleState.guestScore ??
+        0,
+    }
+
+    if (pointAwardedTo === 'PLAYER_A' || pointAwardedTo === 'BOTH') {
+      playerScores[playerAUid] += 1
+    }
+
+    if (pointAwardedTo === 'PLAYER_B' || pointAwardedTo === 'BOTH') {
+      playerScores[playerBUid] += 1
+    }
+
+    const winnerUid =
+      battleResult.winnerResult?.winnerSide === 'PLAYER_A'
+        ? playerAUid
+        : battleResult.winnerResult?.winnerSide === 'PLAYER_B'
+          ? playerBUid
+          : null
+    const savedResult = {
+      roundNumber,
+      playerAUid,
+      playerBUid,
+      playerAPokemon: {
+        pokemonId: playerAPokemon.id,
+        pokemonName: playerAPokemon.name,
+      },
+      playerBPokemon: {
+        pokemonId: playerBPokemon.id,
+        pokemonName: playerBPokemon.name,
+      },
+      playerAFinalScore: battleResult.playerAState.finalScore,
+      playerBFinalScore: battleResult.playerBState.finalScore,
+      winnerUid,
+      pointAwardedTo,
+      resultType: battleResult.winnerResult.resultType,
+      reason: battleResult.winnerResult.reason,
+      logs: battleResult.logs,
+      createdAt: Timestamp.now(),
+    }
+
+    transaction.update(battleStateReference, {
+      roundResults: [...roundResults, savedResult],
+      playerScores,
+      updatedAt: serverTimestamp(),
+    })
+
+    return {
+      saved: true,
+      result: savedResult,
+    }
   })
 }
 

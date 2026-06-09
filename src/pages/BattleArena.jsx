@@ -8,7 +8,10 @@ import {
   getOrderedDraftPicks,
 } from '../data/draftTeamStructure.js'
 import { db } from '../firebase.js'
-import { lockBattlePokemon } from '../services/roomService.js'
+import {
+  lockBattlePokemon,
+  saveBattleRoundResult,
+} from '../services/roomService.js'
 
 const ROUND_WINS_NEEDED = 4
 const EMPTY_BATTLEFIELD_EFFECTS = []
@@ -28,6 +31,24 @@ function findSelectedPokemon(selection, team = []) {
     pokemon.name === selection.pokemonName
 
   return team.find(matchesSelection) ?? allBattlePokemon.find(matchesSelection)
+}
+
+function createSeededRandom(seedValue) {
+  let seed = 2166136261
+
+  for (let index = 0; index < seedValue.length; index += 1) {
+    seed ^= seedValue.charCodeAt(index)
+    seed = Math.imul(seed, 16777619)
+  }
+
+  return () => {
+    seed += 0x6d2b79f5
+    let value = seed
+    value = Math.imul(value ^ (value >>> 15), value | 1)
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61)
+
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296
+  }
 }
 
 function RoundScoreRow({ label, score }) {
@@ -63,6 +84,7 @@ function BattleArena({ currentUser }) {
   const [selectedPokemonId, setSelectedPokemonId] = useState(null)
   const [isLockingFighter, setIsLockingFighter] = useState(false)
   const [lockErrorMessage, setLockErrorMessage] = useState('')
+  const [roundSaveError, setRoundSaveError] = useState('')
 
   useEffect(() => {
     return onSnapshot(
@@ -150,8 +172,11 @@ function BattleArena({ currentUser }) {
   )
   const currentPlayerHasLocked = Boolean(currentPlayerSelection)
   const bothPlayersLocked = currentPlayerHasLocked && opponentHasLocked
-  const opponentSelection = bothPlayersLocked
-    ? battleState.selections[opponentUid]
+  const hostSelection = bothPlayersLocked
+    ? battleState.selections[room.hostUid]
+    : null
+  const guestSelection = bothPlayersLocked
+    ? battleState.selections[room.guestUid]
     : null
   const activeSelectedPokemonId =
     currentPlayerSelection?.pokemonId ?? selectedPokemonId
@@ -182,49 +207,150 @@ function BattleArena({ currentUser }) {
     : false
   const selectionIsOpen =
     (battleState?.phase ?? 'choose_pokemon') === 'choose_pokemon'
-  const currentPlayerBattlefieldEffects =
-    battleState?.battlefieldEffects?.[currentUser?.uid] ??
+  const hostBattlefieldEffects =
+    battleState?.battlefieldEffects?.[room?.hostUid] ??
     EMPTY_BATTLEFIELD_EFFECTS
-  const opponentBattlefieldEffects =
-    battleState?.battlefieldEffects?.[opponentUid] ??
+  const guestBattlefieldEffects =
+    battleState?.battlefieldEffects?.[room?.guestUid] ??
     EMPTY_BATTLEFIELD_EFFECTS
-  const lockedPlayerPokemon = bothPlayersLocked
-    ? findSelectedPokemon(currentPlayerSelection, orderedDraftPicks)
+  const hostPokemon = bothPlayersLocked
+    ? findSelectedPokemon(
+        hostSelection,
+        isHost ? orderedDraftPicks : [],
+      )
     : null
-  const lockedOpponentPokemon = bothPlayersLocked
-    ? findSelectedPokemon(opponentSelection)
+  const guestPokemon = bothPlayersLocked
+    ? findSelectedPokemon(
+        guestSelection,
+        isHost ? [] : orderedDraftPicks,
+      )
     : null
-  const lockedBattlePreview = useMemo(() => {
-    if (
-      !bothPlayersLocked ||
-      !lockedPlayerPokemon ||
-      !lockedOpponentPokemon
-    ) {
+  const canonicalBattleResult = useMemo(() => {
+    if (!bothPlayersLocked || !hostPokemon || !guestPokemon) {
       return null
     }
 
     return resolveBattleRound({
-      pokemonA: lockedPlayerPokemon,
-      pokemonB: lockedOpponentPokemon,
+      pokemonA: hostPokemon,
+      pokemonB: guestPokemon,
       roundNumber: currentRound,
-      playerAScore: yourScore,
-      playerBScore: opponentScore,
-      battlefieldEffectsA: currentPlayerBattlefieldEffects,
-      battlefieldEffectsB: opponentBattlefieldEffects,
-      teamA: orderedDraftPicks,
+      playerAScore:
+        battleState?.playerScores?.[room.hostUid] ??
+        battleState?.hostScore ??
+        0,
+      playerBScore:
+        battleState?.playerScores?.[room.guestUid] ??
+        battleState?.guestScore ??
+        0,
+      battlefieldEffectsA: hostBattlefieldEffects,
+      battlefieldEffectsB: guestBattlefieldEffects,
+      teamA: [],
       teamB: [],
       isMasterRound: false,
+      randomFn: createSeededRandom(
+        `${displayRoomCode}:${currentRound}:${hostSelection.pokemonId}:${guestSelection.pokemonId}`,
+      ),
     })
   }, [
+    battleState?.guestScore,
+    battleState?.hostScore,
+    battleState?.playerScores,
     bothPlayersLocked,
-    currentPlayerBattlefieldEffects,
     currentRound,
-    lockedOpponentPokemon,
-    lockedPlayerPokemon,
-    opponentBattlefieldEffects,
-    opponentScore,
-    orderedDraftPicks,
-    yourScore,
+    displayRoomCode,
+    guestBattlefieldEffects,
+    guestPokemon,
+    guestSelection,
+    hostBattlefieldEffects,
+    hostPokemon,
+    hostSelection,
+    room?.guestUid,
+    room?.hostUid,
+  ])
+  const savedRoundResult = battleState?.roundResults?.find(
+    (result) => result.roundNumber === currentRound,
+  )
+  const previewPlayerAState = canonicalBattleResult?.playerAState
+  const previewPlayerBState = canonicalBattleResult?.playerBState
+  const currentUserIsPlayerA = room?.hostUid === currentUser?.uid
+  const revealedYourPokemon = savedRoundResult
+    ? currentUserIsPlayerA
+      ? savedRoundResult.playerAPokemon
+      : savedRoundResult.playerBPokemon
+    : currentUserIsPlayerA
+      ? previewPlayerAState?.pokemon
+      : previewPlayerBState?.pokemon
+  const revealedOpponentPokemon = savedRoundResult
+    ? currentUserIsPlayerA
+      ? savedRoundResult.playerBPokemon
+      : savedRoundResult.playerAPokemon
+    : currentUserIsPlayerA
+      ? previewPlayerBState?.pokemon
+      : previewPlayerAState?.pokemon
+  const revealedYourScore = savedRoundResult
+    ? currentUserIsPlayerA
+      ? savedRoundResult.playerAFinalScore
+      : savedRoundResult.playerBFinalScore
+    : currentUserIsPlayerA
+      ? previewPlayerAState?.finalScore
+      : previewPlayerBState?.finalScore
+  const revealedOpponentScore = savedRoundResult
+    ? currentUserIsPlayerA
+      ? savedRoundResult.playerBFinalScore
+      : savedRoundResult.playerAFinalScore
+    : currentUserIsPlayerA
+      ? previewPlayerBState?.finalScore
+      : previewPlayerAState?.finalScore
+  const revealReason =
+    savedRoundResult?.reason ?? canonicalBattleResult?.winnerResult.reason
+  const revealLogs =
+    savedRoundResult?.logs ?? canonicalBattleResult?.logs ?? []
+  const hasRevealData = Boolean(
+    revealedYourPokemon &&
+      revealedOpponentPokemon &&
+      revealReason,
+  )
+
+  useEffect(() => {
+    if (
+      !bothPlayersLocked ||
+      !canonicalBattleResult ||
+      savedRoundResult ||
+      !room?.hostUid ||
+      !room?.guestUid
+    ) {
+      return undefined
+    }
+
+    let isActive = true
+
+    saveBattleRoundResult({
+      roomId: displayRoomCode,
+      battleResult: canonicalBattleResult,
+      currentRound,
+      playerAUid: room.hostUid,
+      playerBUid: room.guestUid,
+    }).catch((error) => {
+      if (isActive) {
+        setRoundSaveError(
+          error instanceof Error
+            ? error.message
+            : 'Could not save the round result.',
+        )
+      }
+    })
+
+    return () => {
+      isActive = false
+    }
+  }, [
+    bothPlayersLocked,
+    canonicalBattleResult,
+    currentRound,
+    displayRoomCode,
+    room?.guestUid,
+    room?.hostUid,
+    savedRoundResult,
   ])
 
   async function handleLockFighter() {
@@ -490,48 +616,59 @@ function BattleArena({ currentUser }) {
               <section className="draft-state-panel battle-reveal-preview">
                 <p className="eyebrow">Battle Reveal Preview</p>
 
-                {!lockedBattlePreview && (
+                {!hasRevealData && (
                   <p>
                     Battle reveal waiting for selected opponent fighter
                     data.
                   </p>
                 )}
 
-                {lockedBattlePreview && (
+                {hasRevealData && (
                   <>
                     <div className="battle-reveal-fighters">
                       <div>
                         <span>Your Fighter</span>
                         <strong>
-                          {lockedBattlePreview.playerAState.pokemon.name}
+                          {revealedYourPokemon.name ??
+                            revealedYourPokemon.pokemonName}
                         </strong>
                         <small>
-                          Final Score:{' '}
-                          {lockedBattlePreview.playerAState.finalScore}
+                          Final Score: {revealedYourScore}
                         </small>
                       </div>
                       <div>
                         <span>Opponent Fighter</span>
                         <strong>
-                          {lockedBattlePreview.playerBState.pokemon.name}
+                          {revealedOpponentPokemon.name ??
+                            revealedOpponentPokemon.pokemonName}
                         </strong>
                         <small>
-                          Final Score:{' '}
-                          {lockedBattlePreview.playerBState.finalScore}
+                          Final Score: {revealedOpponentScore}
                         </small>
                       </div>
                     </div>
 
                     <p>
-                      <strong>Winner:</strong>{' '}
-                      {lockedBattlePreview.winnerResult.reason}
+                      <strong>Winner:</strong> {revealReason}
                     </p>
                     <strong>Battle Logs:</strong>
                     <ul>
-                      {lockedBattlePreview.logs.map((log, index) => (
+                      {revealLogs.map((log, index) => (
                         <li key={`${index}-${log}`}>{log}</li>
                       ))}
                     </ul>
+
+                    {savedRoundResult && (
+                      <p>
+                        Round result saved. Ready for next round.
+                      </p>
+                    )}
+
+                    {roundSaveError && (
+                      <p className="battle-lock-error" role="alert">
+                        {roundSaveError}
+                      </p>
+                    )}
                   </>
                 )}
               </section>
