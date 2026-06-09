@@ -1239,6 +1239,18 @@ h1 {
   font-size: 1.15rem;
 }
 
+.battle-continue-area {
+  display: grid;
+  margin-top: 16px;
+  justify-items: start;
+  gap: 8px;
+}
+
+.battle-continue-area p {
+  margin: 0;
+  color: #cbd5e1;
+}
+
 .draft-back-link {
   margin: 30px 0 0;
 }

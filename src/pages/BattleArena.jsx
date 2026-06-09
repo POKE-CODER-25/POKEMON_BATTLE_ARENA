@@ -9,6 +9,7 @@ import {
 } from '../data/draftTeamStructure.js'
 import { db } from '../firebase.js'
 import {
+  continueBattleRound,
   lockBattlePokemon,
   saveBattleRoundResult,
 } from '../services/roomService.js'
@@ -85,6 +86,8 @@ function BattleArena({ currentUser }) {
   const [isLockingFighter, setIsLockingFighter] = useState(false)
   const [lockErrorMessage, setLockErrorMessage] = useState('')
   const [roundSaveError, setRoundSaveError] = useState('')
+  const [isContinuingRound, setIsContinuingRound] = useState(false)
+  const [continueErrorMessage, setContinueErrorMessage] = useState('')
 
   useEffect(() => {
     return onSnapshot(
@@ -270,6 +273,9 @@ function BattleArena({ currentUser }) {
   const savedRoundResult = battleState?.roundResults?.find(
     (result) => result.roundNumber === currentRound,
   )
+  const currentPlayerContinued = Boolean(
+    battleState?.roundContinue?.[currentUser?.uid],
+  )
   const savedPlayerAPokemonId =
     savedRoundResult?.playerAPokemon?.pokemonId ??
     savedRoundResult?.playerAPokemon?.id
@@ -405,6 +411,36 @@ function BattleArena({ currentUser }) {
       )
     } finally {
       setIsLockingFighter(false)
+    }
+  }
+
+  async function handleContinueRound() {
+    if (
+      !savedRoundResult ||
+      currentRound >= 6 ||
+      currentPlayerContinued ||
+      isContinuingRound
+    ) {
+      return
+    }
+
+    setIsContinuingRound(true)
+    setContinueErrorMessage('')
+
+    try {
+      await continueBattleRound({
+        roomId: displayRoomCode,
+        playerUid: currentUser.uid,
+        expectedRound: currentRound,
+      })
+    } catch (error) {
+      setContinueErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'Could not continue to the next round.',
+      )
+    } finally {
+      setIsContinuingRound(false)
     }
   }
 
@@ -689,9 +725,42 @@ function BattleArena({ currentUser }) {
                       </p>
                     )}
 
+                    {savedRoundResult && currentRound < 6 && (
+                      <div className="battle-continue-area">
+                        {!currentPlayerContinued && (
+                          <button
+                            className="game-button game-button-primary"
+                            type="button"
+                            disabled={isContinuingRound}
+                            onClick={handleContinueRound}
+                          >
+                            {isContinuingRound
+                              ? 'Continuing...'
+                              : 'Continue to Next Round'}
+                          </button>
+                        )}
+
+                        {currentPlayerContinued && (
+                          <p>Waiting for opponent to continue...</p>
+                        )}
+                      </div>
+                    )}
+
+                    {savedRoundResult && currentRound === 6 && (
+                      <p>
+                        Normal rounds complete. Master Round coming soon.
+                      </p>
+                    )}
+
                     {roundSaveError && (
                       <p className="battle-lock-error" role="alert">
                         {roundSaveError}
+                      </p>
+                    )}
+
+                    {continueErrorMessage && (
+                      <p className="battle-lock-error" role="alert">
+                        {continueErrorMessage}
                       </p>
                     )}
                   </>

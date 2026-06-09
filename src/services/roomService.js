@@ -717,6 +717,10 @@ function getBattleStateBackfill(battleState, room) {
     backfill.roundResults = []
   }
 
+  if (!battleState.roundContinue) {
+    backfill.roundContinue = {}
+  }
+
   if (!battleState.phase) {
     backfill.phase = 'choose_pokemon'
   }
@@ -1011,6 +1015,105 @@ export async function saveBattleRoundResult({
   })
 }
 
+export async function continueBattleRound({
+  roomId,
+  playerUid,
+  expectedRound,
+}) {
+  if (!roomId || !playerUid) {
+    throw new Error('Battle continue data is incomplete.')
+  }
+
+  const normalizedRoomCode = roomId.trim().toUpperCase()
+  const roomReference = doc(db, 'rooms', normalizedRoomCode)
+  const battleStateReference = doc(roomReference, 'battle', 'state')
+
+  return runTransaction(db, async (transaction) => {
+    const [roomSnapshot, battleStateSnapshot] = await Promise.all([
+      transaction.get(roomReference),
+      transaction.get(battleStateReference),
+    ])
+
+    if (!roomSnapshot.exists()) {
+      throw new Error('Room not found')
+    }
+
+    if (!battleStateSnapshot.exists()) {
+      throw new Error('Battle state is not initialized.')
+    }
+
+    const room = roomSnapshot.data()
+    const battleState = battleStateSnapshot.data()
+    const roundNumber = Number(expectedRound)
+    const currentRound =
+      battleState.currentRound ?? battleState.round ?? 1
+
+    if (!room.players?.[playerUid]) {
+      throw new Error('You are not a player in this room.')
+    }
+
+    if (currentRound > roundNumber) {
+      return {
+        advanced: true,
+        currentRound,
+      }
+    }
+
+    if (currentRound !== roundNumber) {
+      throw new Error('This battle round is no longer current.')
+    }
+
+    if (roundNumber >= 6) {
+      throw new Error('Normal rounds are already complete.')
+    }
+
+    const roundResultExists = (battleState.roundResults ?? []).some(
+      (result) => result.roundNumber === roundNumber,
+    )
+
+    if (!roundResultExists) {
+      throw new Error('The current round result has not been saved.')
+    }
+
+    const roundContinue = {
+      ...(battleState.roundContinue ?? {}),
+      [playerUid]: true,
+    }
+    const bothPlayersContinued =
+      Boolean(roundContinue[room.hostUid]) &&
+      Boolean(roundContinue[room.guestUid])
+    const timestamp = serverTimestamp()
+
+    if (bothPlayersContinued) {
+      const nextRound = roundNumber + 1
+
+      transaction.update(battleStateReference, {
+        currentRound: nextRound,
+        round: nextRound,
+        selections: {},
+        roundContinue: {},
+        phase: 'choose_pokemon',
+        updatedAt: timestamp,
+      })
+
+      return {
+        advanced: true,
+        currentRound: nextRound,
+      }
+    }
+
+    transaction.update(battleStateReference, {
+      roundContinue,
+      updatedAt: timestamp,
+    })
+
+    return {
+      advanced: false,
+      currentRound: roundNumber,
+    }
+  })
+}
+
 function appendUniquePokemonId(usedPokemon, pokemonId) {
   const alreadyUsed = usedPokemon.some((entry) => {
     const usedPokemonId =
@@ -1041,6 +1144,7 @@ function createInitialBattleState(timestamp, hostUid, guestUid) {
       [guestUid]: [],
     },
     roundResults: [],
+    roundContinue: {},
     playerScores: {
       [hostUid]: 0,
       [guestUid]: 0,
