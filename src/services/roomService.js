@@ -1,6 +1,7 @@
 import { doc, runTransaction, serverTimestamp } from 'firebase/firestore'
 import {
-  fanFavoritesPool,
+  fanFavouriteAPool,
+  fanFavouriteBPool,
   legendaryPools,
   pseudoLegendaryPool,
   starterPools,
@@ -15,11 +16,11 @@ const TOTAL_DRAFT_ROUNDS = 6
 
 export const DRAFT_ROUND_NAMES = {
   1: 'Starters',
-  2: 'Support 1',
-  3: 'Fan Favorites',
+  2: 'Support',
+  3: 'Fan Favourite A',
   4: 'Pseudo Legendaries',
-  5: 'Legendaries & Mythicals',
-  6: 'Support 2',
+  5: 'Legendaries',
+  6: 'Fan Favourite B',
 }
 
 function shuffle(items) {
@@ -78,7 +79,6 @@ function generateLegendaryOptions(role, pickedIds) {
 
 function generatePlayerOptions(round, draftTeam, role) {
   const pickedIds = new Set((draftTeam.picks || []).map((pick) => pick.id))
-  const shownSupportIds = new Set(draftTeam.shownSupportIds || [])
 
   if (round === 5) {
     return generateLegendaryOptions(role, pickedIds)
@@ -86,19 +86,14 @@ function generatePlayerOptions(round, draftTeam, role) {
 
   const roundPools = {
     2: supportPool,
-    3: fanFavoritesPool,
+    3: fanFavouriteAPool,
     4: pseudoLegendaryPool,
-    6: supportPool,
-  }
-  const excludedIds = new Set(pickedIds)
-
-  if (round === 2 || round === 6) {
-    shownSupportIds.forEach((id) => excludedIds.add(id))
+    6: fanFavouriteBPool,
   }
 
   return chooseFromPool(
     getRolePool(roundPools[round], role),
-    excludedIds,
+    pickedIds,
   )
 }
 
@@ -508,13 +503,6 @@ export async function advancePlayerDraft(roomCode, currentUser) {
     const nextRound = draftTeam.currentRound + 1
     const role = room.hostUid === currentUser.uid ? 'host' : 'guest'
     const nextOptions = generatePlayerOptions(nextRound, draftTeam, role)
-    const isSupportRound = nextRound === 2 || nextRound === 6
-    const shownSupportIds = isSupportRound
-      ? [
-          ...(draftTeam.shownSupportIds || []),
-          ...nextOptions.map((pokemon) => pokemon.id),
-        ]
-      : draftTeam.shownSupportIds || []
     const timestamp = serverTimestamp()
 
     transaction.set(
@@ -528,7 +516,6 @@ export async function advancePlayerDraft(roomCode, currentUser) {
     )
     transaction.update(draftTeamReference, {
       currentRound: nextRound,
-      shownSupportIds,
       updatedAt: timestamp,
     })
     transaction.update(roomReference, {

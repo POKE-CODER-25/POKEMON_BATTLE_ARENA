@@ -1,208 +1,84 @@
+import {
+  fanFavouriteAPokemon,
+  fanFavouriteBPokemon,
+  legendaryPokemon,
+  pseudoPokemon,
+  starterPokemon,
+  supportPokemon,
+} from './pokemonBattleData.js'
+import { POKEMON_CATEGORIES } from './battleConstants.js'
+
 const artwork = (id) =>
   `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`
 
-const pokemon = (
-  id,
-  name,
-  category,
+const toDraftPokemon = (pokemon, roundPool) => ({
+  ...pokemon,
   roundPool,
-  types,
-  powerScore = 100,
-) => ({
-  id,
-  name,
-  category,
-  roundPool,
-  types,
-  sprite: artwork(id),
-  powerScore,
+  sprite: artwork(pokemon.id),
+  powerScore: pokemon.score,
 })
 
+const createDraftPool = (pokemon, roundPool) =>
+  pokemon.map((entry) => toDraftPokemon(entry, roundPool))
+
 export const starterPools = {
-  Fire: [
-    pokemon(6, 'Charizard', 'Starter', 'Fire Starter', ['Fire', 'Flying']),
-    pokemon(257, 'Blaziken', 'Starter', 'Fire Starter', ['Fire', 'Fighting']),
-    pokemon(392, 'Infernape', 'Starter', 'Fire Starter', ['Fire', 'Fighting']),
-    pokemon(727, 'Incineroar', 'Starter', 'Fire Starter', ['Fire', 'Dark']),
-    pokemon(500, 'Emboar', 'Starter', 'Fire Starter', ['Fire', 'Fighting']),
-    pokemon(815, 'Cinderace', 'Starter', 'Fire Starter', ['Fire']),
-  ],
-  Water: [
-    pokemon(9, 'Blastoise', 'Starter', 'Water Starter', ['Water']),
-    pokemon(260, 'Swampert', 'Starter', 'Water Starter', ['Water', 'Ground']),
-    pokemon(395, 'Empoleon', 'Starter', 'Water Starter', ['Water', 'Steel']),
-    pokemon(658, 'Greninja', 'Starter', 'Water Starter', ['Water', 'Dark']),
-    pokemon(818, 'Inteleon', 'Starter', 'Water Starter', ['Water']),
-    pokemon(503, 'Samurott', 'Starter', 'Water Starter', ['Water']),
-    pokemon(730, 'Primarina', 'Starter', 'Water Starter', ['Water', 'Fairy']),
-  ],
-  Grass: [
-    pokemon(3, 'Venusaur', 'Starter', 'Grass Starter', ['Grass', 'Poison']),
-    pokemon(254, 'Sceptile', 'Starter', 'Grass Starter', ['Grass']),
-    pokemon(812, 'Rillaboom', 'Starter', 'Grass Starter', ['Grass']),
-    pokemon(724, 'Decidueye', 'Starter', 'Grass Starter', ['Grass', 'Ghost']),
-    pokemon(389, 'Torterra', 'Starter', 'Grass Starter', ['Grass', 'Ground']),
-  ],
+  Fire: createDraftPool(
+    starterPokemon.filter((pokemon) => pokemon.types[0] === 'Fire'),
+    'Fire Starter',
+  ),
+  Water: createDraftPool(
+    starterPokemon.filter((pokemon) => pokemon.types[0] === 'Water'),
+    'Water Starter',
+  ),
+  Grass: createDraftPool(
+    starterPokemon.filter((pokemon) => pokemon.types[0] === 'Grass'),
+    'Grass Starter',
+  ),
 }
 
-export const supportPool = [
-  pokemon(134, 'Vaporeon', 'Eeveelution', 'Support', ['Water']),
-  pokemon(135, 'Jolteon', 'Eeveelution', 'Support', ['Electric']),
-  pokemon(136, 'Flareon', 'Eeveelution', 'Support', ['Fire']),
-  pokemon(196, 'Espeon', 'Eeveelution', 'Support', ['Psychic']),
-  pokemon(197, 'Umbreon', 'Eeveelution', 'Support', ['Dark']),
-  pokemon(470, 'Leafeon', 'Eeveelution', 'Support', ['Grass']),
-  pokemon(471, 'Glaceon', 'Eeveelution', 'Support', ['Ice']),
-  pokemon(700, 'Sylveon', 'Eeveelution', 'Support', ['Fairy']),
-  pokemon(18, 'Pidgeot', 'Regional Bird', 'Support', ['Normal', 'Flying']),
-  pokemon(164, 'Noctowl', 'Regional Bird', 'Support', ['Normal', 'Flying']),
-  pokemon(277, 'Swellow', 'Regional Bird', 'Support', ['Normal', 'Flying']),
-  pokemon(398, 'Staraptor', 'Regional Bird', 'Support', ['Normal', 'Flying']),
-  pokemon(521, 'Unfezant', 'Regional Bird', 'Support', ['Normal', 'Flying']),
-  pokemon(663, 'Talonflame', 'Regional Bird', 'Support', ['Fire', 'Flying']),
-  pokemon(733, 'Toucannon', 'Regional Bird', 'Support', ['Normal', 'Flying']),
-  pokemon(823, 'Corviknight', 'Regional Bird', 'Support', ['Flying', 'Steel']),
-  pokemon(628, 'Braviary', 'Regional Bird', 'Support', ['Normal', 'Flying']),
-  pokemon(22, 'Fearow', 'Regional Bird', 'Support', ['Normal', 'Flying']),
-  pokemon(143, 'Snorlax', 'Support Utility', 'Support', ['Normal']),
-  pokemon(131, 'Lapras', 'Support Utility', 'Support', ['Water', 'Ice']),
-  pokemon(468, 'Togekiss', 'Support Utility', 'Support', ['Fairy', 'Flying']),
-  pokemon(748, 'Toxapex', 'Support Utility', 'Support', ['Poison', 'Water']),
-  pokemon(350, 'Milotic', 'Support Utility', 'Support', ['Water']),
-  pokemon(242, 'Blissey', 'Support Utility', 'Support', ['Normal']),
-  pokemon(36, 'Clefable', 'Support Utility', 'Support', ['Fairy']),
-  pokemon(227, 'Skarmory', 'Support Utility', 'Support', ['Steel', 'Flying']),
-  pokemon(598, 'Ferrothorn', 'Support Utility', 'Support', ['Grass', 'Steel']),
-  pokemon(472, 'Gliscor', 'Support Utility', 'Support', ['Ground', 'Flying']),
-  pokemon(80, 'Slowbro', 'Support Utility', 'Support', ['Water', 'Psychic']),
-  pokemon(199, 'Slowking', 'Support Utility', 'Support', ['Water', 'Psychic']),
-  pokemon(591, 'Amoonguss', 'Support Utility', 'Support', ['Grass', 'Poison']),
-  pokemon(423, 'Gastrodon', 'Support Utility', 'Support', ['Water', 'Ground']),
-  pokemon(450, 'Hippowdon', 'Support Utility', 'Support', ['Ground']),
-  pokemon(547, 'Whimsicott', 'Support Utility', 'Support', ['Grass', 'Fairy']),
-  pokemon(861, 'Grimmsnarl', 'Support Utility', 'Support', ['Dark', 'Fairy']),
-  pokemon(630, 'Mandibuzz', 'Support Utility', 'Support', ['Dark', 'Flying']),
-  pokemon(279, 'Pelipper', 'Support Utility', 'Support', ['Water', 'Flying']),
-  pokemon(437, 'Bronzong', 'Support Utility', 'Support', ['Steel', 'Psychic']),
-  pokemon(579, 'Reuniclus', 'Support Utility', 'Support', ['Psychic']),
-  pokemon(858, 'Hatterene', 'Support Utility', 'Support', ['Psychic', 'Fairy']),
-  pokemon(302, 'Sableye', 'Support Utility', 'Support', ['Dark', 'Ghost']),
-  pokemon(707, 'Klefki', 'Support Utility', 'Support', ['Steel', 'Fairy']),
-  pokemon(671, 'Florges', 'Support Utility', 'Support', ['Fairy']),
-  pokemon(869, 'Alcremie', 'Support Utility', 'Support', ['Fairy']),
-  pokemon(842, 'Appletun', 'Support Utility', 'Support', ['Grass', 'Dragon']),
-  pokemon(706, 'Goodra', 'Support Utility', 'Support', ['Dragon']),
-  pokemon(10009, 'Rotom-Wash', 'Support Utility', 'Support', ['Electric', 'Water']),
-  pokemon(477, 'Dusknoir', 'Support Utility', 'Support', ['Ghost']),
-  pokemon(563, 'Cofagrigus', 'Support Utility', 'Support', ['Ghost']),
-  pokemon(465, 'Tangrowth', 'Support Utility', 'Support', ['Grass']),
-  pokemon(462, 'Magnezone', 'Support Utility', 'Support', ['Electric', 'Steel']),
-  pokemon(113, 'Chansey', 'Support Utility', 'Support', ['Normal']),
-  pokemon(91, 'Cloyster', 'Support Utility', 'Support', ['Water', 'Ice']),
-]
+export const supportPool = createDraftPool(supportPokemon, 'Support')
 
-export const fanFavoritesPool = [
-  pokemon(25, 'Pikachu', 'Fan Favorite', 'Fan Favorites', ['Electric']),
-  pokemon(26, 'Raichu', 'Fan Favorite', 'Fan Favorites', ['Electric']),
-  pokemon(94, 'Gengar', 'Fan Favorite', 'Fan Favorites', ['Ghost', 'Poison']),
-  pokemon(448, 'Lucario', 'Fan Favorite', 'Fan Favorites', ['Fighting', 'Steel']),
-  pokemon(282, 'Gardevoir', 'Fan Favorite', 'Fan Favorites', ['Psychic', 'Fairy']),
-  pokemon(475, 'Gallade', 'Fan Favorite', 'Fan Favorites', ['Psychic', 'Fighting']),
-  pokemon(212, 'Scizor', 'Fan Favorite', 'Fan Favorites', ['Bug', 'Steel']),
-  pokemon(130, 'Gyarados', 'Fan Favorite', 'Fan Favorites', ['Water', 'Flying']),
-  pokemon(59, 'Arcanine', 'Fan Favorite', 'Fan Favorites', ['Fire']),
-  pokemon(38, 'Ninetales', 'Fan Favorite', 'Fan Favorites', ['Fire']),
-  pokemon(571, 'Zoroark', 'Fan Favorite', 'Fan Favorites', ['Dark']),
-  pokemon(778, 'Mimikyu', 'Fan Favorite', 'Fan Favorites', ['Ghost', 'Fairy']),
-  pokemon(701, 'Hawlucha', 'Fan Favorite', 'Fan Favorites', ['Fighting', 'Flying']),
-  pokemon(637, 'Volcarona', 'Fan Favorite', 'Fan Favorites', ['Bug', 'Fire']),
-  pokemon(530, 'Excadrill', 'Fan Favorite', 'Fan Favorites', ['Ground', 'Steel']),
-  pokemon(681, 'Aegislash', 'Fan Favorite', 'Fan Favorites', ['Steel', 'Ghost']),
-  pokemon(68, 'Machamp', 'Fan Favorite', 'Fan Favorites', ['Fighting']),
-  pokemon(65, 'Alakazam', 'Fan Favorite', 'Fan Favorites', ['Psychic']),
-  pokemon(34, 'Nidoking', 'Fan Favorite', 'Fan Favorites', ['Poison', 'Ground']),
-  pokemon(31, 'Nidoqueen', 'Fan Favorite', 'Fan Favorites', ['Poison', 'Ground']),
-  pokemon(169, 'Crobat', 'Fan Favorite', 'Fan Favorites', ['Poison', 'Flying']),
-  pokemon(208, 'Steelix', 'Fan Favorite', 'Fan Favorites', ['Steel', 'Ground']),
-  pokemon(214, 'Heracross', 'Fan Favorite', 'Fan Favorites', ['Bug', 'Fighting']),
-  pokemon(229, 'Houndoom', 'Fan Favorite', 'Fan Favorites', ['Dark', 'Fire']),
-  pokemon(230, 'Kingdra', 'Fan Favorite', 'Fan Favorites', ['Water', 'Dragon']),
-  pokemon(359, 'Absol', 'Fan Favorite', 'Fan Favorites', ['Dark']),
-  pokemon(306, 'Aggron', 'Fan Favorite', 'Fan Favorites', ['Steel', 'Rock']),
-  pokemon(365, 'Walrein', 'Fan Favorite', 'Fan Favorites', ['Ice', 'Water']),
-  pokemon(405, 'Luxray', 'Fan Favorite', 'Fan Favorites', ['Electric']),
-  pokemon(407, 'Roserade', 'Fan Favorite', 'Fan Favorites', ['Grass', 'Poison']),
-  pokemon(466, 'Electivire', 'Fan Favorite', 'Fan Favorites', ['Electric']),
-  pokemon(467, 'Magmortar', 'Fan Favorite', 'Fan Favorites', ['Fire']),
-  pokemon(461, 'Weavile', 'Fan Favorite', 'Fan Favorites', ['Dark', 'Ice']),
-  pokemon(478, 'Froslass', 'Fan Favorite', 'Fan Favorites', ['Ice', 'Ghost']),
-  pokemon(553, 'Krookodile', 'Fan Favorite', 'Fan Favorites', ['Ground', 'Dark']),
-  pokemon(609, 'Chandelure', 'Fan Favorite', 'Fan Favorites', ['Ghost', 'Fire']),
-  pokemon(612, 'Haxorus', 'Fan Favorite', 'Fan Favorites', ['Dragon']),
-  pokemon(715, 'Noivern', 'Fan Favorite', 'Fan Favorites', ['Flying', 'Dragon']),
-  pokemon(473, 'Mamoswine', 'Fan Favorite', 'Fan Favorites', ['Ice', 'Ground']),
-  pokemon(330, 'Flygon', 'Fan Favorite', 'Fan Favorites', ['Ground', 'Dragon']),
-]
+export const fanFavouriteAPool = createDraftPool(
+  fanFavouriteAPokemon,
+  'Fan Favourite A',
+)
 
-export const pseudoLegendaryPool = [
-  pokemon(149, 'Dragonite', 'Pseudo Legendary', 'Pseudo Legendaries', ['Dragon', 'Flying']),
-  pokemon(248, 'Tyranitar', 'Pseudo Legendary', 'Pseudo Legendaries', ['Rock', 'Dark']),
-  pokemon(373, 'Salamence', 'Pseudo Legendary', 'Pseudo Legendaries', ['Dragon', 'Flying']),
-  pokemon(376, 'Metagross', 'Pseudo Legendary', 'Pseudo Legendaries', ['Steel', 'Psychic']),
-  pokemon(445, 'Garchomp', 'Pseudo Legendary', 'Pseudo Legendaries', ['Dragon', 'Ground']),
-  pokemon(635, 'Hydreigon', 'Pseudo Legendary', 'Pseudo Legendaries', ['Dark', 'Dragon']),
-  pokemon(784, 'Kommo-o', 'Pseudo Legendary', 'Pseudo Legendaries', ['Dragon', 'Fighting']),
-  pokemon(887, 'Dragapult', 'Pseudo Legendary', 'Pseudo Legendaries', ['Dragon', 'Ghost']),
-]
+export const fanFavouriteBPool = createDraftPool(
+  fanFavouriteBPokemon,
+  'Fan Favourite B',
+)
+
+export const pseudoLegendaryPool = createDraftPool(
+  pseudoPokemon,
+  'Pseudo Legendaries',
+)
 
 export const legendaryPools = {
-  S: [
-    pokemon(493, 'Arceus', 'Legendary/Mythical', 'Legendary S', ['Normal'], 120),
-    pokemon(150, 'Mewtwo', 'Legendary/Mythical', 'Legendary S', ['Psychic'], 120),
-    pokemon(384, 'Rayquaza', 'Legendary/Mythical', 'Legendary S', ['Dragon', 'Flying'], 120),
-    pokemon(487, 'Giratina', 'Legendary/Mythical', 'Legendary S', ['Ghost', 'Dragon'], 120),
-    pokemon(382, 'Kyogre', 'Legendary/Mythical', 'Legendary S', ['Water'], 120),
-    pokemon(383, 'Groudon', 'Legendary/Mythical', 'Legendary S', ['Ground'], 120),
-    pokemon(791, 'Solgaleo', 'Legendary/Mythical', 'Legendary S', ['Psychic', 'Steel'], 120),
-    pokemon(792, 'Lunala', 'Legendary/Mythical', 'Legendary S', ['Psychic', 'Ghost'], 120),
-    pokemon(646, 'Kyurem', 'Legendary/Mythical', 'Legendary S', ['Dragon', 'Ice'], 120),
-    pokemon(800, 'Necrozma', 'Legendary/Mythical', 'Legendary S', ['Psychic'], 120),
-    pokemon(151, 'Mew', 'Legendary/Mythical', 'Legendary S', ['Psychic'], 120),
-  ],
-  A: [
-    pokemon(249, 'Lugia', 'Legendary/Mythical', 'Legendary A', ['Psychic', 'Flying'], 110),
-    pokemon(250, 'Ho-Oh', 'Legendary/Mythical', 'Legendary A', ['Fire', 'Flying'], 110),
-    pokemon(483, 'Dialga', 'Legendary/Mythical', 'Legendary A', ['Steel', 'Dragon'], 110),
-    pokemon(484, 'Palkia', 'Legendary/Mythical', 'Legendary A', ['Water', 'Dragon'], 110),
-    pokemon(491, 'Darkrai', 'Legendary/Mythical', 'Legendary A', ['Dark'], 110),
-    pokemon(643, 'Reshiram', 'Legendary/Mythical', 'Legendary A', ['Dragon', 'Fire'], 110),
-    pokemon(644, 'Zekrom', 'Legendary/Mythical', 'Legendary A', ['Dragon', 'Electric'], 110),
-    pokemon(716, 'Xerneas', 'Legendary/Mythical', 'Legendary A', ['Fairy'], 110),
-    pokemon(717, 'Yveltal', 'Legendary/Mythical', 'Legendary A', ['Dark', 'Flying'], 110),
-    pokemon(718, 'Zygarde', 'Legendary/Mythical', 'Legendary A', ['Dragon', 'Ground'], 110),
-  ],
-  B: [
-    pokemon(144, 'Articuno', 'Legendary/Mythical', 'Legendary B', ['Ice', 'Flying']),
-    pokemon(145, 'Zapdos', 'Legendary/Mythical', 'Legendary B', ['Electric', 'Flying']),
-    pokemon(146, 'Moltres', 'Legendary/Mythical', 'Legendary B', ['Fire', 'Flying']),
-    pokemon(251, 'Celebi', 'Legendary/Mythical', 'Legendary B', ['Psychic', 'Grass']),
-    pokemon(380, 'Latias', 'Legendary/Mythical', 'Legendary B', ['Dragon', 'Psychic']),
-    pokemon(381, 'Latios', 'Legendary/Mythical', 'Legendary B', ['Dragon', 'Psychic']),
-    pokemon(385, 'Jirachi', 'Legendary/Mythical', 'Legendary B', ['Steel', 'Psychic']),
-    pokemon(386, 'Deoxys', 'Legendary/Mythical', 'Legendary B', ['Psychic']),
-    pokemon(888, 'Zacian', 'Legendary/Mythical', 'Legendary B', ['Fairy']),
-    pokemon(889, 'Zamazenta', 'Legendary/Mythical', 'Legendary B', ['Fighting']),
-    pokemon(488, 'Cresselia', 'Legendary/Mythical', 'Legendary B', ['Psychic']),
-    pokemon(485, 'Heatran', 'Legendary/Mythical', 'Legendary B', ['Fire', 'Steel']),
-    pokemon(486, 'Regigigas', 'Legendary/Mythical', 'Legendary B', ['Normal']),
-    pokemon(494, 'Victini', 'Legendary/Mythical', 'Legendary B', ['Psychic', 'Fire']),
-  ],
+  S: createDraftPool(
+    legendaryPokemon.filter(
+      (pokemon) => pokemon.category === POKEMON_CATEGORIES.S_LEGEND,
+    ),
+    'Legendary S',
+  ),
+  A: createDraftPool(
+    legendaryPokemon.filter(
+      (pokemon) => pokemon.category === POKEMON_CATEGORIES.A_LEGEND,
+    ),
+    'Legendary A',
+  ),
+  B: createDraftPool(
+    legendaryPokemon.filter(
+      (pokemon) => pokemon.category === POKEMON_CATEGORIES.B_LEGEND,
+    ),
+    'Legendary B',
+  ),
 }
 
 export const draftPools = {
   starters: starterPools,
   support: supportPool,
-  fanFavorites: fanFavoritesPool,
+  fanFavouriteA: fanFavouriteAPool,
   pseudoLegendaries: pseudoLegendaryPool,
   legendaries: legendaryPools,
+  fanFavouriteB: fanFavouriteBPool,
 }
