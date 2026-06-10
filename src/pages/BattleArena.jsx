@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { resolveBattleRound } from '../data/battleRoundResolver.js'
 import { getJirachiCopyableTraits } from '../data/advancedTraitInteractionResolver.js'
 import { allBattlePokemon } from '../data/pokemonBattleData.js'
@@ -16,7 +16,9 @@ import {
   initializeMasterRoundOptions,
   lockBattlePokemon,
   lockMasterRoundPokemon,
+  requestPlayAgain,
   resolveAndSaveMasterRound,
+  returnHomeAfterMatch,
   saveJirachiCopy,
   saveBattleRoundResult,
 } from '../services/roomService.js'
@@ -93,6 +95,7 @@ function RoundScoreRow({ label, score }) {
 
 function BattleArena({ currentUser }) {
   const { roomCode = '' } = useParams()
+  const navigate = useNavigate()
   const displayRoomCode = roomCode.toUpperCase()
   const [room, setRoom] = useState(null)
   const [battleState, setBattleState] = useState(null)
@@ -114,6 +117,8 @@ function BattleArena({ currentUser }) {
   const [jirachiCopyError, setJirachiCopyError] = useState('')
   const [isSavingCelebiWish, setIsSavingCelebiWish] = useState(false)
   const [celebiWishError, setCelebiWishError] = useState('')
+  const [postMatchAction, setPostMatchAction] = useState('')
+  const [postMatchError, setPostMatchError] = useState('')
   const masterRoundInitializationRef = useRef(false)
   const masterRoundResolutionRef = useRef(false)
 
@@ -137,6 +142,12 @@ function BattleArena({ currentUser }) {
       },
     )
   }, [displayRoomCode])
+
+  useEffect(() => {
+    if (room?.status === 'draft') {
+      navigate(`/draft/${displayRoomCode}`, { replace: true })
+    }
+  }, [displayRoomCode, navigate, room?.status])
 
   useEffect(() => {
     return onSnapshot(
@@ -281,6 +292,19 @@ function BattleArena({ currentUser }) {
     masterRoundSelection && opponentMasterRoundSelection,
   )
   const masterRoundResult = battleState?.masterRound?.result ?? null
+  const postMatch = battleState?.postMatch ?? {
+    playAgainRequests: {},
+    returnedHome: {},
+    status: 'idle',
+  }
+  const opponentReturnedHome = Boolean(
+    opponentUid &&
+      (postMatch.returnedHome?.[opponentUid] ||
+        room?.players?.[opponentUid]?.active === false),
+  )
+  const currentPlayerRequestedPlayAgain = Boolean(
+    postMatch.playAgainRequests?.[currentUser?.uid],
+  )
   const isMasterRoundPending =
     !masterRoundResult &&
     (battlePhase === 'master_round_pending' ||
@@ -764,6 +788,58 @@ function BattleArena({ currentUser }) {
     }
   }
 
+  async function handlePlayAgain() {
+    if (
+      postMatchAction ||
+      currentPlayerRequestedPlayAgain ||
+      opponentReturnedHome
+    ) {
+      return
+    }
+
+    setPostMatchAction('play-again')
+    setPostMatchError('')
+
+    try {
+      await requestPlayAgain({
+        roomCode: displayRoomCode,
+        playerUid: currentUser.uid,
+      })
+    } catch (error) {
+      setPostMatchError(
+        error instanceof Error
+          ? error.message
+          : 'Could not request another game.',
+      )
+    } finally {
+      setPostMatchAction('')
+    }
+  }
+
+  async function handleReturnHome() {
+    if (postMatchAction) {
+      return
+    }
+
+    setPostMatchAction('return-home')
+    setPostMatchError('')
+
+    try {
+      await returnHomeAfterMatch({
+        roomCode: displayRoomCode,
+        playerUid: currentUser.uid,
+      })
+      navigate('/', { replace: true })
+    } catch (error) {
+      setPostMatchError(
+        error instanceof Error
+          ? error.message
+          : 'Could not leave the room.',
+      )
+      setPostMatchAction('')
+    }
+  }
+
   const opponentPokemon =
     battleState &&
     REVEALED_BATTLE_PHASES.has(battleState.phase)
@@ -986,6 +1062,48 @@ function BattleArena({ currentUser }) {
                   <strong>Reason:</strong>{' '}
                   {battleState.matchOverReason}
                 </p>
+
+                <div className="post-match-actions">
+                  {opponentReturnedHome ? (
+                    <p>Opponent left the room.</p>
+                  ) : currentPlayerRequestedPlayAgain ? (
+                    <p>Play Again requested. Waiting for opponent...</p>
+                  ) : null}
+
+                  <div>
+                    {!opponentReturnedHome && (
+                      <button
+                        className="game-button game-button-primary"
+                        type="button"
+                        disabled={
+                          Boolean(postMatchAction) ||
+                          currentPlayerRequestedPlayAgain
+                        }
+                        onClick={handlePlayAgain}
+                      >
+                        {postMatchAction === 'play-again'
+                          ? 'Requesting...'
+                          : 'Play Again'}
+                      </button>
+                    )}
+                    <button
+                      className="game-button"
+                      type="button"
+                      disabled={Boolean(postMatchAction)}
+                      onClick={handleReturnHome}
+                    >
+                      {postMatchAction === 'return-home'
+                        ? 'Leaving...'
+                        : 'Return Home'}
+                    </button>
+                  </div>
+
+                  {postMatchError && (
+                    <p className="battle-lock-error" role="alert">
+                      {postMatchError}
+                    </p>
+                  )}
+                </div>
               </section>
             )}
 

@@ -737,6 +737,14 @@ function getBattleStateBackfill(battleState, room) {
     backfill.pendingCelebiWish = null
   }
 
+  if (!battleState.postMatch) {
+    backfill.postMatch = {
+      playAgainRequests: {},
+      returnedHome: {},
+      status: 'idle',
+    }
+  }
+
   if (battleState.matchWinnerUid === undefined) {
     backfill.matchWinnerUid = null
   }
@@ -1090,6 +1098,195 @@ export async function dismissCelebiWish({ roomCode, playerUid }) {
 
     transaction.update(battleStateReference, {
       pendingCelebiWish: null,
+      updatedAt: serverTimestamp(),
+    })
+
+    return true
+  })
+}
+
+export async function requestPlayAgain({ roomCode, playerUid }) {
+  if (!playerUid) {
+    throw new Error('You must be logged in to request another game.')
+  }
+
+  const normalizedRoomCode = roomCode.trim().toUpperCase()
+  const roomReference = doc(db, 'rooms', normalizedRoomCode)
+  const battleStateReference = doc(roomReference, 'battle', 'state')
+
+  return runTransaction(db, async (transaction) => {
+    const [roomSnapshot, battleStateSnapshot] = await Promise.all([
+      transaction.get(roomReference),
+      transaction.get(battleStateReference),
+    ])
+
+    if (!roomSnapshot.exists() || !battleStateSnapshot.exists()) {
+      throw new Error('Match state is unavailable.')
+    }
+
+    const room = roomSnapshot.data()
+    const battleState = battleStateSnapshot.data()
+    const opponentUid =
+      room.hostUid === playerUid ? room.guestUid : room.hostUid
+
+    if (!room.players?.[playerUid]) {
+      throw new Error('You are not a player in this room.')
+    }
+
+    if (battleState.phase !== 'match_over') {
+      throw new Error('Play Again is only available after the match.')
+    }
+
+    if (
+      !opponentUid ||
+      battleState.postMatch?.returnedHome?.[opponentUid] ||
+      room.players?.[opponentUid]?.active === false
+    ) {
+      throw new Error('Your opponent has left the room.')
+    }
+
+    if (battleState.postMatch?.status === 'resetting') {
+      return 'resetting'
+    }
+
+    const playAgainRequests = {
+      ...(battleState.postMatch?.playAgainRequests ?? {}),
+      [playerUid]: true,
+    }
+    const bothRequested =
+      Boolean(playAgainRequests[room.hostUid]) &&
+      Boolean(playAgainRequests[room.guestUid])
+    const timestamp = serverTimestamp()
+
+    if (!bothRequested) {
+      transaction.update(battleStateReference, {
+        postMatch: {
+          playAgainRequests,
+          returnedHome: {
+            ...(battleState.postMatch?.returnedHome ?? {}),
+          },
+          status: 'waiting_for_opponent',
+        },
+        updatedAt: timestamp,
+      })
+
+      return 'waiting_for_opponent'
+    }
+
+    const { hostOptions, guestOptions } =
+      generateInitialStarterOptions()
+
+    transaction.update(roomReference, {
+      status: 'draft',
+      draft: {
+        totalRounds: TOTAL_DRAFT_ROUNDS,
+        phase: 'active',
+        completedPlayers: [],
+        startedAt: timestamp,
+        updatedAt: timestamp,
+      },
+      teams: {
+        [room.hostUid]: [],
+        [room.guestUid]: [],
+      },
+      battleReady: {
+        hostReady: false,
+        guestReady: false,
+      },
+      [`players.${room.hostUid}.ready`]: false,
+      [`players.${room.guestUid}.ready`]: false,
+      [`players.${room.hostUid}.active`]: true,
+      [`players.${room.guestUid}.active`]: true,
+      updatedAt: timestamp,
+    })
+    transaction.set(
+      doc(roomReference, 'draftTeams', room.hostUid),
+      {
+        uid: room.hostUid,
+        picks: [],
+        currentRound: 1,
+        completed: false,
+        updatedAt: timestamp,
+      },
+    )
+    transaction.set(
+      doc(roomReference, 'draftTeams', room.guestUid),
+      {
+        uid: room.guestUid,
+        picks: [],
+        currentRound: 1,
+        completed: false,
+        updatedAt: timestamp,
+      },
+    )
+    transaction.set(
+      doc(roomReference, 'draftOptions', room.hostUid),
+      createOptionDocument(room.hostUid, 1, hostOptions, timestamp),
+    )
+    transaction.set(
+      doc(roomReference, 'draftOptions', room.guestUid),
+      createOptionDocument(room.guestUid, 1, guestOptions, timestamp),
+    )
+    transaction.set(
+      battleStateReference,
+      createInitialBattleState(
+        timestamp,
+        room.hostUid,
+        room.guestUid,
+      ),
+    )
+
+    return 'resetting'
+  })
+}
+
+export async function returnHomeAfterMatch({ roomCode, playerUid }) {
+  if (!playerUid) {
+    throw new Error('You must be logged in to leave the room.')
+  }
+
+  const normalizedRoomCode = roomCode.trim().toUpperCase()
+  const roomReference = doc(db, 'rooms', normalizedRoomCode)
+  const battleStateReference = doc(roomReference, 'battle', 'state')
+
+  return runTransaction(db, async (transaction) => {
+    const [roomSnapshot, battleStateSnapshot] = await Promise.all([
+      transaction.get(roomReference),
+      transaction.get(battleStateReference),
+    ])
+
+    if (!roomSnapshot.exists() || !battleStateSnapshot.exists()) {
+      throw new Error('Match state is unavailable.')
+    }
+
+    const room = roomSnapshot.data()
+    const battleState = battleStateSnapshot.data()
+
+    if (!room.players?.[playerUid]) {
+      throw new Error('You are not a player in this room.')
+    }
+
+    if (battleState.phase !== 'match_over') {
+      throw new Error('Return Home is only available after the match.')
+    }
+
+    if (battleState.postMatch?.returnedHome?.[playerUid]) {
+      return true
+    }
+
+    transaction.update(roomReference, {
+      [`players.${playerUid}.active`]: false,
+      updatedAt: serverTimestamp(),
+    })
+    transaction.update(battleStateReference, {
+      postMatch: {
+        playAgainRequests: {},
+        returnedHome: {
+          ...(battleState.postMatch?.returnedHome ?? {}),
+          [playerUid]: true,
+        },
+        status: 'opponent_left',
+      },
       updatedAt: serverTimestamp(),
     })
 
@@ -1908,6 +2105,11 @@ function createInitialBattleState(timestamp, hostUid, guestUid) {
     jirachiCopies: {},
     celebiWishes: {},
     pendingCelebiWish: null,
+    postMatch: {
+      playAgainRequests: {},
+      returnedHome: {},
+      status: 'idle',
+    },
     matchWinnerUid: null,
     matchOverReason: null,
     playerScores: {

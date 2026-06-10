@@ -1213,6 +1213,26 @@ h1 {
   color: #fca5a5;
 }
 
+.post-match-actions {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.post-match-actions > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.post-match-actions .game-button {
+  width: auto;
+}
+
+.post-match-actions p {
+  margin: 0;
+}
+
 .master-round-panel {
   display: grid;
   justify-items: center;
