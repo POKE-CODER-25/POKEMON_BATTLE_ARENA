@@ -1,8 +1,13 @@
 import {
+  collection,
   doc,
+  getDoc,
+  getDocs,
+  query,
   runTransaction,
   serverTimestamp,
   Timestamp,
+  where,
 } from 'firebase/firestore'
 import {
   fanFavouriteAPool,
@@ -25,6 +30,93 @@ const MAX_CODE_ATTEMPTS = 5
 const TOTAL_DRAFT_ROUNDS = 6
 
 export { DRAFT_ROUND_NAMES }
+
+const RESUMABLE_ROOM_STATUSES = new Set([
+  'waiting',
+  'ready',
+  'draft',
+  'battle_ready',
+  'battle_setup',
+])
+
+function getTimestampMillis(value) {
+  if (typeof value?.toMillis === 'function') {
+    return value.toMillis()
+  }
+
+  return 0
+}
+
+function getResumeRoute(roomCode, room) {
+  if (['waiting', 'ready'].includes(room.status)) {
+    return `/room/${roomCode}`
+  }
+
+  if (['draft', 'battle_ready'].includes(room.status)) {
+    return `/draft/${roomCode}`
+  }
+
+  return `/battle/${roomCode}`
+}
+
+export async function findActiveRoomForUser(playerUid) {
+  if (!playerUid) {
+    return null
+  }
+
+  const roomsReference = collection(db, 'rooms')
+  const [hostRoomsSnapshot, guestRoomsSnapshot] = await Promise.all([
+    getDocs(query(roomsReference, where('hostUid', '==', playerUid))),
+    getDocs(query(roomsReference, where('guestUid', '==', playerUid))),
+  ])
+  const roomSnapshots = new Map()
+
+  ;[...hostRoomsSnapshot.docs, ...guestRoomsSnapshot.docs].forEach(
+    (roomSnapshot) => {
+      roomSnapshots.set(roomSnapshot.id, roomSnapshot)
+    },
+  )
+
+  const candidates = [...roomSnapshots.values()]
+    .map((roomSnapshot) => ({
+      roomCode: roomSnapshot.id,
+      room: roomSnapshot.data(),
+    }))
+    .filter(({ room }) => RESUMABLE_ROOM_STATUSES.has(room.status))
+    .filter(({ room }) => Boolean(room.players?.[playerUid]))
+    .filter(({ room }) => room.players[playerUid].active !== false)
+    .sort(
+      (candidateA, candidateB) =>
+        getTimestampMillis(candidateB.room.updatedAt) -
+        getTimestampMillis(candidateA.room.updatedAt),
+    )
+
+  for (const candidate of candidates) {
+    const battleStateSnapshot = await getDoc(
+      doc(db, 'rooms', candidate.roomCode, 'battle', 'state'),
+    )
+    const battleState = battleStateSnapshot.exists()
+      ? battleStateSnapshot.data()
+      : null
+    const returnedHome = Boolean(
+      battleState?.postMatch?.returnedHome?.[playerUid],
+    )
+    const surrendered =
+      battleState?.surrender?.surrenderedBy === playerUid
+
+    if (returnedHome || surrendered) {
+      continue
+    }
+
+    return {
+      roomCode: candidate.roomCode,
+      route: getResumeRoute(candidate.roomCode, candidate.room),
+      status: candidate.room.status,
+    }
+  }
+
+  return null
+}
 
 function shuffle(items) {
   const shuffled = [...items]

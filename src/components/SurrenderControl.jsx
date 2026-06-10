@@ -31,7 +31,10 @@ function SurrenderControl({
         playerUid: currentUser.uid,
         username,
       })
-      navigate('/', { replace: true })
+      navigate('/', {
+        replace: true,
+        state: { skipRoomResume: true },
+      })
     } catch (error) {
       setErrorMessage(
         error instanceof Error

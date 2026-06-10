@@ -834,7 +834,10 @@ function BattleArena({ currentUser }) {
         roomCode: displayRoomCode,
         playerUid: currentUser.uid,
       })
-      navigate('/', { replace: true })
+      navigate('/', {
+        replace: true,
+        state: { skipRoomResume: true },
+      })
     } catch (error) {
       setPostMatchError(
         error instanceof Error
