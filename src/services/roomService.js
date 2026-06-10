@@ -13,6 +13,7 @@ import {
   supportPool,
 } from '../data/draftPools.js'
 import { resolveBattleRound } from '../data/battleRoundResolver.js'
+import { getJirachiCopyableTraits } from '../data/advancedTraitInteractionResolver.js'
 import { DRAFT_ROUND_NAMES } from '../data/draftTeamStructure.js'
 import { createMasterRoundOptions } from '../data/masterRoundSelector.js'
 import { allBattlePokemon } from '../data/pokemonBattleData.js'
@@ -724,6 +725,18 @@ function getBattleStateBackfill(battleState, room) {
     backfill.roundContinue = {}
   }
 
+  if (!battleState.jirachiCopies) {
+    backfill.jirachiCopies = {}
+  }
+
+  if (!battleState.celebiWishes) {
+    backfill.celebiWishes = {}
+  }
+
+  if (battleState.pendingCelebiWish === undefined) {
+    backfill.pendingCelebiWish = null
+  }
+
   if (battleState.matchWinnerUid === undefined) {
     backfill.matchWinnerUid = null
   }
@@ -814,7 +827,7 @@ export async function lockBattlePokemon(roomCode, playerUid, pokemon) {
     const isAlreadyUsed = usedPokemon.some((usedPokemonEntry) => {
       const usedPokemonId =
         typeof usedPokemonEntry === 'object'
-          ? usedPokemonEntry?.id
+          ? usedPokemonEntry?.id ?? usedPokemonEntry?.pokemonId
           : usedPokemonEntry
 
       return String(usedPokemonId) === String(selectedPokemon.id)
@@ -840,6 +853,247 @@ export async function lockBattlePokemon(roomCode, playerUid, pokemon) {
     })
 
     return selectedPokemon.id
+  })
+}
+
+export async function saveJirachiCopy({
+  roomCode,
+  playerUid,
+  sourcePokemonId,
+  traitName,
+}) {
+  if (!playerUid || !traitName) {
+    throw new Error('Choose a valid teammate trait for Jirachi.')
+  }
+
+  const normalizedRoomCode = roomCode.trim().toUpperCase()
+  const roomReference = doc(db, 'rooms', normalizedRoomCode)
+  const battleStateReference = doc(roomReference, 'battle', 'state')
+  const draftTeamReference = doc(
+    roomReference,
+    'draftTeams',
+    playerUid,
+  )
+
+  return runTransaction(db, async (transaction) => {
+    const [roomSnapshot, battleStateSnapshot, draftTeamSnapshot] =
+      await Promise.all([
+        transaction.get(roomReference),
+        transaction.get(battleStateReference),
+        transaction.get(draftTeamReference),
+      ])
+
+    if (!roomSnapshot.exists()) {
+      throw new Error('Room not found')
+    }
+
+    if (!battleStateSnapshot.exists()) {
+      throw new Error('Battle state is not initialized.')
+    }
+
+    if (!draftTeamSnapshot.exists()) {
+      throw new Error('Draft team not found.')
+    }
+
+    const room = roomSnapshot.data()
+    const battleState = battleStateSnapshot.data()
+    const team = draftTeamSnapshot.data().picks ?? []
+
+    if (!room.players?.[playerUid]) {
+      throw new Error('You are not a player in this room.')
+    }
+
+    if (!team.some((pokemon) => pokemon.name === 'Jirachi')) {
+      throw new Error('Jirachi is not part of your drafted team.')
+    }
+
+    if (battleState.jirachiCopies?.[playerUid]) {
+      throw new Error("Jirachi's copied trait is already locked.")
+    }
+
+    const selectedTrait = getJirachiCopyableTraits(team).find(
+      (option) =>
+        String(option.sourcePokemon?.id) === String(sourcePokemonId) &&
+        option.traitName === traitName,
+    )
+
+    if (!selectedTrait) {
+      throw new Error('That trait cannot be copied by Jirachi.')
+    }
+
+    const timestamp = serverTimestamp()
+    const savedCopy = {
+      sourcePokemonId: selectedTrait.sourcePokemon.id,
+      sourcePokemonName: selectedTrait.sourcePokemonName,
+      traitName: selectedTrait.traitName,
+      normalBonus: selectedTrait.normalBonus ?? null,
+      masterRoundBonus: selectedTrait.masterRoundBonus ?? null,
+      selectedAt: timestamp,
+    }
+
+    transaction.update(battleStateReference, {
+      jirachiCopies: {
+        ...(battleState.jirachiCopies ?? {}),
+        [playerUid]: savedCopy,
+      },
+      updatedAt: timestamp,
+    })
+
+    return savedCopy
+  })
+}
+
+function getPokemonId(entry) {
+  return typeof entry === 'object'
+    ? entry?.id ?? entry?.pokemonId
+    : entry
+}
+
+function findAvailableCelebiWishTargets({
+  team,
+  usedPokemon,
+  existingWishes,
+}) {
+  const usedIds = new Set(
+    usedPokemon.map((entry) => String(getPokemonId(entry))),
+  )
+  const blessedIds = new Set(
+    existingWishes.map((wish) => String(wish.targetPokemonId)),
+  )
+
+  return team.filter(
+    (pokemon) =>
+      pokemon.name !== 'Celebi' &&
+      !usedIds.has(String(pokemon.id)) &&
+      !blessedIds.has(String(pokemon.id)),
+  )
+}
+
+export async function assignCelebiWish({
+  roomCode,
+  playerUid,
+  targetPokemonId,
+}) {
+  if (!playerUid || targetPokemonId === undefined) {
+    throw new Error('Choose a valid Pokemon for Celebi Future Wish.')
+  }
+
+  const normalizedRoomCode = roomCode.trim().toUpperCase()
+  const roomReference = doc(db, 'rooms', normalizedRoomCode)
+  const battleStateReference = doc(roomReference, 'battle', 'state')
+  const draftTeamReference = doc(
+    roomReference,
+    'draftTeams',
+    playerUid,
+  )
+
+  return runTransaction(db, async (transaction) => {
+    const [roomSnapshot, battleStateSnapshot, draftTeamSnapshot] =
+      await Promise.all([
+        transaction.get(roomReference),
+        transaction.get(battleStateReference),
+        transaction.get(draftTeamReference),
+      ])
+
+    if (
+      !roomSnapshot.exists() ||
+      !battleStateSnapshot.exists() ||
+      !draftTeamSnapshot.exists()
+    ) {
+      throw new Error('Celebi Future Wish data is unavailable.')
+    }
+
+    const room = roomSnapshot.data()
+    const battleState = battleStateSnapshot.data()
+    const pendingWish = battleState.pendingCelebiWish
+
+    if (!room.players?.[playerUid]) {
+      throw new Error('You are not a player in this room.')
+    }
+
+    if (pendingWish?.playerUid !== playerUid) {
+      throw new Error('Celebi Future Wish is not pending for you.')
+    }
+
+    const existingWishes =
+      battleState.celebiWishes?.[playerUid] ?? []
+    const validTargets = findAvailableCelebiWishTargets({
+      team: draftTeamSnapshot.data().picks ?? [],
+      usedPokemon: battleState.usedPokemon?.[playerUid] ?? [],
+      existingWishes,
+    })
+    const target = validTargets.find(
+      (pokemon) => String(pokemon.id) === String(targetPokemonId),
+    )
+
+    if (!target) {
+      throw new Error('That Pokemon cannot receive Celebi Future Wish.')
+    }
+
+    const wish = {
+      targetPokemonId: target.id,
+      targetPokemonName: target.name,
+      amount: pendingWish.amount ?? 10,
+      grantedAtRound: pendingWish.roundWon,
+      consumed: false,
+      sourcePokemonName: 'Celebi',
+    }
+
+    transaction.update(battleStateReference, {
+      celebiWishes: {
+        ...(battleState.celebiWishes ?? {}),
+        [playerUid]: [...existingWishes, wish],
+      },
+      pendingCelebiWish: null,
+      updatedAt: serverTimestamp(),
+    })
+
+    return wish
+  })
+}
+
+export async function dismissCelebiWish({ roomCode, playerUid }) {
+  const normalizedRoomCode = roomCode.trim().toUpperCase()
+  const roomReference = doc(db, 'rooms', normalizedRoomCode)
+  const battleStateReference = doc(roomReference, 'battle', 'state')
+  const draftTeamReference = doc(
+    roomReference,
+    'draftTeams',
+    playerUid,
+  )
+
+  return runTransaction(db, async (transaction) => {
+    const [battleStateSnapshot, draftTeamSnapshot] = await Promise.all([
+      transaction.get(battleStateReference),
+      transaction.get(draftTeamReference),
+    ])
+
+    if (!battleStateSnapshot.exists() || !draftTeamSnapshot.exists()) {
+      throw new Error('Celebi Future Wish data is unavailable.')
+    }
+
+    const battleState = battleStateSnapshot.data()
+
+    if (battleState.pendingCelebiWish?.playerUid !== playerUid) {
+      throw new Error('Celebi Future Wish is not pending for you.')
+    }
+
+    const validTargets = findAvailableCelebiWishTargets({
+      team: draftTeamSnapshot.data().picks ?? [],
+      usedPokemon: battleState.usedPokemon?.[playerUid] ?? [],
+      existingWishes: battleState.celebiWishes?.[playerUid] ?? [],
+    })
+
+    if (validTargets.length > 0) {
+      throw new Error('A valid Pokemon remains for Celebi Future Wish.')
+    }
+
+    transaction.update(battleStateReference, {
+      pendingCelebiWish: null,
+      updatedAt: serverTimestamp(),
+    })
+
+    return true
   })
 }
 
@@ -1139,6 +1393,8 @@ export async function resolveAndSaveMasterRound(roomCode) {
       playerBScore,
       teamA: playerATeamSnapshot.data().picks ?? [],
       teamB: playerBTeamSnapshot.data().picks ?? [],
+      jirachiCopyA: battleState.jirachiCopies?.[playerAUid] ?? null,
+      jirachiCopyB: battleState.jirachiCopies?.[playerBUid] ?? null,
       isMasterRound: true,
       randomFn: createSeededRandom(
         `${normalizedRoomCode}:master:${playerASelection.pokemonId}:${playerBSelection.pokemonId}`,
@@ -1251,6 +1507,16 @@ export async function saveBattleRoundResult({
     }
 
     if (existingResult) {
+      if (
+        battleState.masterRound?.result ||
+        battleState.phase === 'match_over'
+      ) {
+        return {
+          saved: false,
+          result: existingResult,
+        }
+      }
+
       const playerScores = {
         [playerAUid]:
           battleState.playerScores?.[playerAUid] ??
@@ -1307,6 +1573,10 @@ export async function saveBattleRoundResult({
         saved: false,
         result: existingResult,
       }
+    }
+
+    if ((battleState.phase ?? 'choose_pokemon') !== 'choose_pokemon') {
+      throw new Error('Normal round result saving is closed.')
     }
 
     const playerASelection = battleState.selections?.[playerAUid]
@@ -1393,11 +1663,62 @@ export async function saveBattleRoundResult({
       playerAUid,
       playerBUid,
     })
+    const celebiWishes = {
+      ...(battleState.celebiWishes ?? {}),
+    }
+    const consumeWish = (playerUid, pokemonId) => {
+      let consumed = false
+
+      celebiWishes[playerUid] = (
+        celebiWishes[playerUid] ?? []
+      ).map((wish) => {
+        if (
+          consumed ||
+          wish.consumed ||
+          String(wish.targetPokemonId) !== String(pokemonId)
+        ) {
+          return wish
+        }
+
+        consumed = true
+        return {
+          ...wish,
+          consumed: true,
+          consumedAtRound: roundNumber,
+        }
+      })
+    }
+
+    consumeWish(playerAUid, playerAPokemon.id)
+    consumeWish(playerBUid, playerBPokemon.id)
+
+    const celebiWinnerUid =
+      winnerUid &&
+      battleResult.winnerResult?.resultType !== 'TIE' &&
+      battleResult.winnerResult?.winnerPokemon?.name === 'Celebi'
+        ? winnerUid
+        : null
+    const pendingCelebiWish =
+      !battleState.pendingCelebiWish &&
+      celebiWinnerUid &&
+      roundNumber < 6 &&
+      matchState.phase === 'round_result'
+        ? {
+            playerUid: celebiWinnerUid,
+            sourcePokemonId:
+              battleResult.winnerResult.winnerPokemon.id,
+            sourcePokemonName: 'Celebi',
+            roundWon: roundNumber,
+            amount: 10,
+          }
+        : battleState.pendingCelebiWish ?? null
 
     transaction.update(battleStateReference, {
       roundResults: [...roundResults, savedResult],
       playerScores,
       usedPokemon,
+      celebiWishes,
+      pendingCelebiWish,
       ...matchState,
       updatedAt: serverTimestamp(),
     })
@@ -1463,6 +1784,10 @@ export async function continueBattleRound({
 
     if (battleState.phase !== 'round_result') {
       throw new Error('Normal round continuation is not available.')
+    }
+
+    if (battleState.pendingCelebiWish) {
+      throw new Error('Celebi Future Wish must be resolved first.')
     }
 
     const roundResultExists = (battleState.roundResults ?? []).some(
@@ -1580,6 +1905,9 @@ function createInitialBattleState(timestamp, hostUid, guestUid) {
     },
     roundResults: [],
     roundContinue: {},
+    jirachiCopies: {},
+    celebiWishes: {},
+    pendingCelebiWish: null,
     matchWinnerUid: null,
     matchOverReason: null,
     playerScores: {

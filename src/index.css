@@ -1220,6 +1220,49 @@ h1 {
   text-align: center;
 }
 
+.jirachi-copy-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.jirachi-copy-panel .eyebrow,
+.jirachi-copy-panel h2,
+.jirachi-copy-panel p {
+  margin: 0;
+}
+
+.jirachi-copy-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.jirachi-copy-options .game-button {
+  width: auto;
+}
+
+.celebi-wish-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.celebi-wish-panel .eyebrow,
+.celebi-wish-panel h2,
+.celebi-wish-panel p {
+  margin: 0;
+}
+
+.celebi-wish-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.celebi-wish-options .game-button,
+.celebi-wish-panel > .game-button {
+  width: auto;
+}
+
 .master-round-panel .eyebrow,
 .master-round-panel h2,
 .master-round-panel p {

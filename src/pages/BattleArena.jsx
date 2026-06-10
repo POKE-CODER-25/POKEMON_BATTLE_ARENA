@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { Link, useParams } from 'react-router-dom'
 import { resolveBattleRound } from '../data/battleRoundResolver.js'
+import { getJirachiCopyableTraits } from '../data/advancedTraitInteractionResolver.js'
 import { allBattlePokemon } from '../data/pokemonBattleData.js'
 import {
   getDraftPickLabel,
@@ -9,11 +10,14 @@ import {
 } from '../data/draftTeamStructure.js'
 import { db } from '../firebase.js'
 import {
+  assignCelebiWish,
   continueBattleRound,
+  dismissCelebiWish,
   initializeMasterRoundOptions,
   lockBattlePokemon,
   lockMasterRoundPokemon,
   resolveAndSaveMasterRound,
+  saveJirachiCopy,
   saveBattleRoundResult,
 } from '../services/roomService.js'
 
@@ -106,6 +110,10 @@ function BattleArena({ currentUser }) {
   const [isLockingMasterRound, setIsLockingMasterRound] =
     useState(false)
   const [masterRoundError, setMasterRoundError] = useState('')
+  const [isSavingJirachiCopy, setIsSavingJirachiCopy] = useState(false)
+  const [jirachiCopyError, setJirachiCopyError] = useState('')
+  const [isSavingCelebiWish, setIsSavingCelebiWish] = useState(false)
+  const [celebiWishError, setCelebiWishError] = useState('')
   const masterRoundInitializationRef = useRef(false)
   const masterRoundResolutionRef = useRef(false)
 
@@ -188,6 +196,25 @@ function BattleArena({ currentUser }) {
     () => getOrderedDraftPicks(draftTeam?.picks),
     [draftTeam?.picks],
   )
+  const hasJirachi = orderedDraftPicks.some(
+    (pokemon) => pokemon.name === 'Jirachi',
+  )
+  const jirachiCopyOptions = useMemo(
+    () => getJirachiCopyableTraits(orderedDraftPicks),
+    [orderedDraftPicks],
+  )
+  const jirachiCopy =
+    battleState?.jirachiCopies?.[currentUser?.uid] ?? null
+  const pendingCelebiWish = battleState?.pendingCelebiWish ?? null
+  const celebiBlessedPokemonIds = useMemo(
+    () =>
+      new Set(
+        (
+          battleState?.celebiWishes?.[currentUser?.uid] ?? []
+        ).map((wish) => String(wish.targetPokemonId)),
+      ),
+    [battleState?.celebiWishes, currentUser?.uid],
+  )
   const currentPlayerSelection =
     battleState?.selections?.[currentUser?.uid] ?? null
   const opponentHasLocked = Boolean(
@@ -214,7 +241,11 @@ function BattleArena({ currentUser }) {
 
     return new Set(
       usedPokemon.map((entry) =>
-        String(typeof entry === 'object' ? entry?.id : entry),
+        String(
+          typeof entry === 'object'
+            ? entry?.id ?? entry?.pokemonId
+            : entry,
+        ),
       ),
     )
   }, [
@@ -228,6 +259,13 @@ function BattleArena({ currentUser }) {
   const selectedPokemonIsUsed = selectedPokemon
     ? usedPokemonIds.has(String(selectedPokemon.id))
     : false
+  const validCelebiWishTargets = orderedDraftPicks.filter(
+    (pokemon) =>
+      pokemon.name !== 'Celebi' &&
+      !usedPokemonIds.has(String(pokemon.id)) &&
+      String(pokemon.id) !== String(activeSelectedPokemonId) &&
+      !celebiBlessedPokemonIds.has(String(pokemon.id)),
+  )
   const selectionIsOpen =
     (battleState?.phase ?? 'choose_pokemon') === 'choose_pokemon'
   const battlePhase = battleState?.phase ?? 'choose_pokemon'
@@ -280,12 +318,36 @@ function BattleArena({ currentUser }) {
       battlefieldEffectsB: guestBattlefieldEffects,
       teamA: [],
       teamB: [],
+      jirachiCopyA:
+        battleState?.jirachiCopies?.[room?.hostUid] ?? null,
+      jirachiCopyB:
+        battleState?.jirachiCopies?.[room?.guestUid] ?? null,
+      celebiWishA:
+        (
+          battleState?.celebiWishes?.[room?.hostUid] ?? []
+        ).find(
+          (wish) =>
+            !wish.consumed &&
+            String(wish.targetPokemonId) ===
+              String(hostSelection.pokemonId),
+        ) ?? null,
+      celebiWishB:
+        (
+          battleState?.celebiWishes?.[room?.guestUid] ?? []
+        ).find(
+          (wish) =>
+            !wish.consumed &&
+            String(wish.targetPokemonId) ===
+              String(guestSelection.pokemonId),
+        ) ?? null,
       isMasterRound: false,
       randomFn: createSeededRandom(
         `${displayRoomCode}:${currentRound}:${hostSelection.pokemonId}:${guestSelection.pokemonId}`,
       ),
     })
   }, [
+    battleState?.jirachiCopies,
+    battleState?.celebiWishes,
     bothPlayersLocked,
     currentRound,
     displayRoomCode,
@@ -297,6 +359,8 @@ function BattleArena({ currentUser }) {
     hostSelection,
     hostScore,
     guestScore,
+    room?.guestUid,
+    room?.hostUid,
   ])
   const savedRoundResult = battleState?.roundResults?.find(
     (result) => result.roundNumber === currentRound,
@@ -481,6 +545,7 @@ function BattleArena({ currentUser }) {
     }
   }, [
     battlePhase,
+    battleState?.jirachiCopies,
     battleState?.masterRound?.options,
     displayRoomCode,
     room?.guestUid,
@@ -569,6 +634,7 @@ function BattleArena({ currentUser }) {
       currentRound >= 6 ||
       currentPlayerContinued ||
       battlePhase !== 'round_result' ||
+      pendingCelebiWish ||
       isContinuingRound
     ) {
       return
@@ -591,6 +657,55 @@ function BattleArena({ currentUser }) {
       )
     } finally {
       setIsContinuingRound(false)
+    }
+  }
+
+  async function handleAssignCelebiWish(pokemon) {
+    if (!pokemon || isSavingCelebiWish) {
+      return
+    }
+
+    setIsSavingCelebiWish(true)
+    setCelebiWishError('')
+
+    try {
+      await assignCelebiWish({
+        roomCode: displayRoomCode,
+        playerUid: currentUser.uid,
+        targetPokemonId: pokemon.id,
+      })
+    } catch (error) {
+      setCelebiWishError(
+        error instanceof Error
+          ? error.message
+          : 'Could not assign Celebi Future Wish.',
+      )
+    } finally {
+      setIsSavingCelebiWish(false)
+    }
+  }
+
+  async function handleDismissCelebiWish() {
+    if (isSavingCelebiWish) {
+      return
+    }
+
+    setIsSavingCelebiWish(true)
+    setCelebiWishError('')
+
+    try {
+      await dismissCelebiWish({
+        roomCode: displayRoomCode,
+        playerUid: currentUser.uid,
+      })
+    } catch (error) {
+      setCelebiWishError(
+        error instanceof Error
+          ? error.message
+          : 'Could not clear Celebi Future Wish.',
+      )
+    } finally {
+      setIsSavingCelebiWish(false)
     }
   }
 
@@ -620,6 +735,32 @@ function BattleArena({ currentUser }) {
       )
     } finally {
       setIsLockingMasterRound(false)
+    }
+  }
+
+  async function handleJirachiCopy(option) {
+    if (jirachiCopy || isSavingJirachiCopy || !option) {
+      return
+    }
+
+    setIsSavingJirachiCopy(true)
+    setJirachiCopyError('')
+
+    try {
+      await saveJirachiCopy({
+        roomCode: displayRoomCode,
+        playerUid: currentUser.uid,
+        sourcePokemonId: option.sourcePokemon.id,
+        traitName: option.traitName,
+      })
+    } catch (error) {
+      setJirachiCopyError(
+        error instanceof Error
+          ? error.message
+          : 'Could not save Jirachi copy selection.',
+      )
+    } finally {
+      setIsSavingJirachiCopy(false)
     }
   }
 
@@ -742,6 +883,88 @@ function BattleArena({ currentUser }) {
               </div>
             </section>
 
+            {hasJirachi && (
+              <section className="draft-state-panel jirachi-copy-panel">
+                <p className="eyebrow">Jirachi Wish Maker</p>
+                <h2>Choose one teammate trait for Jirachi to copy.</h2>
+
+                {jirachiCopy ? (
+                  <p>
+                    Wish Maker locked: <strong>{jirachiCopy.traitName}</strong>{' '}
+                    from {jirachiCopy.sourcePokemonName}.
+                  </p>
+                ) : jirachiCopyOptions.length > 0 ? (
+                  <div className="jirachi-copy-options">
+                    {jirachiCopyOptions.map((option) => (
+                      <button
+                        className="game-button"
+                        type="button"
+                        key={`${option.sourcePokemon.id}-${option.traitName}`}
+                        disabled={isSavingJirachiCopy}
+                        onClick={() => handleJirachiCopy(option)}
+                      >
+                        {option.sourcePokemonName}: {option.traitName}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p>No teammate traits are available for Wish Maker.</p>
+                )}
+
+                {jirachiCopyError && (
+                  <p className="battle-lock-error" role="alert">
+                    {jirachiCopyError}
+                  </p>
+                )}
+              </section>
+            )}
+
+            {pendingCelebiWish?.playerUid === currentUser.uid && (
+              <section className="draft-state-panel celebi-wish-panel">
+                <p className="eyebrow">Celebi Future Wish</p>
+                <h2>
+                  Celebi won this round. Choose one unused teammate to
+                  receive +10.
+                </h2>
+
+                {validCelebiWishTargets.length > 0 ? (
+                  <div className="celebi-wish-options">
+                    {validCelebiWishTargets.map((pokemon) => (
+                      <button
+                        className="game-button"
+                        type="button"
+                        key={pokemon.id}
+                        disabled={isSavingCelebiWish}
+                        onClick={() =>
+                          handleAssignCelebiWish(pokemon)
+                        }
+                      >
+                        {pokemon.name}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    <p>No valid Pok&eacute;mon remain for Celebi&apos;s wish.</p>
+                    <button
+                      className="game-button"
+                      type="button"
+                      disabled={isSavingCelebiWish}
+                      onClick={handleDismissCelebiWish}
+                    >
+                      Dismiss Future Wish
+                    </button>
+                  </>
+                )}
+
+                {celebiWishError && (
+                  <p className="battle-lock-error" role="alert">
+                    {celebiWishError}
+                  </p>
+                )}
+              </section>
+            )}
+
             {battlePhase === 'match_over' && (
               <section className="draft-state-panel match-status-panel">
                 <p className="eyebrow">Match Over</p>
@@ -788,11 +1011,12 @@ function BattleArena({ currentUser }) {
                 </div>
 
                 <p>
-                  <strong>Result:</strong> {masterRoundResult.reason}
+                  <strong>Result:</strong>{' '}
+                  {masterRoundResult.reason ?? 'Result unavailable.'}
                 </p>
                 <strong>Logs:</strong>
                 <ul>
-                  {masterRoundResult.logs.map((log, index) => (
+                  {(masterRoundResult.logs ?? []).map((log, index) => (
                     <li key={`${index}-${log}`}>{log}</li>
                   ))}
                 </ul>
@@ -1027,12 +1251,17 @@ function BattleArena({ currentUser }) {
                           <button
                             className="game-button game-button-primary"
                             type="button"
-                            disabled={isContinuingRound}
+                            disabled={
+                              isContinuingRound ||
+                              Boolean(pendingCelebiWish)
+                            }
                             onClick={handleContinueRound}
                           >
                             {isContinuingRound
                               ? 'Continuing...'
-                              : 'Continue to Next Round'}
+                              : pendingCelebiWish
+                                ? 'Resolve Celebi Future Wish'
+                                : 'Continue to Next Round'}
                           </button>
                         )}
 

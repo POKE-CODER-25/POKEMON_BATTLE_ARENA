@@ -145,6 +145,36 @@ const combineLogs = (...logGroups) => {
   })
 }
 
+const applyCelebiWish = (state, wish, isMasterRound) => {
+  if (
+    isMasterRound ||
+    !wish ||
+    wish.consumed ||
+    String(wish.targetPokemonId) !== String(state.pokemon?.id)
+  ) {
+    return state
+  }
+
+  const amount = wish.amount ?? 10
+  const message = `Celebi Future Wish: +${amount}.`
+
+  return {
+    ...state,
+    finalScore: state.finalScore + amount,
+    protectedTraitBonus:
+      (state.protectedTraitBonus || 0) + amount,
+    protectedBonuses: [
+      ...(state.protectedBonuses || []),
+      {
+        source: 'Celebi Future Wish',
+        amount,
+        reason: message,
+      },
+    ],
+    logs: [...(state.logs || []), message],
+  }
+}
+
 export const resolveBattleRound = ({
   pokemonA,
   pokemonB,
@@ -155,6 +185,10 @@ export const resolveBattleRound = ({
   battlefieldEffectsB = [],
   teamA = [],
   teamB = [],
+  jirachiCopyA = null,
+  jirachiCopyB = null,
+  celebiWishA = null,
+  celebiWishB = null,
   isMasterRound = false,
   randomFn = Math.random,
 }) => {
@@ -168,9 +202,19 @@ export const resolveBattleRound = ({
     battlefieldEffectsB,
     isMasterRound,
   })
+  const wishedPlayerAState = applyCelebiWish(
+    basicPair.playerA,
+    celebiWishA,
+    isMasterRound,
+  )
+  const wishedPlayerBState = applyCelebiWish(
+    basicPair.playerB,
+    celebiWishB,
+    isMasterRound,
+  )
   const formResult = resolveFormChanges({
-    playerAState: basicPair.playerA,
-    playerBState: basicPair.playerB,
+    playerAState: wishedPlayerAState,
+    playerBState: wishedPlayerBState,
     isMasterRound,
     playerAScore,
     playerBScore,
@@ -185,6 +229,8 @@ export const resolveBattleRound = ({
     playerBState: coreResult.playerBState,
     teamA,
     teamB,
+    jirachiCopyA,
+    jirachiCopyB,
     isMasterRound,
     randomFn,
   })

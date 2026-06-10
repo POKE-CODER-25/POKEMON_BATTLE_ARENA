@@ -21,6 +21,12 @@ const isCopyableTraitName = (traitName) =>
     traitName.includes(restrictedName),
   )
 
+const SIMPLE_JIRACHI_COPY_BONUSES = {
+  Blaze: 2,
+  Torrent: 2,
+  Growth: 2,
+}
+
 // This resolver only handles advanced trait interactions.
 // It does not handle form changes, Snorlax awakening, winner determination,
 // or Firestore updates. Jirachi copy selection UI is not implemented yet.
@@ -55,6 +61,9 @@ export const getJirachiCopyableTraits = (team = []) =>
           sourcePokemon: pokemon,
           sourcePokemonName: pokemon.name,
           traitName,
+          normalBonus: SIMPLE_JIRACHI_COPY_BONUSES[traitName] ?? null,
+          masterRoundBonus:
+            SIMPLE_JIRACHI_COPY_BONUSES[traitName] ?? null,
           description: trait.description,
           effects: [...(trait.effects || [])],
           specialRules: [...(trait.specialRules || [])],
@@ -150,17 +159,114 @@ const stealTraitBonus = ({
   }
 }
 
+const applyJirachiCopy = ({
+  side,
+  state,
+  selection,
+  isMasterRound,
+  randomFn,
+  logs,
+  appliedEffects,
+}) => {
+  if (
+    !isPokemon(state, 'Jirachi') ||
+    !selection?.traitName ||
+    state.traitDisabled
+  ) {
+    return state
+  }
+
+  const isSleepingMonster =
+    selection.traitName === 'Sleeping Monster Copy'
+
+  if (isSleepingMonster) {
+    const succeeded = randomFn() < 0.1
+    const amount = succeeded
+      ? isMasterRound
+        ? selection.masterRoundBonus ?? 12
+        : selection.normalBonus ?? 10
+      : 0
+    const message = succeeded
+      ? 'Wish Maker copied Sleeping Monster and awakened.'
+      : 'Wish Maker copied Sleeping Monster but failed.'
+    const nextState = succeeded
+      ? {
+          ...state,
+          protectedTraitBonus:
+            (state.protectedTraitBonus || 0) + amount,
+          finalScore: state.finalScore + amount,
+          logs: [...state.logs, message],
+        }
+      : {
+          ...state,
+          logs: [...state.logs, message],
+        }
+
+    logs.push(message)
+    appliedEffects.push({
+      side,
+      sourcePokemon: state.pokemon,
+      targetPokemon: state.pokemon,
+      trait: 'Wish Maker',
+      copiedTrait: selection.traitName,
+      applied: succeeded,
+      amount,
+      protected: true,
+    })
+    return nextState
+  }
+
+  const amount = isMasterRound
+    ? selection.masterRoundBonus ?? selection.normalBonus
+    : selection.normalBonus
+
+  if (amount) {
+    const message = `Wish Maker copied ${selection.traitName}: +${amount}.`
+    const nextState = adjustTraitBonus(state, amount)
+
+    nextState.logs.push(message)
+    logs.push(message)
+    appliedEffects.push({
+      side,
+      sourcePokemon: state.pokemon,
+      targetPokemon: state.pokemon,
+      trait: 'Wish Maker',
+      copiedTrait: selection.traitName,
+      applied: true,
+      amount,
+      protected: false,
+    })
+    return nextState
+  }
+
+  const message = `Wish Maker copied ${selection.traitName}, but this copied trait is not auto-resolved yet.`
+
+  state.logs.push(message)
+  logs.push(message)
+  appliedEffects.push({
+    side,
+    sourcePokemon: state.pokemon,
+    targetPokemon: state.pokemon,
+    trait: 'Wish Maker',
+    copiedTrait: selection.traitName,
+    applied: false,
+    amount: 0,
+  })
+  return state
+}
+
 export const resolveAdvancedTraitInteractions = ({
   playerAState,
   playerBState,
   teamA = [],
   teamB = [],
+  jirachiCopyA = null,
+  jirachiCopyB = null,
   isMasterRound = false,
   randomFn = Math.random,
 }) => {
   void teamA
   void teamB
-  void isMasterRound
 
   let nextPlayerAState = cloneBattleState(playerAState)
   let nextPlayerBState = cloneBattleState(playerBState)
@@ -210,6 +316,25 @@ export const resolveAdvancedTraitInteractions = ({
       appliedEffects,
     })
   }
+
+  nextPlayerAState = applyJirachiCopy({
+    side: 'PLAYER_A',
+    state: nextPlayerAState,
+    selection: jirachiCopyA,
+    isMasterRound,
+    randomFn,
+    logs,
+    appliedEffects,
+  })
+  nextPlayerBState = applyJirachiCopy({
+    side: 'PLAYER_B',
+    state: nextPlayerBState,
+    selection: jirachiCopyB,
+    isMasterRound,
+    randomFn,
+    logs,
+    appliedEffects,
+  })
 
   const playerAGengarResult = stealTraitBonus({
     sourceSide: 'PLAYER_A',
