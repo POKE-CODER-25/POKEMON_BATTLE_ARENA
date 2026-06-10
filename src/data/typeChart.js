@@ -121,37 +121,21 @@ export const getAttackEffectiveness = (attackingType, defendingType) => {
 export const calculateRawTypeBonus = (attackerTypes, defenderTypes) => {
   const uniqueAttackerTypes = [...new Set(attackerTypes)]
   const uniqueDefenderTypes = [...new Set(defenderTypes)]
-
-  const calculateDirectionalBonus = (attackingTypes, defendingTypes) =>
-    defendingTypes.reduce((bonus, defendingType) => {
-      const effectiveness = attackingTypes.map((attackingType) =>
-        getAttackEffectiveness(attackingType, defendingType),
-      )
-
-      if (effectiveness.includes(1)) {
-        return bonus + TYPE_BONUS_VALUES.SUPER_EFFECTIVE
-      }
-
-      if (effectiveness.includes(-1)) {
-        return bonus + TYPE_BONUS_VALUES.RESISTED
-      }
-
-      return bonus
-    }, 0)
-
-  const attackBonus = calculateDirectionalBonus(
-    uniqueAttackerTypes,
-    uniqueDefenderTypes,
+  const strongMatchCounts = uniqueAttackerTypes.map(
+    (attackingType) =>
+      uniqueDefenderTypes.filter(
+        (defendingType) =>
+          getAttackEffectiveness(attackingType, defendingType) === 1,
+      ).length,
   )
-  const counterBonus = calculateDirectionalBonus(
-    uniqueDefenderTypes,
-    uniqueAttackerTypes,
-  )
-  const rawBonus = attackBonus - Math.max(TYPE_BONUS_VALUES.MIN_BONUS, counterBonus)
 
-  // Resistances reduce an earned bonus but never create a negative result.
-  return Math.min(
-    TYPE_BONUS_VALUES.MAX_BONUS,
-    Math.max(TYPE_BONUS_VALUES.MIN_BONUS, rawBonus),
-  )
+  if (strongMatchCounts.some((count) => count >= 2)) {
+    return TYPE_BONUS_VALUES.DOUBLE_SUPER_EFFECTIVE
+  }
+
+  if (strongMatchCounts.some((count) => count === 1)) {
+    return TYPE_BONUS_VALUES.SUPER_EFFECTIVE
+  }
+
+  return TYPE_BONUS_VALUES.MIN_BONUS
 }
