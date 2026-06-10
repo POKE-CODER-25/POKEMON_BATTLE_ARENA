@@ -1,5 +1,6 @@
 import { calculateBasicBattlePair } from './battleScoreCalculator.js'
 import { resolveFormChanges } from './formChangeResolver.js'
+import { resolveTypeAndScoreTraits } from './typeAndScoreTraitResolver.js'
 import { resolveCoreTraitConflicts } from './coreTraitConflictResolver.js'
 import { resolveAdvancedTraitInteractions } from './advancedTraitInteractionResolver.js'
 import {
@@ -187,9 +188,13 @@ export const resolveBattleRound = ({
     isMasterRound,
     randomFn,
   })
+  const typeAndScoreResult = resolveTypeAndScoreTraits({
+    playerAState: advancedResult.playerAState,
+    playerBState: advancedResult.playerBState,
+  })
 
-  let playerAState = advancedResult.playerAState
-  let playerBState = advancedResult.playerBState
+  let playerAState = typeAndScoreResult.playerAState
+  let playerBState = typeAndScoreResult.playerBState
   const rawScoreWinner = resolveScoreWinner(playerAState, playerBState)
   let winnerResult = isMasterRound
     ? resolveMasterRoundWinner(playerAState, playerBState)
@@ -263,6 +268,7 @@ export const resolveBattleRound = ({
       formResult.logs,
       coreResult.logs,
       advancedResult.logs,
+      typeAndScoreResult.logs,
       finalOutcomeLogs,
       winnerResult.logs,
     ),
@@ -270,6 +276,7 @@ export const resolveBattleRound = ({
       ...formResult.appliedEffects,
       ...coreResult.appliedEffects,
       ...advancedResult.appliedEffects,
+      ...typeAndScoreResult.appliedEffects,
       ...finalOutcomeEffects,
     ],
   }

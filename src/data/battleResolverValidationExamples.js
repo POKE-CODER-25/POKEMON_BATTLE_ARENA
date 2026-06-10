@@ -128,6 +128,19 @@ export const BATTLE_VALIDATION_EXAMPLES = [
       }),
   },
   {
+    name: 'Solgaleo vs Moltres',
+    description:
+      "Absolute Sun removes Moltres's Fire-related type bonus in the Master Round.",
+    run: () =>
+      resolveBattleRound({
+        pokemonA: findPokemon('Solgaleo'),
+        pokemonB: findPokemon('Moltres'),
+        roundNumber: 7,
+        isMasterRound: true,
+        randomFn: always(0.99),
+      }),
+  },
+  {
     name: 'Master Round Selector with Snorlax',
     description:
       'Master Round candidates must include Snorlax when Snorlax is on the drafted team.',
