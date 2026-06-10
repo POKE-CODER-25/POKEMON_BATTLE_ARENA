@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import SurrenderControl from '../components/SurrenderControl.jsx'
 import { db } from '../firebase.js'
 import {
   startDraft,
@@ -17,6 +18,7 @@ function ReadyStatus({ isReady }) {
 
 function RoomLobby({ currentUser }) {
   const { roomCode = '' } = useParams()
+  const navigate = useNavigate()
   const displayRoomCode = roomCode.toUpperCase()
   const [room, setRoom] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -49,6 +51,16 @@ function RoomLobby({ currentUser }) {
 
     return unsubscribe
   }, [displayRoomCode])
+
+  useEffect(() => {
+    if (room?.status === 'draft') {
+      navigate(`/draft/${displayRoomCode}`, { replace: true })
+    }
+
+    if (room?.status === 'battle_setup') {
+      navigate(`/battle/${displayRoomCode}`, { replace: true })
+    }
+  }, [displayRoomCode, navigate, room?.status])
 
   async function handleReadyToggle() {
     setPendingAction('ready')
@@ -196,8 +208,15 @@ function RoomLobby({ currentUser }) {
           </div>
         )}
 
-        <Link className="back-link" to="/">&larr; Back to Home</Link>
       </section>
+
+      {currentPlayer && (
+        <SurrenderControl
+          roomCode={displayRoomCode}
+          currentUser={currentUser}
+          username={currentPlayer.username}
+        />
+      )}
 
       <footer className="site-footer">
         Fan-made Pok&eacute;mon Draft Strategy Game

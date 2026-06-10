@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
+import SurrenderControl from '../components/SurrenderControl.jsx'
 import { resolveBattleRound } from '../data/battleRoundResolver.js'
 import { getJirachiCopyableTraits } from '../data/advancedTraitInteractionResolver.js'
 import { allBattlePokemon } from '../data/pokemonBattleData.js'
@@ -298,13 +299,17 @@ function BattleArena({ currentUser }) {
     status: 'idle',
   }
   const opponentReturnedHome = Boolean(
-    opponentUid &&
+    !battleState?.surrender &&
+      opponentUid &&
       (postMatch.returnedHome?.[opponentUid] ||
         room?.players?.[opponentUid]?.active === false),
   )
   const currentPlayerRequestedPlayAgain = Boolean(
     postMatch.playAgainRequests?.[currentUser?.uid],
   )
+  const isSurrenderMatch = Boolean(battleState?.surrender)
+  const opponentSurrendered =
+    battleState?.surrender?.surrenderedBy === opponentUid
   const isMasterRoundPending =
     !masterRoundResult &&
     (battlePhase === 'master_round_pending' ||
@@ -1045,8 +1050,10 @@ function BattleArena({ currentUser }) {
               <section className="draft-state-panel match-status-panel">
                 <p className="eyebrow">Match Over</p>
                 <h2>
-                  {battleState.matchWinnerUid === currentUser.uid
-                    ? 'You won the match!'
+                  {opponentSurrendered
+                    ? 'Opponent surrendered. You won the match.'
+                    : battleState.matchWinnerUid === currentUser.uid
+                      ? 'You won the match!'
                     : battleState.matchWinnerUid
                       ? 'You lost the match.'
                       : masterRoundResult?.resultType ===
@@ -1076,6 +1083,7 @@ function BattleArena({ currentUser }) {
                         className="game-button game-button-primary"
                         type="button"
                         disabled={
+                          isSurrenderMatch ||
                           Boolean(postMatchAction) ||
                           currentPlayerRequestedPlayAgain
                         }
@@ -1453,10 +1461,16 @@ function BattleArena({ currentUser }) {
           </>
         )}
 
-        <Link className="back-link draft-back-link" to={`/draft/${displayRoomCode}`}>
-          &larr; Back to Battle Ready
-        </Link>
       </section>
+
+      {isRoomPlayer && (
+        <SurrenderControl
+          roomCode={displayRoomCode}
+          currentUser={currentUser}
+          username={room?.players?.[currentUser.uid]?.username}
+          hidden={battlePhase === 'match_over'}
+        />
+      )}
     </main>
   )
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
+import SurrenderControl from '../components/SurrenderControl.jsx'
 import { db } from '../firebase.js'
 import {
   getDraftPickLabel,
@@ -490,10 +491,15 @@ function DraftPage({ currentUser }) {
           </section>
         )}
 
-        <Link className="back-link draft-back-link" to={`/room/${displayRoomCode}`}>
-          &larr; Back to Lobby
-        </Link>
       </section>
+
+      {isRoomPlayer && (
+        <SurrenderControl
+          roomCode={displayRoomCode}
+          currentUser={currentUser}
+          username={currentUsername}
+        />
+      )}
     </main>
   )
 }

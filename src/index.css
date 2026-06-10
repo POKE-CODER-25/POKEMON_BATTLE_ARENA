@@ -1233,6 +1233,57 @@ h1 {
   margin: 0;
 }
 
+.surrender-button {
+  position: fixed;
+  z-index: 20;
+  bottom: 24px;
+  left: 24px;
+  padding: 10px 16px;
+  color: #fee2e2;
+  background: rgba(127, 29, 29, 0.92);
+  border: 1px solid rgba(248, 113, 113, 0.55);
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.surrender-modal-backdrop {
+  position: fixed;
+  z-index: 100;
+  display: grid;
+  inset: 0;
+  padding: 24px;
+  place-items: center;
+  background: rgba(2, 6, 23, 0.82);
+}
+
+.surrender-modal {
+  display: grid;
+  width: min(100%, 460px);
+  padding: 28px;
+  gap: 16px;
+  color: #e2e8f0;
+  background: #111827;
+  border: 1px solid rgba(248, 113, 113, 0.45);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.48);
+}
+
+.surrender-modal h2,
+.surrender-modal p {
+  margin: 0;
+}
+
+.surrender-modal > div {
+  display: flex;
+  gap: 10px;
+}
+
+.surrender-modal .game-button {
+  width: auto;
+}
+
 .master-round-panel {
   display: grid;
   justify-items: center;

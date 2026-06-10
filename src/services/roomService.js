@@ -737,6 +737,10 @@ function getBattleStateBackfill(battleState, room) {
     backfill.pendingCelebiWish = null
   }
 
+  if (battleState.surrender === undefined) {
+    backfill.surrender = null
+  }
+
   if (!battleState.postMatch) {
     backfill.postMatch = {
       playAgainRequests: {},
@@ -913,6 +917,10 @@ export async function saveJirachiCopy({
 
     if (!team.some((pokemon) => pokemon.name === 'Jirachi')) {
       throw new Error('Jirachi is not part of your drafted team.')
+    }
+
+    if (battleState.phase === 'match_over') {
+      throw new Error('Jirachi selection is closed.')
     }
 
     if (battleState.jirachiCopies?.[playerUid]) {
@@ -1137,6 +1145,10 @@ export async function requestPlayAgain({ roomCode, playerUid }) {
       throw new Error('Play Again is only available after the match.')
     }
 
+    if (battleState.surrender) {
+      throw new Error('Play Again is unavailable after a surrender.')
+    }
+
     if (
       !opponentUid ||
       battleState.postMatch?.returnedHome?.[opponentUid] ||
@@ -1291,6 +1303,94 @@ export async function returnHomeAfterMatch({ roomCode, playerUid }) {
     })
 
     return true
+  })
+}
+
+export async function surrenderRoom({
+  roomCode,
+  playerUid,
+  username,
+}) {
+  if (!playerUid) {
+    throw new Error('You must be logged in to surrender.')
+  }
+
+  const normalizedRoomCode = roomCode.trim().toUpperCase()
+  const roomReference = doc(db, 'rooms', normalizedRoomCode)
+  const battleStateReference = doc(roomReference, 'battle', 'state')
+
+  return runTransaction(db, async (transaction) => {
+    const [roomSnapshot, battleStateSnapshot] = await Promise.all([
+      transaction.get(roomReference),
+      transaction.get(battleStateReference),
+    ])
+
+    if (!roomSnapshot.exists()) {
+      throw new Error('Room not found')
+    }
+
+    const room = roomSnapshot.data()
+    const opponentUid =
+      room.hostUid === playerUid ? room.guestUid : room.hostUid
+
+    if (!room.players?.[playerUid]) {
+      throw new Error('You are not a player in this room.')
+    }
+
+    if (
+      !opponentUid ||
+      room.players?.[opponentUid]?.active === false ||
+      battleStateSnapshot.data()?.postMatch?.returnedHome?.[opponentUid]
+    ) {
+      return 'opponent_left'
+    }
+
+    const battleState = battleStateSnapshot.exists()
+      ? battleStateSnapshot.data()
+      : createInitialBattleState(
+          serverTimestamp(),
+          room.hostUid,
+          room.guestUid,
+        )
+
+    if (battleState.phase === 'match_over') {
+      return 'match_over'
+    }
+
+    const timestamp = serverTimestamp()
+    const surrenderState = {
+      surrenderedBy: playerUid,
+      winnerUid: opponentUid,
+      surrenderedAt: timestamp,
+    }
+    const nextBattleState = {
+      ...battleState,
+      phase: 'match_over',
+      matchWinnerUid: opponentUid,
+      matchOverReason: `${username || room.players[playerUid].username} surrendered.`,
+      surrender: surrenderState,
+      pendingCelebiWish: null,
+      postMatch: {
+        playAgainRequests: {},
+        returnedHome: {},
+        status: 'idle',
+      },
+      updatedAt: timestamp,
+    }
+
+    transaction.update(roomReference, {
+      status: 'battle_setup',
+      [`players.${playerUid}.active`]: false,
+      updatedAt: timestamp,
+    })
+
+    if (battleStateSnapshot.exists()) {
+      transaction.set(battleStateReference, nextBattleState)
+    } else {
+      transaction.set(battleStateReference, nextBattleState)
+    }
+
+    return 'surrendered'
   })
 }
 
@@ -2105,6 +2205,7 @@ function createInitialBattleState(timestamp, hostUid, guestUid) {
     jirachiCopies: {},
     celebiWishes: {},
     pendingCelebiWish: null,
+    surrender: null,
     postMatch: {
       playAgainRequests: {},
       returnedHome: {},
