@@ -28,6 +28,7 @@ const ROOM_CODE_CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
 const ROOM_CODE_LENGTH = 6
 const MAX_CODE_ATTEMPTS = 5
 const TOTAL_DRAFT_ROUNDS = 6
+const RECONNECT_TIMEOUT_MS = 2 * 60 * 1000
 
 export { DRAFT_ROUND_NAMES }
 
@@ -85,6 +86,12 @@ export async function findActiveRoomForUser(playerUid) {
     .filter(({ room }) => RESUMABLE_ROOM_STATUSES.has(room.status))
     .filter(({ room }) => Boolean(room.players?.[playerUid]))
     .filter(({ room }) => room.players[playerUid].active !== false)
+    .filter(
+      ({ room }) =>
+        !['left', 'surrendered', 'afk_lost'].includes(
+          room.presence?.[playerUid]?.status,
+        ),
+    )
     .sort(
       (candidateA, candidateB) =>
         getTimestampMillis(candidateB.room.updatedAt) -
@@ -259,6 +266,13 @@ export async function createRoom(currentUser, userProfile) {
             joinedAt: timestamp,
           },
         },
+        presence: {
+          [currentUser.uid]: {
+            status: 'online',
+            lastSeen: timestamp,
+            reconnectDeadline: null,
+          },
+        },
         createdAt: timestamp,
         updatedAt: timestamp,
       })
@@ -328,11 +342,176 @@ export async function joinRoom(roomCode, currentUser, userProfile) {
         ready: false,
         joinedAt: serverTimestamp(),
       },
+      [`presence.${currentUser.uid}`]: {
+        status: 'online',
+        lastSeen: serverTimestamp(),
+        reconnectDeadline: null,
+      },
       updatedAt: serverTimestamp(),
     })
   })
 
   return normalizedRoomCode
+}
+
+export async function markPlayerOnline({ roomCode, playerUid }) {
+  if (!roomCode || !playerUid) {
+    return
+  }
+
+  const roomReference = doc(db, 'rooms', roomCode.trim().toUpperCase())
+
+  await runTransaction(db, async (transaction) => {
+    const roomSnapshot = await transaction.get(roomReference)
+
+    if (!roomSnapshot.exists()) {
+      return
+    }
+
+    const room = roomSnapshot.data()
+    const presenceStatus = room.presence?.[playerUid]?.status
+
+    if (
+      room.status === 'closed' ||
+      room.players?.[playerUid]?.active === false ||
+      ['left', 'surrendered', 'afk_lost'].includes(presenceStatus)
+    ) {
+      return
+    }
+
+    transaction.update(roomReference, {
+      [`presence.${playerUid}`]: {
+        status: 'online',
+        lastSeen: serverTimestamp(),
+        reconnectDeadline: null,
+      },
+    })
+  })
+}
+
+export async function markPlayerReconnecting({ roomCode, playerUid }) {
+  if (!roomCode || !playerUid) {
+    return
+  }
+
+  const roomReference = doc(db, 'rooms', roomCode.trim().toUpperCase())
+  const now = Date.now()
+
+  await runTransaction(db, async (transaction) => {
+    const roomSnapshot = await transaction.get(roomReference)
+
+    if (!roomSnapshot.exists()) {
+      return
+    }
+
+    const room = roomSnapshot.data()
+    const presenceStatus = room.presence?.[playerUid]?.status
+
+    if (
+      room.status === 'closed' ||
+      room.players?.[playerUid]?.active === false ||
+      ['left', 'surrendered', 'afk_lost'].includes(presenceStatus)
+    ) {
+      return
+    }
+
+    transaction.update(roomReference, {
+      [`presence.${playerUid}`]: {
+        status: 'reconnecting',
+        lastSeen: Timestamp.fromMillis(now),
+        reconnectDeadline: Timestamp.fromMillis(
+          now + RECONNECT_TIMEOUT_MS,
+        ),
+      },
+    })
+  })
+}
+
+export async function finalizeAfkWin({
+  roomCode,
+  winnerUid,
+  afkPlayerUid,
+}) {
+  const normalizedRoomCode = roomCode.trim().toUpperCase()
+  const roomReference = doc(db, 'rooms', normalizedRoomCode)
+  const battleStateReference = doc(roomReference, 'battle', 'state')
+
+  return runTransaction(db, async (transaction) => {
+    const [roomSnapshot, battleStateSnapshot] = await Promise.all([
+      transaction.get(roomReference),
+      transaction.get(battleStateReference),
+    ])
+
+    if (!roomSnapshot.exists()) {
+      throw new Error('Room not found')
+    }
+
+    const room = roomSnapshot.data()
+    const battleState = battleStateSnapshot.exists()
+      ? battleStateSnapshot.data()
+      : null
+
+    if (
+      !room.players?.[winnerUid] ||
+      !room.players?.[afkPlayerUid]
+    ) {
+      throw new Error('AFK player data is invalid.')
+    }
+
+    if (battleState?.phase === 'match_over') {
+      return false
+    }
+
+    if (
+      room.players[afkPlayerUid].active === false ||
+      battleState?.surrender?.surrenderedBy === afkPlayerUid ||
+      battleState?.postMatch?.returnedHome?.[afkPlayerUid]
+    ) {
+      return false
+    }
+
+    const winnerPresence = room.presence?.[winnerUid]
+    const afkPresence = room.presence?.[afkPlayerUid]
+    const deadlineMillis = getTimestampMillis(
+      afkPresence?.reconnectDeadline,
+    )
+
+    if (
+      winnerPresence?.status !== 'online' ||
+      afkPresence?.status !== 'reconnecting' ||
+      !deadlineMillis ||
+      deadlineMillis > Date.now()
+    ) {
+      return false
+    }
+
+    const timestamp = serverTimestamp()
+    const nextBattleState = battleState ?? createInitialBattleState(
+      timestamp,
+      room.hostUid,
+      room.guestUid,
+    )
+
+    transaction.update(roomReference, {
+      status: 'battle_setup',
+      [`presence.${afkPlayerUid}`]: {
+        ...afkPresence,
+        status: 'afk_lost',
+        reconnectDeadline: null,
+      },
+      updatedAt: timestamp,
+    })
+    transaction.set(battleStateReference, {
+      ...nextBattleState,
+      phase: 'match_over',
+      matchWinnerUid: winnerUid,
+      matchOverReason: 'Opponent was AFK for more than 2 minutes.',
+      pendingCelebiWish: null,
+      updatedAt: timestamp,
+    })
+
+    return true
+  })
 }
 
 export async function togglePlayerReady(roomCode, currentUser) {
@@ -1301,6 +1480,18 @@ export async function requestPlayAgain({ roomCode, playerUid }) {
       [`players.${room.guestUid}.ready`]: false,
       [`players.${room.hostUid}.active`]: true,
       [`players.${room.guestUid}.active`]: true,
+      presence: {
+        [room.hostUid]: {
+          status: 'online',
+          lastSeen: timestamp,
+          reconnectDeadline: null,
+        },
+        [room.guestUid]: {
+          status: 'online',
+          lastSeen: timestamp,
+          reconnectDeadline: null,
+        },
+      },
       updatedAt: timestamp,
     })
     transaction.set(
@@ -1378,20 +1569,32 @@ export async function returnHomeAfterMatch({ roomCode, playerUid }) {
       return true
     }
 
+    const timestamp = serverTimestamp()
+    const returnedHome = {
+      ...(battleState.postMatch?.returnedHome ?? {}),
+      [playerUid]: true,
+    }
+    const bothReturnedHome =
+      Boolean(returnedHome[room.hostUid]) &&
+      Boolean(returnedHome[room.guestUid])
+
     transaction.update(roomReference, {
+      ...(bothReturnedHome ? { status: 'closed' } : {}),
       [`players.${playerUid}.active`]: false,
-      updatedAt: serverTimestamp(),
+      [`presence.${playerUid}`]: {
+        status: 'left',
+        lastSeen: timestamp,
+        reconnectDeadline: null,
+      },
+      updatedAt: timestamp,
     })
     transaction.update(battleStateReference, {
       postMatch: {
         playAgainRequests: {},
-        returnedHome: {
-          ...(battleState.postMatch?.returnedHome ?? {}),
-          [playerUid]: true,
-        },
+        returnedHome,
         status: 'opponent_left',
       },
-      updatedAt: serverTimestamp(),
+      updatedAt: timestamp,
     })
 
     return true
@@ -1473,6 +1676,11 @@ export async function surrenderRoom({
     transaction.update(roomReference, {
       status: 'battle_setup',
       [`players.${playerUid}.active`]: false,
+      [`presence.${playerUid}`]: {
+        status: 'surrendered',
+        lastSeen: timestamp,
+        reconnectDeadline: null,
+      },
       updatedAt: timestamp,
     })
 

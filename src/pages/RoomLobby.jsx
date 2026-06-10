@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import RoomPresence from '../components/RoomPresence.jsx'
 import SurrenderControl from '../components/SurrenderControl.jsx'
 import { db } from '../firebase.js'
 import {
@@ -16,7 +17,7 @@ function ReadyStatus({ isReady }) {
   )
 }
 
-function RoomLobby({ currentUser }) {
+function RoomLobby({ currentUser, onRoomLeft }) {
   const { roomCode = '' } = useParams()
   const navigate = useNavigate()
   const displayRoomCode = roomCode.toUpperCase()
@@ -211,11 +212,19 @@ function RoomLobby({ currentUser }) {
       </section>
 
       {currentPlayer && (
-        <SurrenderControl
-          roomCode={displayRoomCode}
-          currentUser={currentUser}
-          username={currentPlayer.username}
-        />
+        <>
+          <RoomPresence
+            roomCode={displayRoomCode}
+            room={room}
+            currentUser={currentUser}
+          />
+          <SurrenderControl
+            roomCode={displayRoomCode}
+            currentUser={currentUser}
+            username={currentPlayer.username}
+            onRoomLeft={onRoomLeft}
+          />
+        </>
       )}
 
       <footer className="site-footer">

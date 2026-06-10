@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { useNavigate, useParams } from 'react-router-dom'
+import RoomPresence from '../components/RoomPresence.jsx'
 import SurrenderControl from '../components/SurrenderControl.jsx'
 import { db } from '../firebase.js'
 import {
@@ -23,7 +24,7 @@ function ClosedPokeball() {
   )
 }
 
-function DraftPage({ currentUser }) {
+function DraftPage({ currentUser, onRoomLeft }) {
   const { roomCode = '' } = useParams()
   const navigate = useNavigate()
   const displayRoomCode = roomCode.toUpperCase()
@@ -494,11 +495,19 @@ function DraftPage({ currentUser }) {
       </section>
 
       {isRoomPlayer && (
-        <SurrenderControl
-          roomCode={displayRoomCode}
-          currentUser={currentUser}
-          username={currentUsername}
-        />
+        <>
+          <RoomPresence
+            roomCode={displayRoomCode}
+            room={room}
+            currentUser={currentUser}
+          />
+          <SurrenderControl
+            roomCode={displayRoomCode}
+            currentUser={currentUser}
+            username={currentUsername}
+            onRoomLeft={onRoomLeft}
+          />
+        </>
       )}
     </main>
   )

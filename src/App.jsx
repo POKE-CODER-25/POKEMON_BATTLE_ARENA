@@ -129,15 +129,30 @@ function App() {
           />
           <Route
             path="/room/:roomCode"
-            element={<RoomLobby currentUser={user} />}
+            element={
+              <RoomLobby
+                currentUser={user}
+                onRoomLeft={() => setActiveRoom(null)}
+              />
+            }
           />
           <Route
             path="/draft/:roomCode"
-            element={<DraftPage currentUser={user} />}
+            element={
+              <DraftPage
+                currentUser={user}
+                onRoomLeft={() => setActiveRoom(null)}
+              />
+            }
           />
           <Route
             path="/battle/:roomCode"
-            element={<BattleArena currentUser={user} />}
+            element={
+              <BattleArena
+                currentUser={user}
+                onRoomLeft={() => setActiveRoom(null)}
+              />
+            }
           />
         </Routes>
       </ResumeRoomGate>

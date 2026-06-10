@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { useNavigate, useParams } from 'react-router-dom'
+import RoomPresence from '../components/RoomPresence.jsx'
 import SurrenderControl from '../components/SurrenderControl.jsx'
 import { resolveBattleRound } from '../data/battleRoundResolver.js'
 import { getJirachiCopyableTraits } from '../data/advancedTraitInteractionResolver.js'
@@ -94,7 +95,7 @@ function RoundScoreRow({ label, score }) {
   )
 }
 
-function BattleArena({ currentUser }) {
+function BattleArena({ currentUser, onRoomLeft }) {
   const { roomCode = '' } = useParams()
   const navigate = useNavigate()
   const displayRoomCode = roomCode.toUpperCase()
@@ -834,6 +835,7 @@ function BattleArena({ currentUser }) {
         roomCode: displayRoomCode,
         playerUid: currentUser.uid,
       })
+      onRoomLeft?.()
       navigate('/', {
         replace: true,
         state: { skipRoomResume: true },
@@ -1467,12 +1469,21 @@ function BattleArena({ currentUser }) {
       </section>
 
       {isRoomPlayer && (
-        <SurrenderControl
-          roomCode={displayRoomCode}
-          currentUser={currentUser}
-          username={room?.players?.[currentUser.uid]?.username}
-          hidden={battlePhase === 'match_over'}
-        />
+        <>
+          <RoomPresence
+            roomCode={displayRoomCode}
+            room={room}
+            currentUser={currentUser}
+            matchOver={battlePhase === 'match_over'}
+          />
+          <SurrenderControl
+            roomCode={displayRoomCode}
+            currentUser={currentUser}
+            username={room?.players?.[currentUser.uid]?.username}
+            hidden={battlePhase === 'match_over'}
+            onRoomLeft={onRoomLeft}
+          />
+        </>
       )}
     </main>
   )

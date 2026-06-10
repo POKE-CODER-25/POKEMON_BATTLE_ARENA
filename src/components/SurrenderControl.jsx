@@ -7,6 +7,7 @@ function SurrenderControl({
   currentUser,
   username,
   hidden = false,
+  onRoomLeft,
 }) {
   const navigate = useNavigate()
   const [isOpen, setIsOpen] = useState(false)
@@ -31,6 +32,7 @@ function SurrenderControl({
         playerUid: currentUser.uid,
         username,
       })
+      onRoomLeft?.()
       navigate('/', {
         replace: true,
         state: { skipRoomResume: true },
