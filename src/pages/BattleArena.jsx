@@ -13,6 +13,7 @@ import {
   initializeMasterRoundOptions,
   lockBattlePokemon,
   lockMasterRoundPokemon,
+  resolveAndSaveMasterRound,
   saveBattleRoundResult,
 } from '../services/roomService.js'
 
@@ -106,6 +107,7 @@ function BattleArena({ currentUser }) {
     useState(false)
   const [masterRoundError, setMasterRoundError] = useState('')
   const masterRoundInitializationRef = useRef(false)
+  const masterRoundResolutionRef = useRef(false)
 
   useEffect(() => {
     return onSnapshot(
@@ -240,9 +242,11 @@ function BattleArena({ currentUser }) {
   const bothMasterRoundPlayersSelected = Boolean(
     masterRoundSelection && opponentMasterRoundSelection,
   )
+  const masterRoundResult = battleState?.masterRound?.result ?? null
   const isMasterRoundPending =
-    battlePhase === 'master_round_pending' ||
-    battleState?.masterRound?.phase === 'choose_master_pokeball'
+    !masterRoundResult &&
+    (battlePhase === 'master_round_pending' ||
+      battleState?.masterRound?.phase === 'choose_master_pokeball')
   const hostBattlefieldEffects =
     battleState?.battlefieldEffects?.[room?.hostUid] ??
     EMPTY_BATTLEFIELD_EFFECTS
@@ -332,9 +336,10 @@ function BattleArena({ currentUser }) {
         ? 'master_round_pending'
         : 'round_result'
   const savedRoundStateFinalized =
-    savedRoundUsageComplete &&
-    FINALIZED_ROUND_PHASES.has(battlePhase) &&
-    battlePhase === expectedSavedPhase
+    Boolean(masterRoundResult && battlePhase === 'match_over') ||
+    (savedRoundUsageComplete &&
+      FINALIZED_ROUND_PHASES.has(battlePhase) &&
+      battlePhase === expectedSavedPhase)
   const previewPlayerAState = canonicalBattleResult?.playerAState
   const previewPlayerBState = canonicalBattleResult?.playerBState
   const currentUserIsPlayerA = room?.hostUid === currentUser?.uid
@@ -375,6 +380,18 @@ function BattleArena({ currentUser }) {
       revealedOpponentPokemon &&
       revealReason,
   )
+  const yourMasterPokemon = currentUserIsPlayerA
+    ? masterRoundResult?.playerAPokemon
+    : masterRoundResult?.playerBPokemon
+  const opponentMasterPokemon = currentUserIsPlayerA
+    ? masterRoundResult?.playerBPokemon
+    : masterRoundResult?.playerAPokemon
+  const yourMasterFinalScore = currentUserIsPlayerA
+    ? masterRoundResult?.playerAFinalScore
+    : masterRoundResult?.playerBFinalScore
+  const opponentMasterFinalScore = currentUserIsPlayerA
+    ? masterRoundResult?.playerBFinalScore
+    : masterRoundResult?.playerAFinalScore
 
   useEffect(() => {
     if (
@@ -466,6 +483,52 @@ function BattleArena({ currentUser }) {
     battlePhase,
     battleState?.masterRound?.options,
     displayRoomCode,
+    room?.guestUid,
+    room?.hostUid,
+  ])
+
+  useEffect(() => {
+    if (
+      battlePhase !== 'master_round_pending' ||
+      !bothMasterRoundPlayersSelected ||
+      masterRoundResult ||
+      masterRoundResolutionRef.current ||
+      !room?.hostUid ||
+      !room?.guestUid
+    ) {
+      return undefined
+    }
+
+    let isActive = true
+    masterRoundResolutionRef.current = true
+
+    resolveAndSaveMasterRound(displayRoomCode)
+      .then(() => {
+        if (isActive) {
+          setMasterRoundError('')
+        }
+      })
+      .catch((error) => {
+        if (isActive) {
+          setMasterRoundError(
+            error instanceof Error
+              ? error.message
+              : 'Could not resolve the Master Round.',
+          )
+        }
+      })
+      .finally(() => {
+        masterRoundResolutionRef.current = false
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [
+    battlePhase,
+    bothMasterRoundPlayersSelected,
+    displayRoomCode,
+    masterRoundResult,
     room?.guestUid,
     room?.hostUid,
   ])
@@ -685,7 +748,12 @@ function BattleArena({ currentUser }) {
                 <h2>
                   {battleState.matchWinnerUid === currentUser.uid
                     ? 'You won the match!'
-                    : 'You lost the match.'}
+                    : battleState.matchWinnerUid
+                      ? 'You lost the match.'
+                      : masterRoundResult?.resultType ===
+                          'TRUE_WARRIORS'
+                        ? 'True Warriors — the match ends in legendary honor.'
+                        : 'The match ended without a winner.'}
                 </h2>
                 <p>
                   <strong>Final Score:</strong> {yourScore} -{' '}
@@ -695,6 +763,39 @@ function BattleArena({ currentUser }) {
                   <strong>Reason:</strong>{' '}
                   {battleState.matchOverReason}
                 </p>
+              </section>
+            )}
+
+            {masterRoundResult && (
+              <section className="draft-state-panel battle-reveal-preview">
+                <p className="eyebrow">MASTER ROUND RESULT</p>
+
+                <div className="battle-reveal-fighters">
+                  <div>
+                    <span>Your Master Pok&eacute;mon</span>
+                    <strong>{yourMasterPokemon?.pokemonName}</strong>
+                    <small>
+                      Final Score: {yourMasterFinalScore}
+                    </small>
+                  </div>
+                  <div>
+                    <span>Opponent Master Pok&eacute;mon</span>
+                    <strong>{opponentMasterPokemon?.pokemonName}</strong>
+                    <small>
+                      Final Score: {opponentMasterFinalScore}
+                    </small>
+                  </div>
+                </div>
+
+                <p>
+                  <strong>Result:</strong> {masterRoundResult.reason}
+                </p>
+                <strong>Logs:</strong>
+                <ul>
+                  {masterRoundResult.logs.map((log, index) => (
+                    <li key={`${index}-${log}`}>{log}</li>
+                  ))}
+                </ul>
               </section>
             )}
 

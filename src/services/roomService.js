@@ -12,8 +12,10 @@ import {
   starterPools,
   supportPool,
 } from '../data/draftPools.js'
+import { resolveBattleRound } from '../data/battleRoundResolver.js'
 import { DRAFT_ROUND_NAMES } from '../data/draftTeamStructure.js'
 import { createMasterRoundOptions } from '../data/masterRoundSelector.js'
+import { allBattlePokemon } from '../data/pokemonBattleData.js'
 import { db } from '../firebase.js'
 
 const ROOM_CODE_CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -848,6 +850,39 @@ function serializeMasterRoundOptions(options) {
   }))
 }
 
+function findMasterRoundPokemon(selection) {
+  if (!selection) {
+    return null
+  }
+
+  return (
+    allBattlePokemon.find(
+      (pokemon) => String(pokemon.id) === String(selection.pokemonId),
+    ) ??
+    allBattlePokemon.find(
+      (pokemon) => pokemon.name === selection.pokemonName,
+    )
+  )
+}
+
+function createSeededRandom(seedValue) {
+  let seed = 2166136261
+
+  for (let index = 0; index < seedValue.length; index += 1) {
+    seed ^= seedValue.charCodeAt(index)
+    seed = Math.imul(seed, 16777619)
+  }
+
+  return () => {
+    seed += 0x6d2b79f5
+    let value = seed
+    value = Math.imul(value ^ (value >>> 15), value | 1)
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61)
+
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296
+  }
+}
+
 export async function initializeMasterRoundOptions(roomCode) {
   const normalizedRoomCode = roomCode.trim().toUpperCase()
   const roomReference = doc(db, 'rooms', normalizedRoomCode)
@@ -1014,6 +1049,148 @@ export async function lockMasterRoundPokemon({
     })
 
     return selectedPokemon.pokemonId
+  })
+}
+
+export async function resolveAndSaveMasterRound(roomCode) {
+  const normalizedRoomCode = roomCode.trim().toUpperCase()
+  const roomReference = doc(db, 'rooms', normalizedRoomCode)
+  const battleStateReference = doc(roomReference, 'battle', 'state')
+
+  return runTransaction(db, async (transaction) => {
+    const roomSnapshot = await transaction.get(roomReference)
+
+    if (!roomSnapshot.exists()) {
+      throw new Error('Room not found')
+    }
+
+    const room = roomSnapshot.data()
+    const playerAUid = room.hostUid
+    const playerBUid = room.guestUid
+    const playerATeamReference = doc(
+      roomReference,
+      'draftTeams',
+      playerAUid,
+    )
+    const playerBTeamReference = doc(
+      roomReference,
+      'draftTeams',
+      playerBUid,
+    )
+    const [
+      battleStateSnapshot,
+      playerATeamSnapshot,
+      playerBTeamSnapshot,
+    ] = await Promise.all([
+      transaction.get(battleStateReference),
+      transaction.get(playerATeamReference),
+      transaction.get(playerBTeamReference),
+    ])
+
+    if (!battleStateSnapshot.exists()) {
+      throw new Error('Battle state is not initialized.')
+    }
+
+    if (!playerATeamSnapshot.exists() || !playerBTeamSnapshot.exists()) {
+      throw new Error('Both draft teams are required for Master Round.')
+    }
+
+    const battleState = battleStateSnapshot.data()
+
+    if (battleState.masterRound?.result) {
+      return battleState.masterRound.result
+    }
+
+    if (battleState.phase !== 'master_round_pending') {
+      throw new Error('Master Round is not ready to resolve.')
+    }
+
+    const playerASelection =
+      battleState.masterRound?.selections?.[playerAUid]
+    const playerBSelection =
+      battleState.masterRound?.selections?.[playerBUid]
+
+    if (!playerASelection || !playerBSelection) {
+      throw new Error('Both trainers must select a Master Pokeball.')
+    }
+
+    const playerAMasterPokemon =
+      findMasterRoundPokemon(playerASelection)
+    const playerBMasterPokemon =
+      findMasterRoundPokemon(playerBSelection)
+
+    if (!playerAMasterPokemon || !playerBMasterPokemon) {
+      throw new Error('A selected Master Round Pokemon was not found.')
+    }
+
+    const playerAScore =
+      battleState.playerScores?.[playerAUid] ??
+      battleState.hostScore ??
+      0
+    const playerBScore =
+      battleState.playerScores?.[playerBUid] ??
+      battleState.guestScore ??
+      0
+    const battleResult = resolveBattleRound({
+      pokemonA: playerAMasterPokemon,
+      pokemonB: playerBMasterPokemon,
+      roundNumber: 7,
+      playerAScore,
+      playerBScore,
+      teamA: playerATeamSnapshot.data().picks ?? [],
+      teamB: playerBTeamSnapshot.data().picks ?? [],
+      isMasterRound: true,
+      randomFn: createSeededRandom(
+        `${normalizedRoomCode}:master:${playerASelection.pokemonId}:${playerBSelection.pokemonId}`,
+      ),
+    })
+    const { winnerResult } = battleResult
+    const winnerUid =
+      winnerResult.resultType === 'PLAYER_A_WIN'
+        ? playerAUid
+        : winnerResult.resultType === 'PLAYER_B_WIN'
+          ? playerBUid
+          : null
+    const matchOverReason =
+      winnerResult.resultType === 'TRUE_WARRIORS'
+        ? 'Both trainers are True Warriors.'
+        : winnerResult.reason
+    const createdAt = Timestamp.now()
+    const savedResult = {
+      playerAUid,
+      playerBUid,
+      playerAPokemon: {
+        pokemonId: playerAMasterPokemon.id,
+        pokemonName: playerAMasterPokemon.name,
+      },
+      playerBPokemon: {
+        pokemonId: playerBMasterPokemon.id,
+        pokemonName: playerBMasterPokemon.name,
+      },
+      playerAFinalScore: battleResult.playerAState.finalScore,
+      playerBFinalScore: battleResult.playerBState.finalScore,
+      resultType: winnerResult.resultType,
+      winnerUid,
+      winnerPokemon: winnerResult.winnerPokemon
+        ? {
+            pokemonId: winnerResult.winnerPokemon.id,
+            pokemonName: winnerResult.winnerPokemon.name,
+          }
+        : null,
+      reason: winnerResult.reason,
+      logs: battleResult.logs,
+      createdAt,
+    }
+
+    transaction.update(battleStateReference, {
+      'masterRound.result': savedResult,
+      phase: 'match_over',
+      matchWinnerUid: winnerUid,
+      matchOverReason,
+      updatedAt: serverTimestamp(),
+    })
+
+    return savedResult
   })
 }
 
