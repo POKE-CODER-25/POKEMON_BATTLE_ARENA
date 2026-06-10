@@ -1213,6 +1213,67 @@ h1 {
   color: #fca5a5;
 }
 
+.master-round-panel {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  text-align: center;
+}
+
+.master-round-panel .eyebrow,
+.master-round-panel h2,
+.master-round-panel p {
+  margin: 0;
+}
+
+.master-round-pokeballs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(90px, 130px));
+  justify-content: center;
+  gap: 18px;
+  width: 100%;
+  margin: 10px 0;
+}
+
+.master-round-pokeball {
+  display: grid;
+  aspect-ratio: 1;
+  padding: 0;
+  place-items: center;
+  background:
+    linear-gradient(
+      to bottom,
+      #ef4444 0 45%,
+      #0f172a 45% 55%,
+      #f8fafc 55% 100%
+    );
+  border: 4px solid #0f172a;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.4);
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.master-round-pokeball:not(:disabled):hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 30px rgba(251, 191, 36, 0.28);
+}
+
+.master-round-pokeball:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.master-round-pokeball span {
+  width: 30%;
+  aspect-ratio: 1;
+  background: #f8fafc;
+  border: 4px solid #0f172a;
+  border-radius: 50%;
+}
+
 .battle-reveal-fighters {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

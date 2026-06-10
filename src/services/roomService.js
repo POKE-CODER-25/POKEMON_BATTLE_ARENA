@@ -13,6 +13,7 @@ import {
   supportPool,
 } from '../data/draftPools.js'
 import { DRAFT_ROUND_NAMES } from '../data/draftTeamStructure.js'
+import { createMasterRoundOptions } from '../data/masterRoundSelector.js'
 import { db } from '../firebase.js'
 
 const ROOM_CODE_CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -837,6 +838,182 @@ export async function lockBattlePokemon(roomCode, playerUid, pokemon) {
     })
 
     return selectedPokemon.id
+  })
+}
+
+function serializeMasterRoundOptions(options) {
+  return options.map((pokemon) => ({
+    pokemonId: pokemon.id,
+    pokemonName: pokemon.name,
+  }))
+}
+
+export async function initializeMasterRoundOptions(roomCode) {
+  const normalizedRoomCode = roomCode.trim().toUpperCase()
+  const roomReference = doc(db, 'rooms', normalizedRoomCode)
+  const battleStateReference = doc(roomReference, 'battle', 'state')
+
+  return runTransaction(db, async (transaction) => {
+    const roomSnapshot = await transaction.get(roomReference)
+
+    if (!roomSnapshot.exists()) {
+      throw new Error('Room not found')
+    }
+
+    const room = roomSnapshot.data()
+    const hostTeamReference = doc(
+      roomReference,
+      'draftTeams',
+      room.hostUid,
+    )
+    const guestTeamReference = doc(
+      roomReference,
+      'draftTeams',
+      room.guestUid,
+    )
+    const [battleStateSnapshot, hostTeamSnapshot, guestTeamSnapshot] =
+      await Promise.all([
+        transaction.get(battleStateReference),
+        transaction.get(hostTeamReference),
+        transaction.get(guestTeamReference),
+      ])
+
+    if (!battleStateSnapshot.exists()) {
+      throw new Error('Battle state is not initialized.')
+    }
+
+    if (!hostTeamSnapshot.exists() || !guestTeamSnapshot.exists()) {
+      throw new Error('Both draft teams are required for Master Round.')
+    }
+
+    const battleState = battleStateSnapshot.data()
+    const existingOptions = battleState.masterRound?.options
+
+    if (
+      existingOptions?.[room.hostUid] &&
+      existingOptions?.[room.guestUid]
+    ) {
+      return false
+    }
+
+    if (battleState.phase !== 'master_round_pending') {
+      throw new Error('Master Round options are not available yet.')
+    }
+
+    const hostOptions = createMasterRoundOptions(
+      hostTeamSnapshot.data().picks ?? [],
+    )
+    const guestOptions = createMasterRoundOptions(
+      guestTeamSnapshot.data().picks ?? [],
+    )
+
+    if (
+      hostOptions.candidates.length !== 3 ||
+      guestOptions.candidates.length !== 3
+    ) {
+      throw new Error('Each trainer needs three Master Round options.')
+    }
+
+    const timestamp = serverTimestamp()
+
+    transaction.update(battleStateReference, {
+      masterRound: {
+        options: {
+          [room.hostUid]: serializeMasterRoundOptions(
+            hostOptions.candidates,
+          ),
+          [room.guestUid]: serializeMasterRoundOptions(
+            guestOptions.candidates,
+          ),
+        },
+        hiddenOptions: {
+          [room.hostUid]: serializeMasterRoundOptions(
+            hostOptions.hiddenOptions,
+          ),
+          [room.guestUid]: serializeMasterRoundOptions(
+            guestOptions.hiddenOptions,
+          ),
+        },
+        selections: {
+          [room.hostUid]: null,
+          [room.guestUid]: null,
+        },
+        phase: 'choose_master_pokeball',
+      },
+      updatedAt: timestamp,
+    })
+
+    return true
+  })
+}
+
+export async function lockMasterRoundPokemon({
+  roomCode,
+  playerUid,
+  pokemonId,
+}) {
+  if (!playerUid || pokemonId === undefined || pokemonId === null) {
+    throw new Error('Choose a valid Master Round Pokeball.')
+  }
+
+  const normalizedRoomCode = roomCode.trim().toUpperCase()
+  const roomReference = doc(db, 'rooms', normalizedRoomCode)
+  const battleStateReference = doc(roomReference, 'battle', 'state')
+
+  return runTransaction(db, async (transaction) => {
+    const [roomSnapshot, battleStateSnapshot] = await Promise.all([
+      transaction.get(roomReference),
+      transaction.get(battleStateReference),
+    ])
+
+    if (!roomSnapshot.exists()) {
+      throw new Error('Room not found')
+    }
+
+    if (!battleStateSnapshot.exists()) {
+      throw new Error('Battle state is not initialized.')
+    }
+
+    const room = roomSnapshot.data()
+    const battleState = battleStateSnapshot.data()
+
+    if (!room.players?.[playerUid]) {
+      throw new Error('You are not a player in this room.')
+    }
+
+    if (
+      battleState.phase !== 'master_round_pending' ||
+      battleState.masterRound?.phase !== 'choose_master_pokeball'
+    ) {
+      throw new Error('Master Round selection is not open.')
+    }
+
+    if (battleState.masterRound?.selections?.[playerUid]) {
+      throw new Error('Your Master Round Pokemon is already locked.')
+    }
+
+    const selectedPokemon = (
+      battleState.masterRound?.hiddenOptions?.[playerUid] ?? []
+    ).find(
+      (pokemon) => String(pokemon.pokemonId) === String(pokemonId),
+    )
+
+    if (!selectedPokemon) {
+      throw new Error('That Pokeball is not a valid Master Round option.')
+    }
+
+    const timestamp = serverTimestamp()
+
+    transaction.update(battleStateReference, {
+      [`masterRound.selections.${playerUid}`]: {
+        pokemonId: selectedPokemon.pokemonId,
+        pokemonName: selectedPokemon.pokemonName,
+        selectedAt: timestamp,
+      },
+      updatedAt: timestamp,
+    })
+
+    return selectedPokemon.pokemonId
   })
 }
 

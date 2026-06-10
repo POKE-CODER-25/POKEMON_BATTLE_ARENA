@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { Link, useParams } from 'react-router-dom'
 import { resolveBattleRound } from '../data/battleRoundResolver.js'
@@ -10,7 +10,9 @@ import {
 import { db } from '../firebase.js'
 import {
   continueBattleRound,
+  initializeMasterRoundOptions,
   lockBattlePokemon,
+  lockMasterRoundPokemon,
   saveBattleRoundResult,
 } from '../services/roomService.js'
 
@@ -100,6 +102,10 @@ function BattleArena({ currentUser }) {
   const [roundSaveError, setRoundSaveError] = useState('')
   const [isContinuingRound, setIsContinuingRound] = useState(false)
   const [continueErrorMessage, setContinueErrorMessage] = useState('')
+  const [isLockingMasterRound, setIsLockingMasterRound] =
+    useState(false)
+  const [masterRoundError, setMasterRoundError] = useState('')
+  const masterRoundInitializationRef = useRef(false)
 
   useEffect(() => {
     return onSnapshot(
@@ -225,6 +231,18 @@ function BattleArena({ currentUser }) {
   const battlePhase = battleState?.phase ?? 'choose_pokemon'
   const battlePhaseLabel =
     BATTLE_PHASE_LABELS[battlePhase] ?? 'Choose Pokemon'
+  const masterRoundOptions =
+    battleState?.masterRound?.hiddenOptions?.[currentUser?.uid] ?? []
+  const masterRoundSelection =
+    battleState?.masterRound?.selections?.[currentUser?.uid] ?? null
+  const opponentMasterRoundSelection =
+    battleState?.masterRound?.selections?.[opponentUid] ?? null
+  const bothMasterRoundPlayersSelected = Boolean(
+    masterRoundSelection && opponentMasterRoundSelection,
+  )
+  const isMasterRoundPending =
+    battlePhase === 'master_round_pending' ||
+    battleState?.masterRound?.phase === 'choose_master_pokeball'
   const hostBattlefieldEffects =
     battleState?.battlefieldEffects?.[room?.hostUid] ??
     EMPTY_BATTLEFIELD_EFFECTS
@@ -400,6 +418,58 @@ function BattleArena({ currentUser }) {
     savedRoundStateFinalized,
   ])
 
+  useEffect(() => {
+    const options = battleState?.masterRound?.options
+    const hasBothPlayersOptions = Boolean(
+      room?.hostUid &&
+        room?.guestUid &&
+        options?.[room.hostUid] &&
+        options?.[room.guestUid],
+    )
+
+    if (
+      battlePhase !== 'master_round_pending' ||
+      hasBothPlayersOptions ||
+      masterRoundInitializationRef.current ||
+      !room?.hostUid ||
+      !room?.guestUid
+    ) {
+      return undefined
+    }
+
+    let isActive = true
+    masterRoundInitializationRef.current = true
+
+    initializeMasterRoundOptions(displayRoomCode)
+      .then(() => {
+        if (isActive) {
+          setMasterRoundError('')
+        }
+      })
+      .catch((error) => {
+        if (isActive) {
+          setMasterRoundError(
+            error instanceof Error
+              ? error.message
+              : 'Could not prepare Master Round options.',
+          )
+        }
+      })
+      .finally(() => {
+        masterRoundInitializationRef.current = false
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [
+    battlePhase,
+    battleState?.masterRound?.options,
+    displayRoomCode,
+    room?.guestUid,
+    room?.hostUid,
+  ])
+
   async function handleLockFighter() {
     if (
       !selectedPokemon ||
@@ -458,6 +528,35 @@ function BattleArena({ currentUser }) {
       )
     } finally {
       setIsContinuingRound(false)
+    }
+  }
+
+  async function handleMasterRoundSelection(option) {
+    if (
+      masterRoundSelection ||
+      isLockingMasterRound ||
+      !option?.pokemonId
+    ) {
+      return
+    }
+
+    setIsLockingMasterRound(true)
+    setMasterRoundError('')
+
+    try {
+      await lockMasterRoundPokemon({
+        roomCode: displayRoomCode,
+        playerUid: currentUser.uid,
+        pokemonId: option.pokemonId,
+      })
+    } catch (error) {
+      setMasterRoundError(
+        error instanceof Error
+          ? error.message
+          : 'Could not lock the Master Round Pokemon.',
+      )
+    } finally {
+      setIsLockingMasterRound(false)
     }
   }
 
@@ -599,126 +698,174 @@ function BattleArena({ currentUser }) {
               </section>
             )}
 
-            {battlePhase === 'master_round_pending' && (
-              <section className="draft-state-panel match-status-panel">
-                <p className="eyebrow">Master Round Pending</p>
+            {isMasterRoundPending && (
+              <section className="draft-state-panel master-round-panel">
+                <p className="eyebrow">MASTER ROUND</p>
                 <h2>
-                  Score tied 3 - 3. Master Round will decide the match.
+                  Score tied 3 - 3. Choose one hidden Pok&eacute;ball.
                 </h2>
+
+                {!masterRoundSelection &&
+                  masterRoundOptions.length === 3 && (
+                  <div className="master-round-pokeballs">
+                    {masterRoundOptions.map((option, index) => (
+                      <button
+                        className="master-round-pokeball"
+                        type="button"
+                        key={`${option.pokemonId}-${index}`}
+                        disabled={isLockingMasterRound}
+                        aria-label={`Choose hidden Pokeball ${index + 1}`}
+                        onClick={() =>
+                          handleMasterRoundSelection(option)
+                        }
+                      >
+                        <span aria-hidden="true" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {!masterRoundSelection &&
+                  masterRoundOptions.length !== 3 && (
+                  <p>Preparing Master Round Pok&eacute;balls...</p>
+                )}
+
+                {bothMasterRoundPlayersSelected ? (
+                  <p>
+                    Both trainers selected. Master Round reveal ready.
+                  </p>
+                ) : masterRoundSelection ? (
+                  <p>
+                    Master Round Pok&eacute;mon locked. Waiting for
+                    opponent...
+                  </p>
+                ) : null}
+
+                {masterRoundError && (
+                  <p className="battle-lock-error" role="alert">
+                    {masterRoundError}
+                  </p>
+                )}
               </section>
             )}
 
-            <section className="battle-arena-summary">
-              <div className="battle-arena-your-team">
-                <div className="battle-section-heading">
-                  <div>
-                    <p className="eyebrow">Your Team</p>
-                    <h2>Choose Your Fighter</h2>
-                  </div>
-                  <span>{yourTeamCount} / 6</span>
-                </div>
-
-                <div className="battle-selection-grid">
-                  {orderedDraftPicks.map((pokemon) => {
-                    const isUsed = usedPokemonIds.has(String(pokemon.id))
-                    const isSelected =
-                      String(pokemon.id) ===
-                      String(activeSelectedPokemonId)
-
-                    return (
-                      <button
-                        className={`battle-selection-card ${
-                          isSelected ? 'is-selected' : ''
-                        } ${isUsed ? 'is-used' : ''}`}
-                        type="button"
-                        key={pokemon.id}
-                        disabled={
-                          isUsed ||
-                          currentPlayerHasLocked ||
-                          isLockingFighter ||
-                          !selectionIsOpen
-                        }
-                        aria-pressed={isSelected}
-                        onClick={() => {
-                          setSelectedPokemonId(pokemon.id)
-                          setLockErrorMessage('')
-                        }}
-                      >
-                        <img
-                          src={pokemon.sprite}
-                          alt={pokemon.name}
-                          width="120"
-                          height="120"
-                        />
-                        <strong>{pokemon.name}</strong>
-                        <small>{getDraftPickLabel(pokemon)}</small>
-                        <div className="battle-type-list">
-                          {pokemon.types.map((type) => (
-                            <span key={type}>{type}</span>
-                          ))}
-                        </div>
-                        <small>
-                          {isUsed
-                            ? 'Used'
-                            : isSelected
-                              ? 'Selected'
-                              : 'Available'}
-                        </small>
-                      </button>
-                    )
-                  })}
-                </div>
-
-                <div className="battle-lock-area">
-                  <button
-                    className="game-button game-button-primary"
-                    type="button"
-                    disabled={
-                      !selectedPokemon ||
-                      selectedPokemonIsUsed ||
-                      currentPlayerHasLocked ||
-                      isLockingFighter ||
-                      !selectionIsOpen
-                    }
-                    onClick={handleLockFighter}
-                  >
-                    {isLockingFighter ? 'Locking...' : 'Lock Fighter'}
-                  </button>
-
-                  {bothPlayersLocked ? (
-                    <p>Both trainers locked. Battle reveal ready.</p>
-                  ) : currentPlayerHasLocked ? (
-                    <p>Fighter locked. Waiting for opponent...</p>
-                  ) : (
-                    <p>Select one unused Pok&eacute;mon for this round.</p>
-                  )}
-
-                  {lockErrorMessage && (
-                    <p className="battle-lock-error" role="alert">
-                      {lockErrorMessage}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="opponent-hidden-team">
-                <h2>Opponent Team</h2>
-                <p>Hidden During Selection</p>
-                <div className="opponent-pokeball-grid">
-                  {Array.from({ length: 6 }, (_, index) => (
-                    <div
-                      className="opponent-pokeball"
-                      key={`battle-opponent-pokeball-${index + 1}`}
-                      aria-label={`Hidden opponent Pokemon ${index + 1}`}
-                    >
-                      <span />
+            {!isMasterRoundPending && (
+              <section className="battle-arena-summary">
+                <div className="battle-arena-your-team">
+                  <div className="battle-section-heading">
+                    <div>
+                      <p className="eyebrow">Your Team</p>
+                      <h2>Choose Your Fighter</h2>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </section>
+                    <span>{yourTeamCount} / 6</span>
+                  </div>
 
-            {bothPlayersLocked && (
+                  <div className="battle-selection-grid">
+                    {orderedDraftPicks.map((pokemon) => {
+                      const isUsed = usedPokemonIds.has(
+                        String(pokemon.id),
+                      )
+                      const isSelected =
+                        String(pokemon.id) ===
+                        String(activeSelectedPokemonId)
+
+                      return (
+                        <button
+                          className={`battle-selection-card ${
+                            isSelected ? 'is-selected' : ''
+                          } ${isUsed ? 'is-used' : ''}`}
+                          type="button"
+                          key={pokemon.id}
+                          disabled={
+                            isUsed ||
+                            currentPlayerHasLocked ||
+                            isLockingFighter ||
+                            !selectionIsOpen
+                          }
+                          aria-pressed={isSelected}
+                          onClick={() => {
+                            setSelectedPokemonId(pokemon.id)
+                            setLockErrorMessage('')
+                          }}
+                        >
+                          <img
+                            src={pokemon.sprite}
+                            alt={pokemon.name}
+                            width="120"
+                            height="120"
+                          />
+                          <strong>{pokemon.name}</strong>
+                          <small>{getDraftPickLabel(pokemon)}</small>
+                          <div className="battle-type-list">
+                            {pokemon.types.map((type) => (
+                              <span key={type}>{type}</span>
+                            ))}
+                          </div>
+                          <small>
+                            {isUsed
+                              ? 'Used'
+                              : isSelected
+                                ? 'Selected'
+                                : 'Available'}
+                          </small>
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  <div className="battle-lock-area">
+                    <button
+                      className="game-button game-button-primary"
+                      type="button"
+                      disabled={
+                        !selectedPokemon ||
+                        selectedPokemonIsUsed ||
+                        currentPlayerHasLocked ||
+                        isLockingFighter ||
+                        !selectionIsOpen
+                      }
+                      onClick={handleLockFighter}
+                    >
+                      {isLockingFighter ? 'Locking...' : 'Lock Fighter'}
+                    </button>
+
+                    {bothPlayersLocked ? (
+                      <p>Both trainers locked. Battle reveal ready.</p>
+                    ) : currentPlayerHasLocked ? (
+                      <p>Fighter locked. Waiting for opponent...</p>
+                    ) : (
+                      <p>
+                        Select one unused Pok&eacute;mon for this round.
+                      </p>
+                    )}
+
+                    {lockErrorMessage && (
+                      <p className="battle-lock-error" role="alert">
+                        {lockErrorMessage}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="opponent-hidden-team">
+                  <h2>Opponent Team</h2>
+                  <p>Hidden During Selection</p>
+                  <div className="opponent-pokeball-grid">
+                    {Array.from({ length: 6 }, (_, index) => (
+                      <div
+                        className="opponent-pokeball"
+                        key={`battle-opponent-pokeball-${index + 1}`}
+                        aria-label={`Hidden opponent Pokemon ${index + 1}`}
+                      >
+                        <span />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {bothPlayersLocked && !isMasterRoundPending && (
               <section className="draft-state-panel battle-reveal-preview">
                 <p className="eyebrow">Battle Reveal Preview</p>
 
