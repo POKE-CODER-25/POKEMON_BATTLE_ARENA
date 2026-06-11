@@ -63,7 +63,18 @@ function DraftPage({ currentUser, onRoomLeft }) {
   const [errorMessage, setErrorMessage] = useState('')
   const [selectionError, setSelectionError] = useState('')
   const [ballSkins, setBallSkins] = useState([])
+  const [selectingIndex, setSelectingIndex] = useState(null)
   const ballSkinsRound = useRef(null)
+  const selectionTimer = useRef(null)
+
+  useEffect(
+    () => () => {
+      if (selectionTimer.current) {
+        window.clearTimeout(selectionTimer.current)
+      }
+    },
+    [],
+  )
 
   useEffect(() => {
     return onSnapshot(
@@ -162,6 +173,7 @@ function DraftPage({ currentUser, onRoomLeft }) {
             : null,
         )
         setPendingSelectedIndex(null)
+        setSelectingIndex(null)
         setPendingAction('')
         setSelectionError('')
       },
@@ -185,6 +197,24 @@ function DraftPage({ currentUser, onRoomLeft }) {
       setPendingSelectedIndex(null)
       setSelectionError(error.message || 'Could not lock your choice.')
     }
+  }
+
+  function handleAnimatedPick(selectedIndex) {
+    if (
+      lockedSelection ||
+      pendingSelectedIndex !== null ||
+      selectingIndex !== null
+    ) {
+      return
+    }
+
+    setSelectionError('')
+    setSelectingIndex(selectedIndex)
+    selectionTimer.current = window.setTimeout(() => {
+      selectionTimer.current = null
+      setSelectingIndex(null)
+      handlePick(selectedIndex)
+    }, 620)
   }
 
   async function handleNextRound() {
@@ -290,7 +320,7 @@ function DraftPage({ currentUser, onRoomLeft }) {
             <section className="draft-state-panel">
               <div className="draft-round-heading">
                 <div>
-                  <span>Your Round</span>
+                  <span>Round Number</span>
                   <strong>{Math.min(currentRound, 6)} / 6</strong>
                 </div>
                 <div>
@@ -298,7 +328,7 @@ function DraftPage({ currentUser, onRoomLeft }) {
                   <strong>{roundName}</strong>
                 </div>
                 <div>
-                  <span>Phase</span>
+                  <span>Draft Phase</span>
                   <strong>{room?.draft?.phase || 'active'}</strong>
                 </div>
               </div>
@@ -350,11 +380,13 @@ function DraftPage({ currentUser, onRoomLeft }) {
                         ballSkins[index]
                           ? `has-${ballSkins[index].className}`
                           : ''
+                      } ${
+                        selectingIndex === index ? 'is-confirming' : ''
                       } ${selectedIndex === index ? 'is-selected' : ''}`}
                       type="button"
                       key={pokemon.id}
-                      onClick={() => handlePick(index)}
-                      disabled={choicesRevealed}
+                      onClick={() => handleAnimatedPick(index)}
+                      disabled={choicesRevealed || selectingIndex !== null}
                     >
                       {!choicesRevealed && (
                         <>
@@ -395,8 +427,8 @@ function DraftPage({ currentUser, onRoomLeft }) {
 
               {lockedSelection && !teamComplete && (
                 <div className="draft-next-area">
-                  <p className="starter-locked-message">
-                    {lockedSelection.selectedPokemon.name} is locked in.
+                  <p className="starter-joined-message">
+                    {lockedSelection.selectedPokemon.name} joined the team.
                   </p>
                   <button
                     className="game-button game-button-primary"
@@ -422,9 +454,11 @@ function DraftPage({ currentUser, onRoomLeft }) {
           teamComplete &&
           !draftTeam.completed && (
             <section className="draft-complete-panel">
-              <p className="eyebrow">Six Picks Locked</p>
-              <h2>Your Team Is Complete</h2>
-              <p>Your opponent still cannot see your Pok&eacute;mon.</p>
+              <div className="draft-ready-message">
+                <span className="draft-ready-indicator" aria-hidden="true" />
+                <strong>&#10003; TRAINER READY</strong>
+                <span>Waiting for Opponent...</span>
+              </div>
               <button
                 className="game-button game-button-primary draft-complete-button"
                 type="button"
@@ -445,8 +479,11 @@ function DraftPage({ currentUser, onRoomLeft }) {
 
         {waitingForOpponent && (
           <section className="draft-complete-panel">
-            <p className="eyebrow">Your Draft Is Complete</p>
-            <h2>Waiting for opponent to finish drafting...</h2>
+            <div className="draft-ready-message">
+              <span className="draft-ready-indicator" aria-hidden="true" />
+              <strong>&#10003; TRAINER READY</strong>
+              <span>Waiting for Opponent...</span>
+            </div>
           </section>
         )}
 
