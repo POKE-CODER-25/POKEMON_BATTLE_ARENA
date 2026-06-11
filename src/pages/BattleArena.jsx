@@ -191,7 +191,6 @@ function BattleArena({ currentUser, onRoomLeft }) {
 
   const isLoading = roomLoading || battleLoading || teamLoading
   const isRoomPlayer = Boolean(room?.players?.[currentUser?.uid])
-  const yourTeamCount = draftTeam?.picks?.length ?? 0
   const isHost = room?.hostUid === currentUser?.uid
   const opponentUid = isHost ? room?.guestUid : room?.hostUid
   const currentRound = battleState?.currentRound ?? battleState?.round ?? 1
@@ -1210,10 +1209,28 @@ function BattleArena({ currentUser, onRoomLeft }) {
                 <div className="battle-arena-your-team">
                   <div className="battle-section-heading">
                     <div>
-                      <p className="eyebrow">Your Team</p>
+                      <p className="eyebrow">Battle Preparation</p>
                       <h2>Choose Your Fighter</h2>
                     </div>
-                    <span>{yourTeamCount} / 6</span>
+                  </div>
+
+                  <div className="battle-usage-strip">
+                    <span>Used Pok&eacute;mon</span>
+                    <div
+                      className="battle-usage-slots"
+                      role="img"
+                      aria-label={`${usedPokemonIds.size} of 6 Pokemon used`}
+                    >
+                      {Array.from({ length: 6 }, (_, index) => (
+                        <span
+                          className={`battle-usage-ball ${
+                            index < usedPokemonIds.size ? 'is-used' : ''
+                          }`}
+                          key={`battle-usage-${index + 1}`}
+                          aria-hidden="true"
+                        />
+                      ))}
+                    </div>
                   </div>
 
                   <div className="battle-selection-grid">
@@ -1286,13 +1303,25 @@ function BattleArena({ currentUser, onRoomLeft }) {
                     </button>
 
                     {bothPlayersLocked ? (
-                      <p>Both trainers locked. Battle reveal ready.</p>
+                      <div className="battle-fighter-ready">
+                        <span
+                          className="battle-ready-indicator"
+                          aria-hidden="true"
+                        />
+                        <strong>&#10003; Fighter Locked</strong>
+                        <span>Battle reveal ready.</span>
+                      </div>
                     ) : currentPlayerHasLocked ? (
-                      <p>Fighter locked. Waiting for opponent...</p>
+                      <div className="battle-fighter-ready">
+                        <span
+                          className="battle-ready-indicator"
+                          aria-hidden="true"
+                        />
+                        <strong>&#10003; Fighter Locked</strong>
+                        <span>Waiting For Opponent...</span>
+                      </div>
                     ) : (
-                      <p>
-                        Select one unused Pok&eacute;mon for this round.
-                      </p>
+                      <p>Select Fighter</p>
                     )}
 
                     {lockErrorMessage && (
@@ -1300,22 +1329,6 @@ function BattleArena({ currentUser, onRoomLeft }) {
                         {lockErrorMessage}
                       </p>
                     )}
-                  </div>
-                </div>
-
-                <div className="opponent-hidden-team">
-                  <h2>Opponent Team</h2>
-                  <p>Hidden During Selection</p>
-                  <div className="opponent-pokeball-grid">
-                    {Array.from({ length: 6 }, (_, index) => (
-                      <div
-                        className="opponent-pokeball"
-                        key={`battle-opponent-pokeball-${index + 1}`}
-                        aria-label={`Hidden opponent Pokemon ${index + 1}`}
-                      >
-                        <span />
-                      </div>
-                    ))}
                   </div>
                 </div>
               </section>

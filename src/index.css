@@ -1617,19 +1617,19 @@ h1 {
 }
 
 .battle-arena-summary {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(280px, 0.8fr);
-  align-items: start;
-  gap: 24px;
+  display: block;
+  width: min(100%, 1040px);
+  margin-inline: auto;
   margin-top: 22px;
 }
 
 .battle-arena-your-team {
-  padding: 24px;
+  padding: 28px;
   background: var(--panel);
   border: 1px solid rgba(148, 163, 184, 0.18);
   border-top: 3px solid #f59e0b;
   border-radius: 16px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.24);
 }
 
 .battle-section-heading {
@@ -1651,32 +1651,82 @@ h1 {
   font-size: 1.4rem;
 }
 
-.battle-section-heading > span {
-  padding: 6px 10px;
-  color: #fef3c7;
-  background: rgba(180, 83, 9, 0.24);
-  border: 1px solid rgba(245, 158, 11, 0.28);
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 900;
+.battle-usage-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 20px;
+  padding: 10px 14px;
+  background: rgba(15, 23, 42, 0.58);
+  border: 1px solid rgba(100, 116, 139, 0.3);
+  border-radius: 12px;
+}
+
+.battle-usage-strip > span {
+  color: #cbd5e1;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.battle-usage-slots {
+  display: flex;
+  gap: 7px;
+}
+
+.battle-usage-ball {
+  position: relative;
+  width: 21px;
+  height: 21px;
+  overflow: hidden;
+  background: linear-gradient(
+    to bottom,
+    #ef4444 0 42%,
+    #0f172a 42% 58%,
+    #f8fafc 58%
+  );
+  border: 2px solid #0f172a;
+  border-radius: 50%;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.battle-usage-ball::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  background: #f8fafc;
+  border: 1px solid #0f172a;
+  border-radius: 50%;
+  content: '';
+  transform: translate(-50%, -50%);
+}
+
+.battle-usage-ball.is-used {
+  filter: grayscale(1) brightness(0.42);
+  opacity: 0.62;
 }
 
 .battle-selection-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 16px;
 }
 
 .battle-selection-card {
   display: grid;
   min-width: 0;
-  padding: 12px;
+  min-height: 250px;
+  padding: 16px;
   place-items: center;
   gap: 8px;
   color: inherit;
   background: rgba(15, 23, 42, 0.74);
   border: 1px solid rgba(100, 116, 139, 0.42);
-  border-radius: 12px;
+  border-radius: 15px;
   font: inherit;
   text-align: center;
   cursor: pointer;
@@ -1688,7 +1738,8 @@ h1 {
 
 .battle-selection-card:not(:disabled):hover {
   border-color: rgba(251, 191, 36, 0.72);
-  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.24);
+  transform: translateY(-3px);
 }
 
 .battle-selection-card.is-selected {
@@ -1697,17 +1748,23 @@ h1 {
 }
 
 .battle-selection-card.is-used {
-  filter: grayscale(0.75);
+  background: rgba(15, 23, 42, 0.52);
+  border-color: rgba(71, 85, 105, 0.32);
+  filter: grayscale(0.9) brightness(0.52);
 }
 
 .battle-selection-card:disabled {
   cursor: not-allowed;
-  opacity: 0.82;
+  opacity: 0.78;
+}
+
+.battle-selection-card.is-used:disabled {
+  opacity: 0.68;
 }
 
 .battle-selection-card img {
   width: 100%;
-  max-width: 112px;
+  max-width: 138px;
   aspect-ratio: 1;
   object-fit: contain;
 }
@@ -1730,8 +1787,9 @@ h1 {
 .battle-lock-area {
   display: grid;
   margin-top: 18px;
-  justify-items: start;
+  justify-items: center;
   gap: 8px;
+  text-align: center;
 }
 
 .battle-lock-area p {
@@ -1741,6 +1799,54 @@ h1 {
 
 .battle-lock-area .battle-lock-error {
   color: #fca5a5;
+}
+
+.battle-fighter-ready {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  width: min(100%, 360px);
+  padding: 14px 18px;
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(134, 239, 172, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 0 22px rgba(34, 197, 94, 0.1);
+  animation: battle-ready-pulse 2.4s ease-in-out infinite;
+}
+
+.battle-fighter-ready strong {
+  color: #bbf7d0;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.battle-fighter-ready > span:last-child {
+  color: #93c5fd;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.battle-ready-indicator {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 8px;
+  height: 8px;
+  background: #86efac;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(134, 239, 172, 0.9);
+}
+
+@keyframes battle-ready-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.06);
+  }
+
+  50% {
+    box-shadow: 0 0 26px rgba(34, 197, 94, 0.18);
+  }
 }
 
 .post-match-actions {
@@ -2177,6 +2283,26 @@ h1 {
 
   .battle-selection-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .battle-arena-your-team {
+    padding: 20px 14px;
+  }
+
+  .battle-usage-strip {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .battle-selection-card {
+    min-height: 220px;
+    padding: 12px 8px;
+  }
+
+  .battle-selection-card img {
+    max-width: 112px;
   }
 
   .starter-options {
@@ -2202,5 +2328,9 @@ h1 {
   .game-button,
   .back-link {
     transition: none;
+  }
+
+  .battle-fighter-ready {
+    animation: none;
   }
 }
