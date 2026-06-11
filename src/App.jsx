@@ -23,14 +23,10 @@ import {
 
 function ResumeRoomGate({ activeRoom, children }) {
   const location = useLocation()
-  const activeRoomSuffix = activeRoom
-    ? `/${activeRoom.roomCode.toUpperCase()}`
-    : ''
-  const alreadyInsideActiveRoom =
-    activeRoom && location.pathname.toUpperCase().endsWith(activeRoomSuffix)
   const skipRoomResume = Boolean(location.state?.skipRoomResume)
+  const isHomeRoute = location.pathname === '/'
 
-  if (activeRoom && !alreadyInsideActiveRoom && !skipRoomResume) {
+  if (activeRoom && isHomeRoute && !skipRoomResume) {
     return <Navigate replace to={activeRoom.route} />
   }
 
@@ -58,9 +54,12 @@ function App() {
       }
 
       try {
+        const shouldSearchForActiveRoom = window.location.pathname === '/'
         const [profile, resumedRoom] = await Promise.all([
           getOrCreateUserProfile(currentUser),
-          findActiveRoomForUser(currentUser.uid),
+          shouldSearchForActiveRoom
+            ? findActiveRoomForUser(currentUser.uid)
+            : Promise.resolve(null),
         ])
 
         if (requestId === authRequestId) {

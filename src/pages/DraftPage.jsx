@@ -5,15 +5,10 @@ import RoomPresence from '../components/RoomPresence.jsx'
 import SurrenderControl from '../components/SurrenderControl.jsx'
 import { db } from '../firebase.js'
 import {
-  getDraftPickLabel,
-  getOrderedDraftPicks,
-} from '../data/draftTeamStructure.js'
-import {
   advancePlayerDraft,
   completePlayerDraft,
   DRAFT_ROUND_NAMES,
   lockDraftPick,
-  markPlayerBattleReady,
 } from '../services/roomService.js'
 
 const BALL_SKINS = [
@@ -264,20 +259,6 @@ function DraftPage({ currentUser, onRoomLeft }) {
     }
   }
 
-  async function handleBattleReady() {
-    setPendingAction('battle-ready')
-    setSelectionError('')
-
-    try {
-      await markPlayerBattleReady(displayRoomCode, currentUser)
-    } catch (error) {
-      setPendingAction('')
-      setSelectionError(
-        error.message || 'Could not enter the battle arena.',
-      )
-    }
-  }
-
   const isRoomPlayer = Boolean(room?.players?.[currentUser?.uid])
   const currentUsername = room?.players?.[currentUser?.uid]?.username
   const opponentUid =
@@ -294,16 +275,7 @@ function DraftPage({ currentUser, onRoomLeft }) {
   const teamComplete = yourTeamCount === 6
   const waitingForOpponent =
     Boolean(draftTeam?.completed) && room?.status === 'draft'
-  const battleReadyScreen = ['battle_ready', 'battle_setup'].includes(
-    room?.status,
-  )
-  const isHost = room?.hostUid === currentUser?.uid
-  const currentPlayerBattleReady = isHost
-    ? Boolean(room?.battleReady?.hostReady)
-    : Boolean(room?.battleReady?.guestReady)
-  const bothPlayersBattleReady = room?.status === 'battle_setup'
   const optionsMatchCurrentRound = optionsRound === currentRound
-  const orderedDraftPicks = getOrderedDraftPicks(draftTeam?.picks)
 
   return (
     <main className="page-shell draft-page-shell">
@@ -311,11 +283,9 @@ function DraftPage({ currentUser, onRoomLeft }) {
         <header className="draft-header">
           <div>
             <p className="eyebrow">Room {displayRoomCode}</p>
-            <h1>{battleReadyScreen ? 'Battle Ready' : 'Draft Arena'}</h1>
+            <h1>Draft Arena</h1>
             <p className="draft-coming-soon">
-              {battleReadyScreen
-                ? 'Review your team before entering the arena.'
-                : 'Draft privately at your own pace.'}
+              Draft privately at your own pace.
             </p>
           </div>
 
@@ -338,8 +308,7 @@ function DraftPage({ currentUser, onRoomLeft }) {
         {!isLoading &&
           !privateStateLoading &&
           draftTeam &&
-          isRoomPlayer &&
-          !battleReadyScreen && (
+          isRoomPlayer && (
             <section className="draft-status-bar">
               <div className="draft-status-summary">
                 <div className="draft-status-round">
@@ -495,91 +464,6 @@ function DraftPage({ currentUser, onRoomLeft }) {
               <span className="draft-ready-indicator" aria-hidden="true" />
               <strong>&#10003; TRAINER READY</strong>
               <span>Waiting for Opponent...</span>
-            </div>
-          </section>
-        )}
-
-        {battleReadyScreen && draftTeam && (
-          <section className="battle-ready-panel">
-            <div className="battle-ready-heading">
-              <p className="eyebrow">Both Drafts Complete</p>
-              <h2>Battle Ready</h2>
-            </div>
-
-            <div className="battle-ready-columns">
-              <div>
-                <h3>Your Team</h3>
-                <div className="battle-team-grid">
-                  {orderedDraftPicks.map((pokemon) => (
-                    <article className="battle-team-card" key={pokemon.id}>
-                      <img
-                        src={pokemon.sprite}
-                        alt={pokemon.name}
-                        width="120"
-                        height="120"
-                      />
-                      <strong>{pokemon.name}</strong>
-                      <small>{getDraftPickLabel(pokemon)}</small>
-                      <div className="battle-type-list">
-                        {pokemon.types.map((type) => (
-                          <span key={type}>{type}</span>
-                        ))}
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </div>
-
-              <div className="opponent-hidden-team">
-                <h3>Opponent Team</h3>
-                <p>Hidden Until Battle</p>
-                <div className="opponent-pokeball-grid">
-                  {Array.from({ length: 6 }, (_, index) => (
-                    <div
-                      className="opponent-pokeball"
-                      key={`opponent-pokeball-${index + 1}`}
-                      aria-label={`Hidden opponent Pokemon ${index + 1}`}
-                    >
-                      <span />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="battle-ready-action">
-              <button
-                className="game-button game-button-primary"
-                type="button"
-                onClick={handleBattleReady}
-                disabled={
-                  currentPlayerBattleReady ||
-                  bothPlayersBattleReady ||
-                  pendingAction === 'battle-ready'
-                }
-              >
-                {bothPlayersBattleReady
-                  ? 'Battle Setup Ready'
-                  : currentPlayerBattleReady
-                    ? 'Ready for Battle'
-                    : pendingAction === 'battle-ready'
-                      ? 'Entering Arena...'
-                      : 'Enter Battle Arena'}
-              </button>
-
-              {currentPlayerBattleReady && !bothPlayersBattleReady && (
-                <p>Waiting for opponent...</p>
-              )}
-
-              {bothPlayersBattleReady && (
-                <p>Both trainers are ready. Battle setup is next.</p>
-              )}
-
-              {selectionError && (
-                <p className="starter-selection-error" role="alert">
-                  {selectionError}
-                </p>
-              )}
             </div>
           </section>
         )}

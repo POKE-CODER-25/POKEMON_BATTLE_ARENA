@@ -865,10 +865,12 @@ export async function completePlayerDraft(roomCode, currentUser) {
     'draftTeams',
     currentUser.uid,
   )
+  const battleStateReference = doc(roomReference, 'battle', 'state')
 
   return runTransaction(db, async (transaction) => {
     const roomSnapshot = await transaction.get(roomReference)
     const draftTeamSnapshot = await transaction.get(draftTeamReference)
+    const battleStateSnapshot = await transaction.get(battleStateReference)
 
     if (!roomSnapshot.exists()) {
       throw new Error('Room not found')
@@ -903,22 +905,33 @@ export async function completePlayerDraft(roomCode, currentUser) {
       updatedAt: timestamp,
     })
     transaction.update(roomReference, {
-      status: bothCompleted ? 'battle_ready' : 'draft',
+      status: bothCompleted ? 'battle_setup' : 'draft',
       'draft.completedPlayers': nextCompletedPlayers,
       'draft.phase': bothCompleted ? 'complete' : 'active',
-      ...(bothCompleted
-        ? {
-            battleReady: {
-              hostReady: false,
-              guestReady: false,
-            },
-          }
-        : {}),
       'draft.updatedAt': timestamp,
       updatedAt: timestamp,
     })
 
-    return bothCompleted ? 'battle_ready' : 'draft'
+    if (bothCompleted && !battleStateSnapshot.exists()) {
+      transaction.set(
+        battleStateReference,
+        createInitialBattleState(timestamp, room.hostUid, room.guestUid),
+      )
+    } else if (bothCompleted) {
+      const backfill = getBattleStateBackfill(
+        battleStateSnapshot.data(),
+        room,
+      )
+
+      if (Object.keys(backfill).length > 0) {
+        transaction.update(battleStateReference, {
+          ...backfill,
+          updatedAt: timestamp,
+        })
+      }
+    }
+
+    return bothCompleted ? 'battle_setup' : 'draft'
   })
 }
 
