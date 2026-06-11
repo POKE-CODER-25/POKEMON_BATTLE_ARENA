@@ -5,6 +5,7 @@ import RoomPresence from '../components/RoomPresence.jsx'
 import SurrenderControl from '../components/SurrenderControl.jsx'
 import { db } from '../firebase.js'
 import {
+  leavePreGameRoom,
   startDraft,
   togglePlayerReady,
 } from '../services/roomService.js'
@@ -97,6 +98,33 @@ function RoomLobby({
     }
   }
 
+  async function handleLeaveRoom() {
+    if (pendingAction) {
+      return
+    }
+
+    onManualNavigation?.()
+    setPendingAction('leave')
+    setErrorMessage('')
+
+    try {
+      await leavePreGameRoom({
+        roomCode: displayRoomCode,
+        playerUid: currentUser.uid,
+      })
+      onRoomLeft?.()
+      navigate('/', {
+        replace: true,
+        state: { skipRoomResume: true },
+      })
+    } catch (error) {
+      setErrorMessage(
+        error.message || 'Could not leave the room. Please try again.',
+      )
+      setPendingAction('')
+    }
+  }
+
   const hasGuest = Boolean(room?.guestUid)
   const hostReady = Boolean(room?.players?.[room?.hostUid]?.ready)
   const guestReady = Boolean(room?.players?.[room?.guestUid]?.ready)
@@ -104,6 +132,12 @@ function RoomLobby({
   const currentPlayer = room?.players?.[currentUser?.uid]
   const isHost = room?.hostUid === currentUser?.uid
   const draftStarted = room?.status === 'draft'
+  const opponentUid = isHost ? room?.guestUid : room?.hostUid
+  const opponentPresence = room?.presence?.[opponentUid]
+  const opponentLeft =
+    room?.status === 'closed' ||
+    room?.players?.[opponentUid]?.active === false ||
+    ['left', 'surrendered', 'afk_lost'].includes(opponentPresence?.status)
   const isActionPending = Boolean(pendingAction)
 
   return (
@@ -143,7 +177,7 @@ function RoomLobby({
               </div>
             </div>
 
-            {!draftStarted && (
+            {!draftStarted && !opponentLeft && (
               <p className={`waiting-message ${bothReady ? 'opponent-joined' : ''}`}>
                 <span className="status-dot" />
                 {bothReady
@@ -151,6 +185,12 @@ function RoomLobby({
                   : hasGuest
                     ? 'Opponent joined!'
                     : 'Waiting for opponent...'}
+              </p>
+            )}
+
+            {!draftStarted && opponentLeft && (
+              <p className="waiting-message">
+                Opponent left the room.
               </p>
             )}
 
@@ -169,7 +209,7 @@ function RoomLobby({
               </div>
             )}
 
-            {currentPlayer && !draftStarted && (
+            {currentPlayer && !draftStarted && !opponentLeft && (
               <div className="lobby-actions">
                 <button
                   className={`game-button ${
@@ -204,6 +244,21 @@ function RoomLobby({
                 )}
               </div>
             )}
+
+            {currentPlayer && !draftStarted && (
+              <div className="lobby-actions">
+                <button
+                  className="game-button"
+                  type="button"
+                  onClick={handleLeaveRoom}
+                  disabled={isActionPending}
+                >
+                  {pendingAction === 'leave'
+                    ? 'Leaving...'
+                    : 'Back to Home'}
+                </button>
+              </div>
+            )}
           </>
         )}
 
@@ -226,6 +281,7 @@ function RoomLobby({
             roomCode={displayRoomCode}
             currentUser={currentUser}
             username={currentPlayer.username}
+            hidden={!draftStarted || room?.status === 'closed'}
             onRoomLeft={onRoomLeft}
             onManualNavigation={onManualNavigation}
           />

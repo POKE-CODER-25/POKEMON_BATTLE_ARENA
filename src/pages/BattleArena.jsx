@@ -864,10 +864,7 @@ function BattleArena({
       : null
   const previewPokemonA = orderedDraftPicks[0]
   const previewPokemonB = opponentPokemon ?? orderedDraftPicks[1]
-  const previewMode = opponentPokemon
-    ? 'Opponent Team Preview'
-    : 'Local Team Preview'
-  const battlePreview = useMemo(() => {
+  useMemo(() => {
     if (!import.meta.env.DEV || !previewPokemonA || !previewPokemonB) {
       return null
     }
@@ -1445,43 +1442,6 @@ function BattleArena({
               </section>
             )}
 
-            {import.meta.env.DEV && (
-              <section className="draft-state-panel">
-                <p className="eyebrow">Battle Engine Preview DEV ONLY</p>
-
-                {!battlePreview && (
-                  <p>Battle preview waiting for enough local team data.</p>
-                )}
-
-                {battlePreview && (
-                  <>
-                    <p>
-                      <strong>Preview Mode:</strong> {previewMode}
-                    </p>
-                    <p>
-                      <strong>Pokemon A:</strong>{' '}
-                      {battlePreview.playerAState.pokemon.name} -{' '}
-                      {battlePreview.playerAState.finalScore}
-                    </p>
-                    <p>
-                      <strong>Pokemon B:</strong>{' '}
-                      {battlePreview.playerBState.pokemon.name} -{' '}
-                      {battlePreview.playerBState.finalScore}
-                    </p>
-                    <p>
-                      <strong>Winner:</strong>{' '}
-                      {battlePreview.winnerResult.reason}
-                    </p>
-                    <strong>Logs:</strong>
-                    <ul>
-                      {battlePreview.logs.map((log, index) => (
-                        <li key={`${index}-${log}`}>{log}</li>
-                      ))}
-                    </ul>
-                  </>
-                )}
-              </section>
-            )}
           </>
         )}
 

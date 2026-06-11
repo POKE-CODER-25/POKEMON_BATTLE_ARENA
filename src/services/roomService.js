@@ -403,6 +403,49 @@ export async function joinRoom(roomCode, currentUser, userProfile) {
   return normalizedRoomCode
 }
 
+export async function leavePreGameRoom({ roomCode, playerUid }) {
+  if (!roomCode || !playerUid) {
+    throw new Error('Room and player are required to leave the lobby.')
+  }
+
+  const normalizedRoomCode = roomCode.trim().toUpperCase()
+  const roomReference = doc(db, 'rooms', normalizedRoomCode)
+
+  return runTransaction(db, async (transaction) => {
+    const roomSnapshot = await transaction.get(roomReference)
+
+    if (!roomSnapshot.exists()) {
+      throw new Error('Room not found')
+    }
+
+    const room = roomSnapshot.data()
+
+    if (!room.players?.[playerUid]) {
+      throw new Error('You are not a player in this room.')
+    }
+
+    if (!['waiting', 'ready', 'closed'].includes(room.status)) {
+      throw new Error('This room has already started.')
+    }
+
+    const timestamp = serverTimestamp()
+
+    transaction.update(roomReference, {
+      status: 'closed',
+      [`players.${playerUid}.active`]: false,
+      [`players.${playerUid}.ready`]: false,
+      [`presence.${playerUid}`]: {
+        status: 'left',
+        lastSeen: timestamp,
+        reconnectDeadline: null,
+      },
+      updatedAt: timestamp,
+    })
+
+    return 'closed'
+  })
+}
+
 export async function markPlayerOnline({ roomCode, playerUid }) {
   if (!roomCode || !playerUid) {
     return
