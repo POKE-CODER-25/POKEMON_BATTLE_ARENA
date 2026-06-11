@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { useNavigate, useParams } from 'react-router-dom'
 import RoomPresence from '../components/RoomPresence.jsx'
@@ -16,10 +16,33 @@ import {
   markPlayerBattleReady,
 } from '../services/roomService.js'
 
-function ClosedPokeball() {
+const BALL_SKINS = [
+  { name: 'Pokéball', className: 'pokeball', weight: 0.55 },
+  { name: 'Great Ball', className: 'great-ball', weight: 0.25 },
+  { name: 'Ultra Ball', className: 'ultra-ball', weight: 0.15 },
+  { name: 'Master Ball', className: 'master-ball', weight: 0.05 },
+]
+
+function getRandomBallSkin() {
+  const roll = Math.random()
+  let totalWeight = 0
+
   return (
-    <div className="draft-pokeball" aria-hidden="true">
-      <span />
+    BALL_SKINS.find((skin) => {
+      totalWeight += skin.weight
+      return roll < totalWeight
+    }) || BALL_SKINS[0]
+  )
+}
+
+function ClosedPokeball({ skin }) {
+  return (
+    <div
+      className={`draft-pokeball draft-pokeball-${skin.className}`}
+      aria-hidden="true"
+    >
+      <span className="draft-pokeball-mark" />
+      <span className="draft-pokeball-button" />
     </div>
   )
 }
@@ -39,6 +62,8 @@ function DraftPage({ currentUser, onRoomLeft }) {
   const [privateStateLoading, setPrivateStateLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
   const [selectionError, setSelectionError] = useState('')
+  const [ballSkins, setBallSkins] = useState([])
+  const ballSkinsRound = useRef(null)
 
   useEffect(() => {
     return onSnapshot(
@@ -122,6 +147,12 @@ function DraftPage({ currentUser, onRoomLeft }) {
         const optionData = optionsSnapshot.data()
         setDraftOptions(optionData.options || [])
         setOptionsRound(optionData.round)
+        if (ballSkinsRound.current !== optionData.round) {
+          ballSkinsRound.current = optionData.round
+          setBallSkins(
+            (optionData.options || []).map(() => getRandomBallSkin()),
+          )
+        }
         setLockedSelection(
           optionData.locked
             ? {
@@ -315,6 +346,10 @@ function DraftPage({ currentUser, onRoomLeft }) {
                     <button
                       className={`starter-option ${
                         choicesRevealed ? 'is-revealed' : ''
+                      } ${!choicesRevealed ? 'is-hidden' : ''} ${
+                        ballSkins[index]
+                          ? `has-${ballSkins[index].className}`
+                          : ''
                       } ${selectedIndex === index ? 'is-selected' : ''}`}
                       type="button"
                       key={pokemon.id}
@@ -323,8 +358,16 @@ function DraftPage({ currentUser, onRoomLeft }) {
                     >
                       {!choicesRevealed && (
                         <>
-                          <ClosedPokeball />
-                          <span>Pok&eacute;ball {index + 1}</span>
+                          <span className="draft-mystery-aura" aria-hidden="true" />
+                          <ClosedPokeball
+                            skin={ballSkins[index] || BALL_SKINS[0]}
+                          />
+                          <span className="draft-ball-name">
+                            {ballSkins[index]?.name || 'Pokéball'}
+                          </span>
+                          <span className="draft-mystery-label">
+                            Mystery Pick {index + 1}
+                          </span>
                         </>
                       )}
 

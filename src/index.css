@@ -696,12 +696,14 @@ h1 {
 .starter-options {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  max-width: 820px;
+  gap: 18px;
+  max-width: 860px;
   margin: 24px auto 0;
 }
 
 .starter-option {
+  position: relative;
+  overflow: hidden;
   display: grid;
   min-height: 230px;
   padding: 18px;
@@ -714,14 +716,16 @@ h1 {
   border-radius: 16px;
   font-weight: 800;
   transition:
-    transform 160ms ease,
-    border-color 160ms ease,
-    background-color 160ms ease;
+    transform 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
 }
 
 .starter-option:not(:disabled):hover {
-  border-color: #64748b;
-  transform: translateY(-2px);
+  border-color: #94a3b8;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.3);
+  transform: translateY(-3px) scale(1.015);
 }
 
 .starter-option:disabled {
@@ -732,7 +736,57 @@ h1 {
 .starter-option.is-selected {
   background: rgba(250, 204, 21, 0.08);
   border-color: var(--yellow);
-  box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.18);
+  box-shadow:
+    0 0 0 2px rgba(250, 204, 21, 0.18),
+    0 0 26px rgba(250, 204, 21, 0.2);
+}
+
+.starter-option.is-hidden {
+  min-height: 270px;
+  isolation: isolate;
+  background:
+    radial-gradient(
+      circle at 50% 42%,
+      rgba(148, 163, 184, 0.14),
+      transparent 48%
+    ),
+    rgba(15, 23, 42, 0.82);
+  border-color: rgba(100, 116, 139, 0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 14px 32px rgba(0, 0, 0, 0.22);
+}
+
+.starter-option.is-hidden::before {
+  position: absolute;
+  z-index: -1;
+  inset: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 12px;
+  content: '';
+}
+
+.starter-option.is-hidden:not(:disabled):hover .draft-pokeball {
+  filter: brightness(1.08);
+  transform: scale(1.045) rotate(-2deg);
+}
+
+.draft-mystery-aura {
+  position: absolute;
+  z-index: -1;
+  top: 50%;
+  left: 50%;
+  width: 190px;
+  height: 190px;
+  background: radial-gradient(
+    circle,
+    rgba(147, 197, 253, 0.17),
+    rgba(99, 102, 241, 0.07) 48%,
+    transparent 70%
+  );
+  border-radius: 50%;
+  transform: translate(-50%, -58%);
+  animation: draft-mystery-pulse 2.8s ease-in-out infinite;
 }
 
 .starter-option img {
@@ -762,10 +816,10 @@ h1 {
 
 .draft-pokeball {
   position: relative;
-  width: 112px;
-  height: 112px;
+  width: 132px;
+  height: 132px;
   overflow: hidden;
-  border: 9px solid #111827;
+  border: 9px solid #0f172a;
   border-radius: 50%;
   background: linear-gradient(
     to bottom,
@@ -773,19 +827,123 @@ h1 {
     #111827 44% 56%,
     #f8fafc 56%
   );
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+  box-shadow:
+    inset -10px -10px 18px rgba(15, 23, 42, 0.28),
+    inset 8px 8px 14px rgba(255, 255, 255, 0.12),
+    0 16px 30px rgba(0, 0, 0, 0.38);
+  transition:
+    filter 180ms ease,
+    transform 180ms ease;
 }
 
-.draft-pokeball span {
+.draft-pokeball-button {
   position: absolute;
+  z-index: 2;
   top: 50%;
   left: 50%;
-  width: 32px;
-  height: 32px;
-  border: 7px solid #111827;
+  width: 34px;
+  height: 34px;
+  border: 7px solid #0f172a;
   border-radius: 50%;
   background: #f8fafc;
   transform: translate(-50%, -50%);
+}
+
+.draft-pokeball-mark {
+  position: absolute;
+  z-index: 1;
+  top: 8px;
+  left: 50%;
+  width: 60px;
+  height: 38px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+}
+
+.draft-pokeball-great-ball {
+  background: linear-gradient(
+    to bottom,
+    #2563eb 0 44%,
+    #111827 44% 56%,
+    #f8fafc 56%
+  );
+}
+
+.draft-pokeball-great-ball .draft-pokeball-mark {
+  background:
+    linear-gradient(135deg, transparent 35%, #ef4444 36% 62%, transparent 63%)
+      0 0 / 28px 38px,
+    linear-gradient(225deg, transparent 35%, #ef4444 36% 62%, transparent 63%)
+      100% 0 / 28px 38px;
+  background-repeat: no-repeat;
+}
+
+.draft-pokeball-ultra-ball {
+  background: linear-gradient(
+    to bottom,
+    #1f2937 0 44%,
+    #111827 44% 56%,
+    #f8fafc 56%
+  );
+}
+
+.draft-pokeball-ultra-ball .draft-pokeball-mark {
+  width: 82px;
+  background:
+    linear-gradient(112deg, transparent 28%, #facc15 29% 45%, transparent 46%)
+      left / 50% 100%,
+    linear-gradient(248deg, transparent 28%, #facc15 29% 45%, transparent 46%)
+      right / 50% 100%;
+  background-repeat: no-repeat;
+}
+
+.draft-pokeball-master-ball {
+  background: linear-gradient(
+    to bottom,
+    #7e22ce 0 44%,
+    #111827 44% 56%,
+    #f8fafc 56%
+  );
+}
+
+.draft-pokeball-master-ball .draft-pokeball-mark::before {
+  color: #f8fafc;
+  content: 'M';
+  font-size: 1.8rem;
+  font-weight: 900;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.38);
+}
+
+.draft-ball-name {
+  color: #f8fafc;
+  font-size: 0.92rem;
+  letter-spacing: 0.03em;
+}
+
+.draft-mystery-label {
+  color: #94a3b8;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+@keyframes draft-mystery-pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: translate(-50%, -58%) scale(0.94);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -58%) scale(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .draft-mystery-aura {
+    animation: none;
+  }
 }
 
 .starter-locked-message {
@@ -1608,6 +1766,15 @@ h1 {
 
   .starter-option {
     min-height: 190px;
+  }
+
+  .starter-option.is-hidden {
+    min-height: 238px;
+  }
+
+  .draft-pokeball {
+    width: 116px;
+    height: 116px;
   }
 
 }
