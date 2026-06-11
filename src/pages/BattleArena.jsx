@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { useNavigate, useParams } from 'react-router-dom'
+import BattleStage from '../components/BattleStage.jsx'
 import RoomPresence from '../components/RoomPresence.jsx'
 import SurrenderControl from '../components/SurrenderControl.jsx'
 import { resolveBattleRound } from '../data/battleRoundResolver.js'
@@ -476,6 +477,12 @@ function BattleArena({
     revealedYourPokemon &&
       revealedOpponentPokemon &&
       revealReason,
+  )
+  const showBattleStage = Boolean(
+    bothPlayersLocked &&
+      hasRevealData &&
+      !isMasterRoundPending &&
+      !masterRoundResult,
   )
   const yourMasterPokemon = currentUserIsPlayerA
     ? masterRoundResult?.playerAPokemon
@@ -1207,7 +1214,7 @@ function BattleArena({
               </section>
             )}
 
-            {!isMasterRoundPending && (
+            {!isMasterRoundPending && !showBattleStage && (
               <section className="battle-arena-summary">
                 <div className="battle-arena-your-team">
                   <div className="battle-section-heading">
@@ -1337,109 +1344,50 @@ function BattleArena({
               </section>
             )}
 
-            {bothPlayersLocked && !isMasterRoundPending && (
-              <section className="draft-state-panel battle-reveal-preview">
-                <p className="eyebrow">Battle Reveal Preview</p>
-
-                {!hasRevealData && (
-                  <p>
-                    Battle reveal waiting for selected opponent fighter
-                    data.
-                  </p>
-                )}
-
-                {hasRevealData && (
-                  <>
-                    <div className="battle-reveal-fighters">
-                      <div>
-                        <span>Your Fighter</span>
-                        <strong>
-                          {revealedYourPokemon.name ??
-                            revealedYourPokemon.pokemonName}
-                        </strong>
-                        <small>
-                          Final Score: {revealedYourScore}
-                        </small>
-                      </div>
-                      <div>
-                        <span>Opponent Fighter</span>
-                        <strong>
-                          {revealedOpponentPokemon.name ??
-                            revealedOpponentPokemon.pokemonName}
-                        </strong>
-                        <small>
-                          Final Score: {revealedOpponentScore}
-                        </small>
-                      </div>
-                    </div>
-
-                    <p>
-                      <strong>Winner:</strong> {revealReason}
-                    </p>
-                    <strong>Battle Logs:</strong>
-                    <ul>
-                      {revealLogs.map((log, index) => (
-                        <li key={`${index}-${log}`}>{log}</li>
-                      ))}
-                    </ul>
-
-                    {savedRoundResult &&
-                      battlePhase === 'round_result' && (
-                      <p>
-                        Round result saved. Ready for next round.
-                      </p>
-                      )}
-
-                    {savedRoundResult &&
-                      battlePhase === 'round_result' &&
-                      currentRound < 6 && (
-                      <div className="battle-continue-area">
-                        {!currentPlayerContinued && (
-                          <button
-                            className="game-button game-button-primary"
-                            type="button"
-                            disabled={
-                              isContinuingRound ||
-                              Boolean(pendingCelebiWish)
-                            }
-                            onClick={handleContinueRound}
-                          >
-                            {isContinuingRound
-                              ? 'Continuing...'
-                              : pendingCelebiWish
-                                ? 'Resolve Celebi Future Wish'
-                                : 'Continue to Next Round'}
-                          </button>
-                        )}
-
-                        {currentPlayerContinued && (
-                          <p>Waiting for opponent to continue...</p>
-                        )}
-                      </div>
-                      )}
-
-                    {savedRoundResult &&
-                      battlePhase === 'round_result' &&
-                      currentRound === 6 && (
-                      <p>
-                        Normal rounds complete.
-                      </p>
-                      )}
-
-                    {roundSaveError && (
-                      <p className="battle-lock-error" role="alert">
-                        {roundSaveError}
-                      </p>
-                    )}
-
-                    {continueErrorMessage && (
-                      <p className="battle-lock-error" role="alert">
-                        {continueErrorMessage}
-                      </p>
-                    )}
-                  </>
-                )}
-              </section>
+            {showBattleStage && (
+              <BattleStage
+                roundNumber={currentRound}
+                yourTrainerScore={yourScore}
+                opponentTrainerScore={opponentScore}
+                yourPokemon={revealedYourPokemon}
+                opponentPokemon={revealedOpponentPokemon}
+                yourFinalScore={revealedYourScore}
+                opponentFinalScore={revealedOpponentScore}
+                resultText={revealReason}
+                logs={revealLogs}
+                showContinue={
+                  Boolean(savedRoundResult) &&
+                  battlePhase === 'round_result' &&
+                  currentRound < 6
+                }
+                continueDisabled={
+                  isContinuingRound || Boolean(pendingCelebiWish)
+                }
+                continueLabel={
+                  isContinuingRound
+                    ? 'Continuing...'
+                    : pendingCelebiWish
+                      ? 'Resolve Celebi Future Wish'
+                      : 'Continue to Next Round'
+                }
+                currentPlayerContinued={
+                  Boolean(savedRoundResult) &&
+                  battlePhase === 'round_result' &&
+                  currentPlayerContinued
+                }
+                onContinue={handleContinueRound}
+                statusMessage={
+                  savedRoundResult &&
+                  battlePhase === 'round_result' &&
+                  currentRound === 6
+                    ? 'Normal rounds complete.'
+                    : ''
+                }
+                errorMessages={[
+                  roundSaveError,
+                  continueErrorMessage,
+                ]}
+              />
             )}
 
           </>
