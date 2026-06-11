@@ -47,6 +47,29 @@ function ClosedPokeball({ skin }) {
   )
 }
 
+function TeamProgress({ count, label }) {
+  return (
+    <div className="draft-progress-group">
+      <span>{label}</span>
+      <div
+        className="draft-progress-slots"
+        role="img"
+        aria-label={`${label}: ${count} of 6 slots filled`}
+      >
+        {Array.from({ length: 6 }, (_, index) => (
+          <span
+            className={`draft-progress-ball ${
+              index < count ? 'is-filled' : ''
+            }`}
+            key={`${label}-${index + 1}`}
+            aria-hidden="true"
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function DraftPage({ currentUser, onRoomLeft }) {
   const { roomCode = '' } = useParams()
   const navigate = useNavigate()
@@ -317,35 +340,27 @@ function DraftPage({ currentUser, onRoomLeft }) {
           draftTeam &&
           isRoomPlayer &&
           !battleReadyScreen && (
-            <section className="draft-state-panel">
-              <div className="draft-round-heading">
-                <div>
-                  <span>Round Number</span>
+            <section className="draft-status-bar">
+              <div className="draft-status-summary">
+                <div className="draft-status-round">
+                  <span>Round</span>
                   <strong>{Math.min(currentRound, 6)} / 6</strong>
                 </div>
-                <div>
-                  <span>Round Name</span>
+                <div className="draft-status-phase">
                   <strong>{roundName}</strong>
+                  <span>{room?.draft?.phase || 'active'} Draft</span>
                 </div>
-                <div>
-                  <span>Draft Phase</span>
-                  <strong>{room?.draft?.phase || 'active'}</strong>
-                </div>
-              </div>
-
-              <div className="draft-team-summary">
-                <div>
-                  <span>Your Trainer</span>
+                <div className="draft-status-trainer">
+                  <span>Trainer</span>
                   <strong>{currentUsername}</strong>
                 </div>
-                <div>
-                  <span>Your Team</span>
-                  <strong>{yourTeamCount} / 6</strong>
-                </div>
-                <div>
-                  <span>Opponent Team</span>
-                  <strong>{opponentTeamCount} / 6</strong>
-                </div>
+              </div>
+              <div className="draft-progress-summary">
+                <TeamProgress count={yourTeamCount} label="Your Team" />
+                <TeamProgress
+                  count={opponentTeamCount}
+                  label="Opponent Progress"
+                />
               </div>
             </section>
           )}
@@ -361,10 +376,7 @@ function DraftPage({ currentUser, onRoomLeft }) {
           !draftTeam.completed &&
           (!teamComplete || lockedSelection) && (
             <section className="starter-choice-panel">
-              <h2>Choose Your {roundName} Pok&eacute;ball</h2>
-              <p className="starter-help">
-                Your first click is final for this round.
-              </p>
+              <h2>Choose a Mystery Ball</h2>
 
               {!optionsMatchCurrentRound && (
                 <p className="starter-help">Preparing your private choices...</p>
