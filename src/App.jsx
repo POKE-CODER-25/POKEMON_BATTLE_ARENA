@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
 import {
   BrowserRouter,
-  Navigate,
   Route,
   Routes,
   useLocation,
+  useNavigate,
 } from 'react-router-dom'
 import { auth } from './firebase.js'
 import AuthPage from './pages/AuthPage.jsx'
@@ -21,23 +21,93 @@ import {
   getUsernameFromUser,
 } from './services/userProfile.js'
 
-function ResumeRoomGate({ activeRoom, children }) {
+const ROOM_ROUTE_PATTERN = /^\/(?:room|draft|battle)\/[^/]+\/?$/i
+
+function AutoResume({ currentUser, manualNavigationRef }) {
   const location = useLocation()
+  const navigate = useNavigate()
   const skipRoomResume = Boolean(location.state?.skipRoomResume)
-  const isHomeRoute = location.pathname === '/'
 
-  if (activeRoom && isHomeRoute && !skipRoomResume) {
-    return <Navigate replace to={activeRoom.route} />
-  }
+  useEffect(() => {
+    let cancelled = false
+    const pathname = location.pathname
+    const isRoomRoute = ROOM_ROUTE_PATTERN.test(pathname)
 
-  return children
+    if (isRoomRoute) {
+      if (import.meta.env.DEV) {
+        console.log('[resume] skipped because route is room route')
+      }
+      return () => {
+        cancelled = true
+      }
+    }
+
+    if (
+      !currentUser ||
+      pathname !== '/' ||
+      skipRoomResume
+    ) {
+      return () => {
+        cancelled = true
+      }
+    }
+
+    if (manualNavigationRef.current) {
+      if (import.meta.env.DEV) {
+        console.log('[resume] skipped because manual navigation')
+      }
+      return () => {
+        cancelled = true
+      }
+    }
+
+    async function resumeActiveRoom() {
+      const resumedRoom = await findActiveRoomForUser(currentUser.uid)
+
+      if (
+        cancelled ||
+        manualNavigationRef.current ||
+        window.location.pathname !== '/'
+      ) {
+        if (import.meta.env.DEV && manualNavigationRef.current) {
+          console.log('[resume] skipped because manual navigation')
+        }
+        return
+      }
+
+      if (resumedRoom) {
+        if (import.meta.env.DEV) {
+          console.log('[resume] found active room', resumedRoom.roomCode)
+        }
+        navigate(resumedRoom.route, { replace: true })
+      }
+    }
+
+    resumeActiveRoom().catch(() => {})
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    currentUser,
+    location.pathname,
+    manualNavigationRef,
+    navigate,
+    skipRoomResume,
+  ])
+
+  return null
 }
 
 function App() {
   const [user, setUser] = useState(null)
   const [userProfile, setUserProfile] = useState(null)
-  const [activeRoom, setActiveRoom] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
+  const manualNavigationRef = useRef(false)
+
+  function markManualNavigation() {
+    manualNavigationRef.current = true
+  }
 
   useEffect(() => {
     let authRequestId = 0
@@ -47,24 +117,17 @@ function App() {
       setUser(currentUser)
 
       if (!currentUser) {
+        manualNavigationRef.current = false
         setUserProfile(null)
-        setActiveRoom(null)
         setAuthLoading(false)
         return
       }
 
       try {
-        const shouldSearchForActiveRoom = window.location.pathname === '/'
-        const [profile, resumedRoom] = await Promise.all([
-          getOrCreateUserProfile(currentUser),
-          shouldSearchForActiveRoom
-            ? findActiveRoomForUser(currentUser.uid)
-            : Promise.resolve(null),
-        ])
+        const profile = await getOrCreateUserProfile(currentUser)
 
         if (requestId === authRequestId) {
           setUserProfile(profile)
-          setActiveRoom(resumedRoom)
         }
       } catch {
         if (requestId === authRequestId) {
@@ -73,7 +136,6 @@ function App() {
             username: getUsernameFromUser(currentUser),
             displayName: getUsernameFromUser(currentUser),
           })
-          setActiveRoom(null)
         }
       } finally {
         if (requestId === authRequestId) {
@@ -112,49 +174,71 @@ function App() {
 
   return (
     <BrowserRouter>
-      <ResumeRoomGate activeRoom={activeRoom}>
-        <Routes>
-          <Route
-            path="/"
-            element={<Home username={userProfile?.username || 'trainer'} />}
-          />
-          <Route
-            path="/create-room"
-            element={<CreateRoom currentUser={user} userProfile={userProfile} />}
-          />
-          <Route
-            path="/join-room"
-            element={<JoinRoom currentUser={user} userProfile={userProfile} />}
-          />
-          <Route
-            path="/room/:roomCode"
-            element={
-              <RoomLobby
-                currentUser={user}
-                onRoomLeft={() => setActiveRoom(null)}
-              />
-            }
-          />
-          <Route
-            path="/draft/:roomCode"
-            element={
-              <DraftPage
-                currentUser={user}
-                onRoomLeft={() => setActiveRoom(null)}
-              />
-            }
-          />
-          <Route
-            path="/battle/:roomCode"
-            element={
-              <BattleArena
-                currentUser={user}
-                onRoomLeft={() => setActiveRoom(null)}
-              />
-            }
-          />
-        </Routes>
-      </ResumeRoomGate>
+      <AutoResume
+        currentUser={user}
+        manualNavigationRef={manualNavigationRef}
+      />
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <Home
+              username={userProfile?.username || 'trainer'}
+              onManualNavigation={markManualNavigation}
+            />
+          }
+        />
+        <Route
+          path="/create-room"
+          element={
+            <CreateRoom
+              currentUser={user}
+              userProfile={userProfile}
+              onManualNavigation={markManualNavigation}
+            />
+          }
+        />
+        <Route
+          path="/join-room"
+          element={
+            <JoinRoom
+              currentUser={user}
+              userProfile={userProfile}
+              onManualNavigation={markManualNavigation}
+            />
+          }
+        />
+        <Route
+          path="/room/:roomCode"
+          element={
+            <RoomLobby
+              currentUser={user}
+              onRoomLeft={markManualNavigation}
+              onManualNavigation={markManualNavigation}
+            />
+          }
+        />
+        <Route
+          path="/draft/:roomCode"
+          element={
+            <DraftPage
+              currentUser={user}
+              onRoomLeft={markManualNavigation}
+              onManualNavigation={markManualNavigation}
+            />
+          }
+        />
+        <Route
+          path="/battle/:roomCode"
+          element={
+            <BattleArena
+              currentUser={user}
+              onRoomLeft={markManualNavigation}
+              onManualNavigation={markManualNavigation}
+            />
+          }
+        />
+      </Routes>
     </BrowserRouter>
   )
 }

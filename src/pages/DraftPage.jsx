@@ -65,7 +65,11 @@ function TeamProgress({ count, label }) {
   )
 }
 
-function DraftPage({ currentUser, onRoomLeft }) {
+function DraftPage({
+  currentUser,
+  onRoomLeft,
+  onManualNavigation,
+}) {
   const { roomCode = '' } = useParams()
   const navigate = useNavigate()
   const displayRoomCode = roomCode.toUpperCase()
@@ -482,6 +486,7 @@ function DraftPage({ currentUser, onRoomLeft }) {
             currentUser={currentUser}
             username={currentUsername}
             onRoomLeft={onRoomLeft}
+            onManualNavigation={onManualNavigation}
           />
         </>
       )}

@@ -17,7 +17,11 @@ function ReadyStatus({ isReady }) {
   )
 }
 
-function RoomLobby({ currentUser, onRoomLeft }) {
+function RoomLobby({
+  currentUser,
+  onRoomLeft,
+  onManualNavigation,
+}) {
   const { roomCode = '' } = useParams()
   const navigate = useNavigate()
   const displayRoomCode = roomCode.toUpperCase()
@@ -223,6 +227,7 @@ function RoomLobby({ currentUser, onRoomLeft }) {
             currentUser={currentUser}
             username={currentPlayer.username}
             onRoomLeft={onRoomLeft}
+            onManualNavigation={onManualNavigation}
           />
         </>
       )}

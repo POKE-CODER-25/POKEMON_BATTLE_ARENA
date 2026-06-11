@@ -8,6 +8,7 @@ function SurrenderControl({
   username,
   hidden = false,
   onRoomLeft,
+  onManualNavigation,
 }) {
   const navigate = useNavigate()
   const [isOpen, setIsOpen] = useState(false)
@@ -23,6 +24,7 @@ function SurrenderControl({
       return
     }
 
+    onManualNavigation?.()
     setIsSubmitting(true)
     setErrorMessage('')
 

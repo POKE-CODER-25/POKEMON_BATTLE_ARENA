@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import { auth } from '../firebase.js'
 
-function Home({ username }) {
+function Home({ username, onManualNavigation }) {
   return (
     <main className="page-shell">
       <div className="arena-stage" aria-hidden="true">
@@ -30,10 +30,18 @@ function Home({ username }) {
         </p>
 
         <div className="action-list">
-          <Link className="game-button game-button-primary" to="/create-room">
+          <Link
+            className="game-button game-button-primary"
+            to="/create-room"
+            onClick={onManualNavigation}
+          >
             Create Room
           </Link>
-          <Link className="game-button game-button-secondary" to="/join-room">
+          <Link
+            className="game-button game-button-secondary"
+            to="/join-room"
+            onClick={onManualNavigation}
+          >
             Join Room
           </Link>
         </div>

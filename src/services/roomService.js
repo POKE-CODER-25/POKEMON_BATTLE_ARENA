@@ -33,10 +33,7 @@ const RECONNECT_TIMEOUT_MS = 2 * 60 * 1000
 export { DRAFT_ROUND_NAMES }
 
 const RESUMABLE_ROOM_STATUSES = new Set([
-  'waiting',
-  'ready',
   'draft',
-  'battle_ready',
   'battle_setup',
 ])
 

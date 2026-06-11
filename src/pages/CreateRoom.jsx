@@ -2,12 +2,17 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { createRoom } from '../services/roomService.js'
 
-function CreateRoom({ currentUser, userProfile }) {
+function CreateRoom({
+  currentUser,
+  userProfile,
+  onManualNavigation,
+}) {
   const navigate = useNavigate()
   const [isCreating, setIsCreating] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
   async function handleCreateRoom() {
+    onManualNavigation?.()
     setIsCreating(true)
     setErrorMessage('')
 
@@ -48,7 +53,11 @@ function CreateRoom({ currentUser, userProfile }) {
           {errorMessage}
         </div>
 
-        <Link className="back-link room-back-link" to="/">
+        <Link
+          className="back-link room-back-link"
+          to="/"
+          onClick={onManualNavigation}
+        >
           &larr; Back to Home
         </Link>
       </section>

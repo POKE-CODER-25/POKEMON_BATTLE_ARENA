@@ -2,7 +2,11 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { joinRoom } from '../services/roomService.js'
 
-function JoinRoom({ currentUser, userProfile }) {
+function JoinRoom({
+  currentUser,
+  userProfile,
+  onManualNavigation,
+}) {
   const navigate = useNavigate()
   const [roomCode, setRoomCode] = useState('')
   const [isJoining, setIsJoining] = useState(false)
@@ -10,6 +14,7 @@ function JoinRoom({ currentUser, userProfile }) {
 
   async function handleJoinRoom(event) {
     event.preventDefault()
+    onManualNavigation?.()
     setIsJoining(true)
     setErrorMessage('')
 
@@ -66,7 +71,11 @@ function JoinRoom({ currentUser, userProfile }) {
           {errorMessage}
         </div>
 
-        <Link className="back-link room-back-link" to="/">
+        <Link
+          className="back-link room-back-link"
+          to="/"
+          onClick={onManualNavigation}
+        >
           &larr; Back to Home
         </Link>
       </section>

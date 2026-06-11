@@ -95,7 +95,11 @@ function RoundScoreRow({ label, score }) {
   )
 }
 
-function BattleArena({ currentUser, onRoomLeft }) {
+function BattleArena({
+  currentUser,
+  onRoomLeft,
+  onManualNavigation,
+}) {
   const { roomCode = '' } = useParams()
   const navigate = useNavigate()
   const displayRoomCode = roomCode.toUpperCase()
@@ -802,6 +806,7 @@ function BattleArena({ currentUser, onRoomLeft }) {
       return
     }
 
+    onManualNavigation?.()
     setPostMatchAction('play-again')
     setPostMatchError('')
 
@@ -826,6 +831,7 @@ function BattleArena({ currentUser, onRoomLeft }) {
       return
     }
 
+    onManualNavigation?.()
     setPostMatchAction('return-home')
     setPostMatchError('')
 
@@ -1495,6 +1501,7 @@ function BattleArena({ currentUser, onRoomLeft }) {
             username={room?.players?.[currentUser.uid]?.username}
             hidden={battlePhase === 'match_over'}
             onRoomLeft={onRoomLeft}
+            onManualNavigation={onManualNavigation}
           />
         </>
       )}
