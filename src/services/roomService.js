@@ -60,6 +60,46 @@ function getResumeRoute(roomCode, room) {
   return `/battle/${roomCode}`
 }
 
+const NON_RESUMABLE_PRESENCE_STATUSES = new Set([
+  'left',
+  'surrendered',
+  'afk_lost',
+])
+
+function isRoomClosed(room) {
+  return room.status === 'closed' || room.roomStatus === 'closed'
+}
+
+async function closeRoomIfBothPlayersReturned(roomCode) {
+  const roomReference = doc(db, 'rooms', roomCode)
+  const battleStateReference = doc(roomReference, 'battle', 'state')
+
+  await runTransaction(db, async (transaction) => {
+    const [roomSnapshot, battleStateSnapshot] = await Promise.all([
+      transaction.get(roomReference),
+      transaction.get(battleStateReference),
+    ])
+
+    if (!roomSnapshot.exists() || !battleStateSnapshot.exists()) {
+      return
+    }
+
+    const room = roomSnapshot.data()
+    const returnedHome =
+      battleStateSnapshot.data().postMatch?.returnedHome ?? {}
+    const bothReturnedHome =
+      Boolean(returnedHome[room.hostUid]) &&
+      Boolean(returnedHome[room.guestUid])
+
+    if (bothReturnedHome && !isRoomClosed(room)) {
+      transaction.update(roomReference, {
+        status: 'closed',
+        updatedAt: serverTimestamp(),
+      })
+    }
+  })
+}
+
 export async function findActiveRoomForUser(playerUid) {
   if (!playerUid) {
     return null
@@ -83,12 +123,13 @@ export async function findActiveRoomForUser(playerUid) {
       roomCode: roomSnapshot.id,
       room: roomSnapshot.data(),
     }))
+    .filter(({ room }) => !isRoomClosed(room))
     .filter(({ room }) => RESUMABLE_ROOM_STATUSES.has(room.status))
     .filter(({ room }) => Boolean(room.players?.[playerUid]))
     .filter(({ room }) => room.players[playerUid].active !== false)
     .filter(
       ({ room }) =>
-        !['left', 'surrendered', 'afk_lost'].includes(
+        !NON_RESUMABLE_PRESENCE_STATUSES.has(
           room.presence?.[playerUid]?.status,
         ),
     )
@@ -108,10 +149,21 @@ export async function findActiveRoomForUser(playerUid) {
     const returnedHome = Boolean(
       battleState?.postMatch?.returnedHome?.[playerUid],
     )
-    const surrendered =
+    const currentPlayerSurrendered =
       battleState?.surrender?.surrenderedBy === playerUid
+    const bothReturnedHome =
+      Boolean(
+        battleState?.postMatch?.returnedHome?.[candidate.room.hostUid],
+      ) &&
+      Boolean(
+        battleState?.postMatch?.returnedHome?.[candidate.room.guestUid],
+      )
 
-    if (returnedHome || surrendered) {
+    if (bothReturnedHome) {
+      await closeRoomIfBothPlayersReturned(candidate.roomCode)
+    }
+
+    if (returnedHome || currentPlayerSurrendered) {
       continue
     }
 
@@ -1563,10 +1615,6 @@ export async function returnHomeAfterMatch({ roomCode, playerUid }) {
 
     if (battleState.phase !== 'match_over') {
       throw new Error('Return Home is only available after the match.')
-    }
-
-    if (battleState.postMatch?.returnedHome?.[playerUid]) {
-      return true
     }
 
     const timestamp = serverTimestamp()
