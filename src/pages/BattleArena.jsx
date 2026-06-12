@@ -171,6 +171,17 @@ function findSelectedPokemon(selection, team = []) {
   return team.find(matchesSelection) ?? allBattlePokemon.find(matchesSelection)
 }
 
+function isSamePokemonSelection(pokemon, selection) {
+  const pokemonId = pokemon?.id ?? pokemon?.pokemonId
+  const selectionId = selection?.id ?? selection?.pokemonId
+
+  if (pokemonId && selectionId) {
+    return String(pokemonId) === String(selectionId)
+  }
+
+  return getPokemonName(pokemon) === getPokemonName(selection)
+}
+
 function createSeededRandom(seedValue) {
   let seed = 2166136261
 
@@ -664,6 +675,87 @@ function BattleArena({
     getSuccessfulTransformation(revealedYourPokemon)
   const opponentTransformation =
     getSuccessfulTransformation(revealedOpponentPokemon)
+  const revealedWinnerPokemon = savedRoundResult
+    ? savedRoundResult.resultType === 'PLAYER_A_WIN'
+      ? savedRoundResult.playerAPokemon
+      : savedRoundResult.resultType === 'PLAYER_B_WIN'
+        ? savedRoundResult.playerBPokemon
+        : null
+    : canonicalBattleResult?.winnerResult?.winnerPokemon ?? null
+  const yourTeamSlots = useMemo(() => {
+    const slots = orderedDraftPicks.slice(0, 6).map((pokemon) => {
+      const active = isSamePokemonSelection(
+        pokemon,
+        revealedYourPokemon,
+      )
+
+      return {
+        pokemon,
+        active,
+        used: !active && usedPokemonIds.has(String(pokemon.id)),
+        unknown: false,
+      }
+    })
+
+    while (slots.length < 6) {
+      slots.push({
+        pokemon: null,
+        active: false,
+        used: false,
+        unknown: true,
+      })
+    }
+
+    return slots
+  }, [orderedDraftPicks, revealedYourPokemon, usedPokemonIds])
+  const opponentTeamSlots = useMemo(() => {
+    const revealed = []
+    const revealedIds = new Set()
+    const roundResults = battleState?.roundResults ?? []
+
+    roundResults.forEach((result) => {
+      const pokemon =
+        result.playerAUid === opponentUid
+          ? result.playerAPokemon
+          : result.playerBUid === opponentUid
+            ? result.playerBPokemon
+            : null
+      const pokemonId = pokemon?.pokemonId ?? pokemon?.id
+
+      if (!pokemon || revealedIds.has(String(pokemonId))) {
+        return
+      }
+
+      revealedIds.add(String(pokemonId))
+      revealed.push({
+        pokemon,
+        active: isSamePokemonSelection(
+          pokemon,
+          revealedOpponentPokemon,
+        ),
+        used: !isSamePokemonSelection(
+          pokemon,
+          revealedOpponentPokemon,
+        ),
+        unknown: false,
+      })
+    })
+
+    while (revealed.length < 6) {
+      revealed.push({
+        pokemon: null,
+        active: false,
+        used: false,
+        unknown: true,
+      })
+    }
+
+    return revealed.slice(0, 6)
+  }, [
+    battleState?.roundResults,
+    opponentUid,
+    revealedOpponentPokemon,
+  ])
   const transformationCinematicCompleted =
     !transformationCinematicRequired ||
     transformationCinematicCompletedRound === currentRound
@@ -1618,9 +1710,11 @@ function BattleArena({
                 opponentFinalScore={revealedOpponentScore}
                 yourTransformation={yourTransformation}
                 opponentTransformation={opponentTransformation}
-                winnerPokemon={savedRoundResult?.winnerPokemon}
+                winnerPokemon={revealedWinnerPokemon}
                 resultText={revealReason}
                 logs={revealLogs}
+                yourTeamSlots={yourTeamSlots}
+                opponentTeamSlots={opponentTeamSlots}
                 showContinue={
                   Boolean(savedRoundResult) &&
                   battlePhase === 'round_result' &&

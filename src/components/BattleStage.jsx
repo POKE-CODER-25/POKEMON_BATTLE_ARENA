@@ -24,6 +24,58 @@ function isSamePokemon(pokemon, otherPokemon) {
   return getPokemonName(pokemon) === getPokemonName(otherPokemon)
 }
 
+function TeamTracker({ label, slots = [], side }) {
+  return (
+    <aside
+      className={`battle-team-tracker is-${side}`}
+      aria-label={`${label} team tracker`}
+    >
+      <strong>{label}</strong>
+      <div>
+        {slots.map((slot, index) => {
+          const image = slot.pokemon
+            ? getNormalPokemonImage(slot.pokemon)
+            : null
+          const name = slot.pokemon
+            ? getPokemonName(slot.pokemon)
+            : 'Unknown Pokemon'
+
+          return (
+            <span
+              className={`battle-team-slot ${
+                slot.active ? 'is-active' : ''
+              } ${slot.used ? 'is-used' : ''} ${
+                slot.unknown ? 'is-unknown' : ''
+              }`}
+              title={
+                slot.unknown
+                  ? 'Not revealed'
+                  : `${name}${slot.active ? ' - Active' : slot.used ? ' - Used' : ' - Remaining'}`
+              }
+              key={`${side}-${slot.pokemon?.pokemonId ?? slot.pokemon?.id ?? 'unknown'}-${index}`}
+            >
+              {image ? (
+                <img
+                  src={image}
+                  alt=""
+                  width="42"
+                  height="42"
+                  onError={(event) => {
+                    event.currentTarget.hidden = true
+                  }}
+                />
+              ) : (
+                <b aria-hidden="true">?</b>
+              )}
+              <small>{slot.unknown ? '?' : name}</small>
+            </span>
+          )
+        })}
+      </div>
+    </aside>
+  )
+}
+
 function Fighter({
   label,
   pokemon,
@@ -100,6 +152,8 @@ function BattleStage({
   statusMessage = '',
   errorMessages = [],
   countdownBackdrop = false,
+  yourTeamSlots = [],
+  opponentTeamSlots = [],
 }) {
   const [arena] = useState(
     () =>
@@ -141,6 +195,7 @@ function BattleStage({
       <div
         className={`battle-stage-matchup battle-arena-${arena}`}
       >
+        <TeamTracker label="You" slots={yourTeamSlots} side="you" />
         <Fighter
           label="You"
           pokemon={yourPokemon}
@@ -162,24 +217,34 @@ function BattleStage({
             countdownBackdrop ? null : opponentTransformation
           }
         />
+        <TeamTracker
+          label="Opponent"
+          slots={opponentTeamSlots}
+          side="opponent"
+        />
       </div>
 
       {!countdownBackdrop && (
         <>
           <div className="battle-stage-result">
-            <span>Round Result</span>
-            <strong>{resultText}</strong>
+            <span>Round Winner</span>
+            <strong>
+              {winnerPokemon
+                ? getPokemonName(winnerPokemon)
+                : 'Round Draw'}
+            </strong>
+            <small>{resultText}</small>
           </div>
 
           {logs.length > 0 && (
-            <div className="battle-stage-log">
-              <h2>Battle Log</h2>
+            <details className="battle-stage-log">
+              <summary>View Battle Analysis</summary>
               <div>
                 {logs.map((log, index) => (
                   <p key={`${index}-${log}`}>{log}</p>
                 ))}
               </div>
-            </div>
+            </details>
           )}
 
           {(showContinue ||

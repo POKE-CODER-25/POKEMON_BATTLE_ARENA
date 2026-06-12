@@ -2795,7 +2795,9 @@ h1 {
 .battle-stage-matchup {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns:
+    76px minmax(0, 1fr) auto minmax(0, 1fr)
+    76px;
   align-items: center;
   min-height: 520px;
   padding: clamp(24px, 5vw, 54px);
@@ -2816,6 +2818,18 @@ h1 {
   content: '';
   background:
     linear-gradient(
+      108deg,
+      transparent 20%,
+      rgba(255, 255, 255, 0.08) 36%,
+      transparent 50%
+    ),
+    linear-gradient(
+      252deg,
+      transparent 20%,
+      rgba(255, 255, 255, 0.06) 36%,
+      transparent 50%
+    ),
+    linear-gradient(
       90deg,
       rgba(2, 6, 23, 0.44),
       rgba(2, 6, 23, 0.2) 50%,
@@ -2825,9 +2839,117 @@ h1 {
   pointer-events: none;
 }
 
+.battle-stage-matchup::after {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  content: '';
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.48) 0 1px, transparent 2px),
+    radial-gradient(circle, rgba(255, 212, 71, 0.34) 0 1px, transparent 2px);
+  background-position:
+    0 0,
+    34px 52px;
+  background-size:
+    78px 78px,
+    112px 112px;
+  opacity: 0.24;
+  pointer-events: none;
+  animation: battle-arena-particles 14s linear infinite;
+}
+
 .battle-stage-matchup > * {
   position: relative;
   z-index: 1;
+}
+
+.battle-team-tracker {
+  display: grid;
+  align-content: center;
+  align-self: stretch;
+  justify-items: center;
+  min-width: 0;
+  padding: 14px 7px;
+  gap: 10px;
+  background: rgba(2, 6, 23, 0.42);
+  border: 1px solid rgba(226, 232, 240, 0.16);
+  border-radius: 14px;
+  backdrop-filter: blur(5px);
+}
+
+.battle-team-tracker > strong {
+  color: #dbeafe;
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.battle-team-tracker > div {
+  display: grid;
+  gap: 7px;
+}
+
+.battle-team-slot {
+  position: relative;
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 50%;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease;
+}
+
+.battle-team-slot img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+
+.battle-team-slot small {
+  position: absolute;
+  right: 50%;
+  bottom: -4px;
+  max-width: 64px;
+  overflow: hidden;
+  padding: 1px 4px;
+  color: #e2e8f0;
+  background: rgba(2, 6, 23, 0.88);
+  border-radius: 4px;
+  font-size: 0.48rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transform: translateX(50%);
+}
+
+.battle-team-slot b {
+  color: #64748b;
+  font-size: 1rem;
+}
+
+.battle-team-slot.is-used {
+  filter: grayscale(0.85) brightness(0.48);
+  opacity: 0.68;
+}
+
+.battle-team-slot.is-active {
+  filter: none;
+  opacity: 1;
+  border-color: #ffd447;
+  box-shadow:
+    0 0 0 2px rgba(78, 161, 255, 0.42),
+    0 0 16px rgba(255, 212, 71, 0.58);
+}
+
+.battle-team-slot.is-unknown {
+  border-style: dashed;
 }
 
 .battle-arena-forest {
@@ -2910,6 +3032,20 @@ h1 {
   content: '';
   background: radial-gradient(ellipse, rgba(2, 6, 23, 0.72), transparent 68%);
   filter: blur(5px);
+}
+
+.battle-stage-fighter::before {
+  position: absolute;
+  z-index: -1;
+  top: 86px;
+  width: min(82%, 280px);
+  aspect-ratio: 1;
+  content: '';
+  border: 1px solid rgba(78, 161, 255, 0.26);
+  border-radius: 50%;
+  box-shadow:
+    0 0 28px rgba(78, 161, 255, 0.16),
+    inset 0 0 28px rgba(255, 212, 71, 0.08);
 }
 
 .battle-stage-fighter-label {
@@ -3056,6 +3192,7 @@ h1 {
   font-size: clamp(1.75rem, 4vw, 3rem);
   font-weight: 1000;
   text-shadow: 0 0 24px rgba(251, 191, 36, 0.35);
+  animation: battle-versus-energy 3.2s ease-in-out infinite;
 }
 
 .battle-stage-versus span {
@@ -3064,35 +3201,55 @@ h1 {
 
 .battle-stage-result {
   display: grid;
-  padding: 16px 22px;
-  gap: 5px;
+  width: min(100%, 620px);
+  margin-inline: auto;
+  padding: 18px 24px;
+  gap: 4px;
   background:
-    linear-gradient(90deg, transparent, rgba(120, 53, 15, 0.5), transparent),
-    rgba(15, 23, 42, 0.72);
-  border-block: 1px solid rgba(251, 191, 36, 0.38);
-  border-radius: 14px;
+    radial-gradient(circle at 50% 0, rgba(255, 212, 71, 0.22), transparent 62%),
+    linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.94));
+  border: 1px solid rgba(255, 212, 71, 0.52);
+  border-radius: 16px;
+  box-shadow:
+    0 0 28px rgba(255, 212, 71, 0.14),
+    0 14px 34px rgba(2, 6, 23, 0.3);
   text-align: center;
+  animation: battle-winner-banner 420ms ease-out both;
 }
 
 .battle-stage-result strong {
-  color: #fef3c7;
-  font-size: clamp(1.05rem, 2.4vw, 1.35rem);
+  color: #ffd447;
+  font-size: clamp(1.7rem, 4vw, 2.6rem);
+  text-shadow: 0 0 22px rgba(255, 212, 71, 0.42);
+}
+
+.battle-stage-result small {
+  color: #cbd5e1;
+  font-size: 0.76rem;
 }
 
 .battle-stage-log {
   display: grid;
-  gap: 12px;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 12px;
 }
 
-.battle-stage-log h2 {
-  margin: 0;
-  color: #f8fafc;
-  font-size: 1rem;
+.battle-stage-log summary {
+  padding: 12px 14px;
+  color: #bfdbfe;
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  list-style-position: inside;
   text-transform: uppercase;
 }
 
 .battle-stage-log > div {
   display: grid;
+  padding: 0 12px 12px;
   gap: 6px;
 }
 
@@ -3104,6 +3261,41 @@ h1 {
   border-left: 2px solid rgba(96, 165, 250, 0.5);
   border-radius: 7px;
   font-size: 0.8rem;
+}
+
+@keyframes battle-arena-particles {
+  to {
+    background-position:
+      78px -78px,
+      -78px -60px;
+  }
+}
+
+@keyframes battle-versus-energy {
+  0%,
+  100% {
+    box-shadow:
+      0 0 24px rgba(78, 161, 255, 0.2),
+      inset 0 0 18px rgba(248, 113, 113, 0.24);
+  }
+
+  50% {
+    box-shadow:
+      0 0 34px rgba(255, 212, 71, 0.32),
+      inset 0 0 22px rgba(78, 161, 255, 0.26);
+  }
+}
+
+@keyframes battle-winner-banner {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .battle-continue-area {
@@ -3192,6 +3384,39 @@ h1 {
     justify-content: space-between;
     padding-top: 12px;
     border-top: 1px solid rgba(100, 116, 139, 0.26);
+  }
+
+  .battle-stage-matchup {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+
+  .battle-team-tracker {
+    grid-column: 1 / -1;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-self: auto;
+    width: 100%;
+    padding: 9px 12px;
+  }
+
+  .battle-team-tracker > strong {
+    writing-mode: horizontal-tb;
+    transform: none;
+  }
+
+  .battle-team-tracker > div {
+    display: flex;
+    justify-content: space-evenly;
+    gap: 6px;
+  }
+
+  .battle-team-slot {
+    width: 42px;
+    height: 42px;
+  }
+
+  .battle-team-slot img {
+    width: 36px;
+    height: 36px;
   }
 }
 
@@ -3348,6 +3573,24 @@ h1 {
     gap: 12px;
   }
 
+  .battle-team-tracker {
+    grid-column: 1;
+  }
+
+  .battle-team-slot {
+    width: 38px;
+    height: 38px;
+  }
+
+  .battle-team-slot img {
+    width: 33px;
+    height: 33px;
+  }
+
+  .battle-team-slot small {
+    display: none;
+  }
+
   .battle-stage-versus {
     width: 64px;
     justify-self: center;
@@ -3406,6 +3649,12 @@ h1 {
   }
 
   .battle-fighter-ready {
+    animation: none;
+  }
+
+  .battle-stage-matchup::after,
+  .battle-stage-versus,
+  .battle-stage-result {
     animation: none;
   }
 }
