@@ -251,6 +251,8 @@ function BattleArena({
   const [celebiWishError, setCelebiWishError] = useState('')
   const [postMatchAction, setPostMatchAction] = useState('')
   const [postMatchError, setPostMatchError] = useState('')
+  const [viewedMatchResultKey, setViewedMatchResultKey] =
+    useState(null)
   const [countdownValue, setCountdownValue] = useState(null)
   const [countdownCompletedRound, setCountdownCompletedRound] =
     useState(null)
@@ -576,6 +578,29 @@ function BattleArena({
     (savedRoundUsageComplete &&
       FINALIZED_ROUND_PHASES.has(battlePhase) &&
       battlePhase === expectedSavedPhase)
+  const hasFinalNormalRoundResult = Boolean(
+    savedRoundResult &&
+      battlePhase === 'match_over' &&
+      (hostScore >= ROUND_WINS_NEEDED ||
+        guestScore >= ROUND_WINS_NEEDED),
+  )
+  const hasFinalBattleResult = Boolean(
+    masterRoundResult || hasFinalNormalRoundResult,
+  )
+  const finalBattleResult = masterRoundResult ?? savedRoundResult
+  const finalBattleResultKey = hasFinalBattleResult
+    ? [
+        masterRoundResult ? 'master' : 'round',
+        finalBattleResult?.roundNumber ?? currentRound,
+        finalBattleResult?.createdAt?.seconds ?? '',
+        finalBattleResult?.createdAt?.nanoseconds ?? '',
+        finalBattleResult?.resultType ?? '',
+      ].join(':')
+    : null
+  const showFinalMatchScreen =
+    battlePhase === 'match_over' &&
+    (!hasFinalBattleResult ||
+      viewedMatchResultKey === finalBattleResultKey)
   const previewPlayerAState = canonicalBattleResult?.playerAState
   const previewPlayerBState = canonicalBattleResult?.playerBState
   const currentUserIsPlayerA = room?.hostUid === currentUser?.uid
@@ -638,17 +663,18 @@ function BattleArena({
     ],
   )
   const battleStageReady = Boolean(
-    bothPlayersLocked &&
-      savedRoundResult &&
-      hasRevealData &&
-      !isMasterRoundPending &&
-      !masterRoundResult &&
-      battlePhase !== 'match_over',
+    masterRoundResult
+      ? battlePhase === 'match_over'
+      : bothPlayersLocked &&
+          savedRoundResult &&
+          hasRevealData &&
+          !isMasterRoundPending,
   )
+  const battleStageKey = masterRoundResult ? 'master' : currentRound
   const isBattleCountdownActive =
     battleStageReady && countdownValue !== null
   const transformationCinematicRequired =
-    transformationEvents.length > 0
+    !masterRoundResult && transformationEvents.length > 0
   const successfulTransformationByPokemon = useMemo(() => {
     const transformations = new Map()
 
@@ -763,20 +789,20 @@ function BattleArena({
   ])
   const transformationCinematicCompleted =
     !transformationCinematicRequired ||
-    transformationCinematicCompletedRound === currentRound
+    transformationCinematicCompletedRound === battleStageKey
   const activeTransformationEvent =
     transformationCinematicIndex === null
       ? null
       : transformationEvents[transformationCinematicIndex] ?? null
   const isTransformationCinematicActive = Boolean(
     battleStageReady &&
-      countdownCompletedRound === currentRound &&
+      countdownCompletedRound === battleStageKey &&
       !transformationCinematicCompleted &&
       activeTransformationEvent,
   )
   const showBattleStage =
     battleStageReady &&
-    countdownCompletedRound === currentRound &&
+    countdownCompletedRound === battleStageKey &&
     !isBattleCountdownActive &&
     transformationCinematicCompleted &&
     !isTransformationCinematicActive
@@ -830,11 +856,24 @@ function BattleArena({
       : masterRoundResult?.resultType === 'TRUE_WARRIORS'
         ? 'The match ends in legendary honor.'
         : 'The match ended without a winner.'
+  const battleStageYourPokemon =
+    yourMasterPokemon ?? revealedYourPokemon
+  const battleStageOpponentPokemon =
+    opponentMasterPokemon ?? revealedOpponentPokemon
+  const battleStageYourScore =
+    yourMasterFinalScore ?? revealedYourScore
+  const battleStageOpponentScore =
+    opponentMasterFinalScore ?? revealedOpponentScore
+  const battleStageWinnerPokemon =
+    masterRoundResult?.winnerPokemon ?? revealedWinnerPokemon
+  const battleStageResultText =
+    masterRoundResult?.reason ?? revealReason
+  const battleStageLogs = masterRoundResult?.logs ?? revealLogs
 
   useEffect(() => {
     if (
       !battleStageReady ||
-      countdownCompletedRound === currentRound
+      countdownCompletedRound === battleStageKey
     ) {
       return undefined
     }
@@ -845,7 +884,7 @@ function BattleArena({
       window.setTimeout(() => setCountdownValue('1'), 1400),
       window.setTimeout(() => setCountdownValue('GO!'), 2100),
       window.setTimeout(() => {
-        setCountdownCompletedRound(currentRound)
+        setCountdownCompletedRound(battleStageKey)
         setCountdownValue(null)
       }, 2700),
     ]
@@ -853,14 +892,14 @@ function BattleArena({
     return () => {
       timers.forEach((timer) => window.clearTimeout(timer))
     }
-  }, [battleStageReady, countdownCompletedRound, currentRound])
+  }, [battleStageKey, battleStageReady, countdownCompletedRound])
 
   useEffect(() => {
     if (
       !battleStageReady ||
-      countdownCompletedRound !== currentRound ||
+      countdownCompletedRound !== battleStageKey ||
       !transformationCinematicRequired ||
-      transformationCinematicCompletedRound === currentRound
+      transformationCinematicCompletedRound === battleStageKey
     ) {
       return undefined
     }
@@ -874,7 +913,7 @@ function BattleArena({
 
     timers.push(
       window.setTimeout(() => {
-        setTransformationCinematicCompletedRound(currentRound)
+        setTransformationCinematicCompletedRound(battleStageKey)
         setTransformationCinematicIndex(null)
       }, transformationEvents.length * 2100),
     )
@@ -884,8 +923,8 @@ function BattleArena({
     }
   }, [
     battleStageReady,
+    battleStageKey,
     countdownCompletedRound,
-    currentRound,
     transformationCinematicCompletedRound,
     transformationCinematicRequired,
     transformationEvents,
@@ -1457,7 +1496,7 @@ function BattleArena({
               </section>
             )}
 
-            {battlePhase === 'match_over' && (
+            {showFinalMatchScreen && (
               <section
                 className={`champion-result-screen battle-arena-final-panel ${
                   currentPlayerWonMatch
@@ -1595,40 +1634,6 @@ function BattleArena({
                     </p>
                   )}
                 </div>
-              </section>
-            )}
-
-            {masterRoundResult && battlePhase !== 'match_over' && (
-              <section className="draft-state-panel battle-reveal-preview battle-arena-final-panel">
-                <p className="eyebrow">MASTER ROUND RESULT</p>
-
-                <div className="battle-reveal-fighters">
-                  <div>
-                    <span>Your Master Pok&eacute;mon</span>
-                    <strong>{yourMasterPokemon?.pokemonName}</strong>
-                    <small>
-                      Final Score: {yourMasterFinalScore}
-                    </small>
-                  </div>
-                  <div>
-                    <span>Opponent Master Pok&eacute;mon</span>
-                    <strong>{opponentMasterPokemon?.pokemonName}</strong>
-                    <small>
-                      Final Score: {opponentMasterFinalScore}
-                    </small>
-                  </div>
-                </div>
-
-                <p>
-                  <strong>Result:</strong>{' '}
-                  {masterRoundResult.reason ?? 'Result unavailable.'}
-                </p>
-                <strong>Logs:</strong>
-                <ul>
-                  {(masterRoundResult.logs ?? []).map((log, index) => (
-                    <li key={`${index}-${log}`}>{log}</li>
-                  ))}
-                </ul>
               </section>
             )}
 
@@ -1817,33 +1822,45 @@ function BattleArena({
               </section>
             )}
 
-            {(showBattleStage || isBattleCountdownActive) && (
+            {(showBattleStage || isBattleCountdownActive) &&
+              !showFinalMatchScreen && (
               <BattleStage
-                roundNumber={currentRound}
+                roundNumber={masterRoundResult ? 'Master' : currentRound}
                 yourTrainerScore={yourScore}
                 opponentTrainerScore={opponentScore}
-                yourPokemon={revealedYourPokemon}
-                opponentPokemon={revealedOpponentPokemon}
-                yourFinalScore={revealedYourScore}
-                opponentFinalScore={revealedOpponentScore}
-                yourTransformation={yourTransformation}
-                opponentTransformation={opponentTransformation}
-                winnerPokemon={revealedWinnerPokemon}
-                resultText={revealReason}
-                logs={revealLogs}
-                yourTeamSlots={yourTeamSlots}
-                opponentTeamSlots={opponentTeamSlots}
+                yourPokemon={battleStageYourPokemon}
+                opponentPokemon={battleStageOpponentPokemon}
+                yourFinalScore={battleStageYourScore}
+                opponentFinalScore={battleStageOpponentScore}
+                yourTransformation={
+                  masterRoundResult ? null : yourTransformation
+                }
+                opponentTransformation={
+                  masterRoundResult ? null : opponentTransformation
+                }
+                winnerPokemon={battleStageWinnerPokemon}
+                resultText={battleStageResultText}
+                logs={battleStageLogs}
+                yourTeamSlots={
+                  masterRoundResult ? [] : yourTeamSlots
+                }
+                opponentTeamSlots={
+                  masterRoundResult ? [] : opponentTeamSlots
+                }
                 arena={battleArena}
                 showContinue={
-                  Boolean(savedRoundResult) &&
-                  battlePhase === 'round_result' &&
-                  currentRound < 6
+                  hasFinalBattleResult ||
+                  (Boolean(savedRoundResult) &&
+                    battlePhase === 'round_result' &&
+                    currentRound < 6)
                 }
                 continueDisabled={
                   isContinuingRound || Boolean(pendingCelebiWish)
                 }
                 continueLabel={
-                  isContinuingRound
+                  hasFinalBattleResult
+                    ? 'View Match Result'
+                    : isContinuingRound
                     ? 'Continuing...'
                     : pendingCelebiWish
                       ? 'Resolve Celebi Future Wish'
@@ -1851,10 +1868,16 @@ function BattleArena({
                 }
                 currentPlayerContinued={
                   Boolean(savedRoundResult) &&
+                  !hasFinalBattleResult &&
                   battlePhase === 'round_result' &&
                   currentPlayerContinued
                 }
-                onContinue={handleContinueRound}
+                onContinue={
+                  hasFinalBattleResult
+                    ? () =>
+                        setViewedMatchResultKey(finalBattleResultKey)
+                    : handleContinueRound
+                }
                 statusMessage={
                   savedRoundResult &&
                   battlePhase === 'round_result' &&
@@ -1875,7 +1898,7 @@ function BattleArena({
 
       </section>
 
-      {isBattleCountdownActive && battlePhase !== 'match_over' && (
+      {isBattleCountdownActive && (
         <div
           className={`battle-countdown-overlay ${
             countdownValue === '1' ? 'is-one' : ''
@@ -1903,7 +1926,7 @@ function BattleArena({
       )}
 
       {isTransformationCinematicActive &&
-        battlePhase !== 'match_over' && (
+        !showFinalMatchScreen && (
         <div
           className={`mega-cinematic-overlay ${
             activeTransformationEvent.succeeded
