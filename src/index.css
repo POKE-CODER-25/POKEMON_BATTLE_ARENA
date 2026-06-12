@@ -2022,9 +2022,13 @@ h1 {
   place-items: center;
   overflow: hidden;
   color: #f5f3ff;
-  background:
+  background-image:
     radial-gradient(circle at center, rgba(126, 34, 206, 0.34), transparent 34%),
-    linear-gradient(145deg, rgba(2, 6, 23, 0.98), rgba(30, 27, 75, 0.98));
+    linear-gradient(145deg, rgba(2, 6, 23, 0.84), rgba(30, 27, 75, 0.86)),
+    var(--battle-arena-image);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
   pointer-events: all;
 }
 
@@ -2176,9 +2180,10 @@ h1 {
 }
 
 .mega-cinematic-overlay.is-battle-bond {
-  background:
+  background-image:
     radial-gradient(circle at center, rgba(14, 165, 233, 0.38), transparent 34%),
-    linear-gradient(145deg, rgba(2, 6, 23, 0.98), rgba(8, 47, 73, 0.98));
+    linear-gradient(145deg, rgba(2, 6, 23, 0.84), rgba(8, 47, 73, 0.86)),
+    var(--battle-arena-image);
 }
 
 .mega-cinematic-overlay.is-battle-bond::before,
@@ -2226,9 +2231,10 @@ h1 {
 }
 
 .mega-cinematic-overlay.is-failure {
-  background:
+  background-image:
     radial-gradient(circle at center, rgba(88, 28, 135, 0.24), transparent 32%),
-    linear-gradient(145deg, rgba(2, 6, 23, 0.99), rgba(30, 27, 75, 0.96));
+    linear-gradient(145deg, rgba(2, 6, 23, 0.88), rgba(30, 27, 75, 0.88)),
+    var(--battle-arena-image);
 }
 
 .mega-cinematic-overlay.is-failure::before,
@@ -2795,20 +2801,49 @@ h1 {
 .battle-stage-matchup {
   position: relative;
   display: grid;
-  grid-template-columns:
-    76px minmax(0, 1fr) auto minmax(0, 1fr)
-    76px;
-  align-items: center;
-  min-height: 520px;
-  padding: clamp(24px, 5vw, 54px);
+  grid-template-columns: minmax(0, 40fr) minmax(90px, 20fr) minmax(0, 40fr);
+  align-items: end;
+  width: 100%;
+  min-height: 0;
+  aspect-ratio: 16 / 9;
+  padding: clamp(46px, 5vw, 64px) clamp(82px, 8vw, 96px)
+    clamp(18px, 2.5vw, 28px);
   overflow: hidden;
   gap: clamp(14px, 4vw, 40px);
   background-color: #0f172a;
   background-position: center;
+  background-repeat: no-repeat;
   background-size: cover;
   border: 1px solid rgba(226, 232, 240, 0.2);
   border-radius: 20px;
   box-shadow: inset 0 -60px 80px rgba(2, 6, 23, 0.48);
+}
+
+.battle-arena-name {
+  position: absolute;
+  z-index: 3;
+  top: 14px;
+  left: 14px;
+  padding: 7px 11px;
+  color: #dbeafe;
+  background: rgba(15, 23, 42, 0.78);
+  border: 1px solid rgba(255, 212, 71, 0.5);
+  border-radius: 999px;
+  box-shadow: 0 5px 18px rgba(2, 6, 23, 0.3);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  backdrop-filter: blur(6px);
+}
+
+.battle-arena-final-panel {
+  background-image:
+    linear-gradient(rgba(2, 6, 23, 0.76), rgba(2, 6, 23, 0.84)),
+    var(--battle-arena-image);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
 .battle-stage-matchup::before {
@@ -2831,11 +2866,11 @@ h1 {
     ),
     linear-gradient(
       90deg,
-      rgba(2, 6, 23, 0.44),
-      rgba(2, 6, 23, 0.2) 50%,
-      rgba(2, 6, 23, 0.44)
+      rgba(2, 6, 23, 0.1),
+      rgba(2, 6, 23, 0.02) 50%,
+      rgba(2, 6, 23, 0.1)
     ),
-    linear-gradient(0deg, rgba(2, 6, 23, 0.5), transparent 60%);
+    linear-gradient(0deg, rgba(2, 6, 23, 0.14), transparent 60%);
   pointer-events: none;
 }
 
@@ -2863,11 +2898,20 @@ h1 {
   z-index: 1;
 }
 
+.battle-stage-matchup > .battle-arena-name {
+  position: absolute;
+  z-index: 3;
+}
+
 .battle-team-tracker {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
   display: grid;
   align-content: center;
-  align-self: stretch;
+  align-self: center;
   justify-items: center;
+  height: min(430px, calc(100% - 70px));
   min-width: 0;
   padding: 14px 7px;
   gap: 10px;
@@ -2875,6 +2919,15 @@ h1 {
   border: 1px solid rgba(226, 232, 240, 0.16);
   border-radius: 14px;
   backdrop-filter: blur(5px);
+  transform: translateY(-50%);
+}
+
+.battle-team-tracker.is-you {
+  left: 12px;
+}
+
+.battle-team-tracker.is-opponent {
+  right: 12px;
 }
 
 .battle-team-tracker > strong {
@@ -3151,19 +3204,29 @@ h1 {
 .battle-stage-fighter {
   position: relative;
   display: grid;
-  align-self: stretch;
+  align-self: end;
+  align-content: end;
   min-width: 0;
-  padding: 18px 8px 12px;
+  min-height: clamp(380px, 42vw, 450px);
+  padding: 54px 8px 0;
   place-items: center;
   gap: 4px;
   text-align: center;
+}
+
+.battle-stage-fighter:first-of-type {
+  grid-column: 1;
+}
+
+.battle-stage-fighter:last-of-type {
+  grid-column: 3;
 }
 
 .battle-stage-fighter::after {
   position: absolute;
   z-index: -1;
   right: 8%;
-  bottom: 72px;
+  bottom: 58px;
   left: 8%;
   height: 54px;
   content: '';
@@ -3174,7 +3237,7 @@ h1 {
 .battle-stage-fighter::before {
   position: absolute;
   z-index: -1;
-  top: 86px;
+  bottom: 58px;
   width: min(82%, 280px);
   aspect-ratio: 1;
   content: '';
@@ -3186,7 +3249,10 @@ h1 {
 }
 
 .battle-stage-fighter-label {
-  align-self: start;
+  position: absolute;
+  top: 42px;
+  left: 50%;
+  align-self: auto;
   padding: 7px 14px;
   color: #dbeafe;
   background: rgba(2, 6, 23, 0.5);
@@ -3196,14 +3262,19 @@ h1 {
   font-weight: 1000;
   letter-spacing: 0.16em;
   text-transform: uppercase;
+  transform: translateX(-50%);
   backdrop-filter: blur(5px);
 }
 
 .battle-stage-fighter img {
-  width: min(118%, 360px);
-  height: 330px;
-  margin: -8px -9% -24px;
-  filter: drop-shadow(0 20px 16px rgba(2, 6, 23, 0.58));
+  width: min(100%, 340px);
+  max-width: 100%;
+  height: clamp(260px, 29vw, 330px);
+  max-height: 330px;
+  margin: 0 0 -26px;
+  filter:
+    drop-shadow(0 0 18px rgba(191, 219, 254, 0.16))
+    drop-shadow(0 20px 16px rgba(2, 6, 23, 0.62));
   object-fit: contain;
 }
 
@@ -3211,8 +3282,9 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: min(100%, 330px);
-  min-height: 70px;
+  width: min(100%, 320px);
+  min-height: 68px;
+  height: 68px;
   padding: 10px 12px 10px 18px;
   gap: 12px;
   background: linear-gradient(90deg, rgba(2, 6, 23, 0.82), rgba(15, 23, 42, 0.64));
@@ -3277,8 +3349,8 @@ h1 {
 .battle-stage-winner-badge {
   position: absolute;
   z-index: 3;
-  top: 52px;
-  right: 2px;
+  top: 4px;
+  right: 50%;
   padding: 7px 12px;
   color: #422006;
   background: linear-gradient(135deg, #fef08a, #f59e0b);
@@ -3289,6 +3361,7 @@ h1 {
   font-weight: 1000;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+  transform: translateX(50%);
 }
 
 .battle-stage-fighter.is-winner img {
@@ -3314,6 +3387,8 @@ h1 {
 }
 
 .battle-stage-versus {
+  grid-column: 2;
+  justify-self: center;
   display: grid;
   width: clamp(70px, 9vw, 96px);
   aspect-ratio: 1;
@@ -3329,6 +3404,7 @@ h1 {
   font-size: clamp(1.75rem, 4vw, 3rem);
   font-weight: 1000;
   text-shadow: 0 0 24px rgba(251, 191, 36, 0.35);
+  transform: translateY(-82px);
   animation: battle-versus-energy 3.2s ease-in-out infinite;
 }
 
@@ -3525,14 +3601,30 @@ h1 {
 
   .battle-stage-matchup {
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    min-height: 640px;
+    aspect-ratio: auto;
+    padding: 52px 20px 22px;
+    gap: 14px;
   }
 
   .battle-team-tracker {
+    position: relative;
+    top: auto;
+    right: auto;
+    left: auto;
     grid-column: 1 / -1;
     grid-template-columns: auto minmax(0, 1fr);
     align-self: auto;
     width: 100%;
+    height: auto;
     padding: 9px 12px;
+    transform: none;
+  }
+
+  .battle-team-tracker.is-you,
+  .battle-team-tracker.is-opponent {
+    right: auto;
+    left: auto;
   }
 
   .battle-team-tracker > strong {
@@ -3554,6 +3646,10 @@ h1 {
   .battle-team-slot img {
     width: 36px;
     height: 36px;
+  }
+
+  .battle-stage-versus {
+    transform: translateY(-34px);
   }
 }
 
@@ -3706,6 +3802,7 @@ h1 {
   .battle-stage-matchup {
     grid-template-columns: 1fr;
     min-height: 0;
+    aspect-ratio: auto;
     padding: 22px 14px;
     gap: 12px;
   }
@@ -3732,12 +3829,16 @@ h1 {
     width: 64px;
     justify-self: center;
     line-height: 1;
+    transform: none;
   }
 
-  .battle-stage-fighter {
+  .battle-stage-fighter,
+  .battle-stage-fighter:first-of-type,
+  .battle-stage-fighter:last-of-type {
+    grid-column: 1;
     width: 100%;
     min-height: 350px;
-    padding-inline: 0;
+    padding: 46px 0 0;
   }
 
   .battle-stage-fighter img {
@@ -3746,12 +3847,17 @@ h1 {
     margin-bottom: -24px;
   }
 
+  .battle-stage-fighter-label {
+    top: 34px;
+  }
+
   .battle-stage-fighter-identity {
     width: min(100%, 310px);
   }
 
   .battle-stage-winner-badge {
-    right: max(2px, calc(50% - 150px));
+    top: 4px;
+    right: 50%;
   }
 
   .battle-stage-header {

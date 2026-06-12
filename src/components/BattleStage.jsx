@@ -151,7 +151,7 @@ function BattleStage({
   countdownBackdrop = false,
   yourTeamSlots = [],
   opponentTeamSlots = [],
-  arenaTheme = 'night-stadium',
+  arena,
 }) {
   const yourOutcome = !countdownBackdrop && winnerPokemon
     ? isSamePokemon(yourPokemon, winnerPokemon)
@@ -185,8 +185,13 @@ function BattleStage({
       </header>
 
       <div
-        className={`battle-stage-matchup battle-arena-${arenaTheme}`}
+        className="battle-stage-matchup"
+        style={{
+          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.25), rgba(0, 0, 0, 0.25)), url("${arena.image}")`,
+          backgroundPosition: 'center center',
+        }}
       >
+        <span className="battle-arena-name">{arena.name}</span>
         <TeamTracker label="You" slots={yourTeamSlots} side="you" />
         <Fighter
           label="You"

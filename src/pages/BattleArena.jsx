@@ -7,6 +7,7 @@ import SurrenderControl from '../components/SurrenderControl.jsx'
 import { resolveBattleRound } from '../data/battleRoundResolver.js'
 import { getJirachiCopyableTraits } from '../data/advancedTraitInteractionResolver.js'
 import { allBattlePokemon } from '../data/pokemonBattleData.js'
+import { getBattleArena } from '../data/battleArenas.js'
 import {
   getDisplayPokemonImage,
   getNormalPokemonImage,
@@ -34,13 +35,6 @@ import {
 
 const ROUND_WINS_NEEDED = 4
 const EMPTY_BATTLEFIELD_EFFECTS = []
-const BATTLE_ARENA_THEMES = [
-  'night-stadium',
-  'sky-temple',
-  'forest-shrine',
-  'volcanic-field',
-  'crystal-cavern',
-]
 const REVEALED_BATTLE_PHASES = new Set([
   'reveal',
   'score_breakdown',
@@ -257,12 +251,6 @@ function BattleArena({
   const [celebiWishError, setCelebiWishError] = useState('')
   const [postMatchAction, setPostMatchAction] = useState('')
   const [postMatchError, setPostMatchError] = useState('')
-  const [arenaTheme] = useState(
-    () =>
-      BATTLE_ARENA_THEMES[
-        Math.floor(Math.random() * BATTLE_ARENA_THEMES.length)
-      ],
-  )
   const [countdownValue, setCountdownValue] = useState(null)
   const [countdownCompletedRound, setCountdownCompletedRound] =
     useState(null)
@@ -434,6 +422,10 @@ function BattleArena({
   const battlePhase = battleState?.phase ?? 'choose_pokemon'
   const battlePhaseLabel =
     BATTLE_PHASE_LABELS[battlePhase] ?? 'Choose Pokemon'
+  const battleArena = getBattleArena(battleState?.arenaId)
+  const battleArenaStyle = {
+    '--battle-arena-image': `url("${battleArena.image}")`,
+  }
   const masterRoundOptions =
     battleState?.masterRound?.hiddenOptions?.[currentUser?.uid] ?? []
   const masterRoundSelection =
@@ -1261,7 +1253,10 @@ function BattleArena({
   ])
 
   return (
-    <main className="page-shell draft-page-shell battle-arena-page">
+    <main
+      className="page-shell draft-page-shell battle-arena-page"
+      style={battleArenaStyle}
+    >
       <section className="draft-container battle-arena-container">
         <header className="draft-header battle-arena-header">
           <div>
@@ -1425,7 +1420,7 @@ function BattleArena({
             )}
 
             {battlePhase === 'match_over' && (
-              <section className="draft-state-panel match-status-panel">
+              <section className="draft-state-panel match-status-panel battle-arena-final-panel">
                 <p className="eyebrow">Match Over</p>
                 <h2>
                   {opponentSurrendered
@@ -1494,7 +1489,7 @@ function BattleArena({
             )}
 
             {masterRoundResult && (
-              <section className="draft-state-panel battle-reveal-preview">
+              <section className="draft-state-panel battle-reveal-preview battle-arena-final-panel">
                 <p className="eyebrow">MASTER ROUND RESULT</p>
 
                 <div className="battle-reveal-fighters">
@@ -1728,7 +1723,7 @@ function BattleArena({
                 logs={revealLogs}
                 yourTeamSlots={yourTeamSlots}
                 opponentTeamSlots={opponentTeamSlots}
-                arenaTheme={arenaTheme}
+                arena={battleArena}
                 showContinue={
                   Boolean(savedRoundResult) &&
                   battlePhase === 'round_result' &&

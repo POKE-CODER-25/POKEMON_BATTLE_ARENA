@@ -22,6 +22,10 @@ import { getJirachiCopyableTraits } from '../data/advancedTraitInteractionResolv
 import { DRAFT_ROUND_NAMES } from '../data/draftTeamStructure.js'
 import { createMasterRoundOptions } from '../data/masterRoundSelector.js'
 import { allBattlePokemon } from '../data/pokemonBattleData.js'
+import {
+  getBattleArena,
+  selectRandomBattleArenaId,
+} from '../data/battleArenas.js'
 import { db } from '../firebase.js'
 
 const ROOM_CODE_CHARACTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -1070,6 +1074,12 @@ export async function markPlayerBattleReady(roomCode, currentUser) {
 
 function getBattleStateBackfill(battleState, room) {
   const backfill = {}
+
+  if (!battleState.arenaId) {
+    backfill.arenaId = selectRandomBattleArenaId()
+  } else if (getBattleArena(battleState.arenaId).id !== battleState.arenaId) {
+    backfill.arenaId = selectRandomBattleArenaId()
+  }
 
   if (battleState.currentRound === undefined) {
     backfill.currentRound = battleState.round ?? 1
@@ -2585,6 +2595,7 @@ function appendUniquePokemonId(usedPokemon, pokemonId) {
 
 function createInitialBattleState(timestamp, hostUid, guestUid) {
   return {
+    arenaId: selectRandomBattleArenaId(),
     currentRound: 1,
     round: 1,
     maxNormalRounds: 6,
