@@ -792,6 +792,44 @@ function BattleArena({
   const opponentMasterFinalScore = currentUserIsPlayerA
     ? masterRoundResult?.playerBFinalScore
     : masterRoundResult?.playerAFinalScore
+  const currentPlayerWonMatch =
+    opponentSurrendered ||
+    battleState?.matchWinnerUid === currentUser?.uid
+  const currentPlayerLostMatch = Boolean(
+    battleState?.matchWinnerUid &&
+      battleState.matchWinnerUid !== currentUser?.uid,
+  )
+  const finalNormalRoundResult =
+    battleState?.roundResults?.[battleState.roundResults.length - 1] ??
+    null
+  const finalRoundWinnerPokemon = finalNormalRoundResult
+    ? finalNormalRoundResult.resultType === 'PLAYER_A_WIN'
+      ? finalNormalRoundResult.playerAPokemon
+      : finalNormalRoundResult.resultType === 'PLAYER_B_WIN'
+        ? finalNormalRoundResult.playerBPokemon
+        : null
+    : null
+  const finalMatchPokemon =
+    masterRoundResult?.winnerPokemon ??
+    finalRoundWinnerPokemon ??
+    (currentUserIsPlayerA
+      ? finalNormalRoundResult?.playerAPokemon
+      : finalNormalRoundResult?.playerBPokemon) ??
+    null
+  const finalMatchPokemonImage =
+    getNormalPokemonImage(finalMatchPokemon)
+  const finalMatchTitle = currentPlayerWonMatch
+    ? 'Victory'
+    : currentPlayerLostMatch
+      ? 'Defeat'
+      : 'Match Complete'
+  const finalMatchMessage = currentPlayerWonMatch
+    ? 'You won the match!'
+    : currentPlayerLostMatch
+      ? 'You lost the match.'
+      : masterRoundResult?.resultType === 'TRUE_WARRIORS'
+        ? 'The match ends in legendary honor.'
+        : 'The match ended without a winner.'
 
   useEffect(() => {
     if (
@@ -1420,7 +1458,79 @@ function BattleArena({
             )}
 
             {battlePhase === 'match_over' && (
-              <section className="draft-state-panel match-status-panel battle-arena-final-panel">
+              <section
+                className={`champion-result-screen battle-arena-final-panel ${
+                  currentPlayerWonMatch
+                    ? 'is-victory'
+                    : currentPlayerLostMatch
+                      ? 'is-defeat'
+                      : 'is-draw'
+                }`}
+              >
+                <div className="champion-result-particles" aria-hidden="true">
+                  {Array.from({ length: 8 }, (_, index) => (
+                    <i key={index} />
+                  ))}
+                </div>
+
+                <header className="champion-result-header">
+                  <p>Final Match Result</p>
+                  <h2>{finalMatchTitle}</h2>
+                  <strong>{finalMatchMessage}</strong>
+                </header>
+
+                <div className="champion-result-score">
+                  <span>You</span>
+                  <strong>
+                    {yourScore} <b>-</b> {opponentScore}
+                  </strong>
+                  <span>Opponent</span>
+                </div>
+
+                {finalMatchPokemon && (
+                  <div className="champion-result-pokemon">
+                    {finalMatchPokemonImage && (
+                      <img
+                        src={finalMatchPokemonImage}
+                        alt={getPokemonName(finalMatchPokemon)}
+                        width="220"
+                        height="220"
+                        onError={(event) => {
+                          event.currentTarget.hidden = true
+                        }}
+                      />
+                    )}
+                    <div>
+                      <span>
+                        {masterRoundResult
+                          ? 'Master Round Champion'
+                          : 'Final Round Pokémon'}
+                      </span>
+                      <strong>
+                        {getPokemonName(finalMatchPokemon)}
+                      </strong>
+                    </div>
+                  </div>
+                )}
+
+                <div className="champion-match-summary">
+                  <div>
+                    <span>Rounds Won By You</span>
+                    <strong>{yourScore}</strong>
+                  </div>
+                  <div>
+                    <span>Rounds Won By Opponent</span>
+                    <strong>{opponentScore}</strong>
+                  </div>
+                  <div>
+                    <span>Final Reason</span>
+                    <strong>
+                      {battleState.matchOverReason ??
+                        masterRoundResult?.reason ??
+                        'Match complete.'}
+                    </strong>
+                  </div>
+                </div>
                 <p className="eyebrow">Match Over</p>
                 <h2>
                   {opponentSurrendered
@@ -1488,7 +1598,7 @@ function BattleArena({
               </section>
             )}
 
-            {masterRoundResult && (
+            {masterRoundResult && battlePhase !== 'match_over' && (
               <section className="draft-state-panel battle-reveal-preview battle-arena-final-panel">
                 <p className="eyebrow">MASTER ROUND RESULT</p>
 

@@ -2551,6 +2551,323 @@ h1 {
   margin: 0;
 }
 
+.champion-result-screen {
+  position: relative;
+  display: grid;
+  width: min(100%, 900px);
+  margin: 24px auto;
+  padding: clamp(28px, 5vw, 54px);
+  overflow: hidden;
+  gap: 24px;
+  color: #e2e8f0;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 24px;
+  box-shadow: 0 26px 70px rgba(2, 6, 23, 0.48);
+  text-align: center;
+  isolation: isolate;
+}
+
+.champion-result-screen::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  content: '';
+  background:
+    radial-gradient(circle at 50% 0, rgba(96, 165, 250, 0.2), transparent 42%),
+    linear-gradient(rgba(2, 6, 23, 0.7), rgba(2, 6, 23, 0.9));
+}
+
+.champion-result-screen.is-victory {
+  border-color: rgba(253, 224, 71, 0.58);
+  box-shadow:
+    0 0 46px rgba(251, 191, 36, 0.18),
+    0 26px 70px rgba(2, 6, 23, 0.48);
+}
+
+.champion-result-screen.is-victory::before {
+  background:
+    radial-gradient(circle at 50% 0, rgba(253, 224, 71, 0.28), transparent 44%),
+    linear-gradient(rgba(30, 41, 59, 0.66), rgba(2, 6, 23, 0.92));
+}
+
+.champion-result-screen.is-defeat {
+  border-color: rgba(248, 113, 113, 0.4);
+}
+
+.champion-result-screen.is-defeat::before {
+  background:
+    radial-gradient(circle at 50% 0, rgba(127, 29, 29, 0.3), transparent 46%),
+    linear-gradient(rgba(15, 23, 42, 0.74), rgba(2, 6, 23, 0.94));
+}
+
+.champion-result-screen > .eyebrow,
+.champion-result-screen > h2,
+.champion-result-screen > p {
+  display: none;
+}
+
+.champion-result-header {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+}
+
+.champion-result-header p,
+.champion-result-header h2 {
+  margin: 0;
+}
+
+.champion-result-header p {
+  color: #93c5fd;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.champion-result-header h2 {
+  color: #f8fafc;
+  font-size: clamp(2.8rem, 9vw, 6.2rem);
+  line-height: 0.9;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-shadow: 0 0 34px rgba(96, 165, 250, 0.44);
+}
+
+.is-victory .champion-result-header h2 {
+  color: #fde68a;
+  text-shadow:
+    0 0 18px rgba(255, 255, 255, 0.42),
+    0 0 44px rgba(251, 191, 36, 0.64);
+}
+
+.is-defeat .champion-result-header h2 {
+  color: #fca5a5;
+  text-shadow: 0 0 36px rgba(239, 68, 68, 0.42);
+}
+
+.champion-result-header > strong {
+  color: #e2e8f0;
+  font-size: clamp(1rem, 2.4vw, 1.35rem);
+}
+
+.champion-result-score {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(70px, 1fr) auto minmax(70px, 1fr);
+  align-items: center;
+  width: min(100%, 520px);
+  margin-inline: auto;
+  padding: 14px 20px;
+  gap: 16px;
+  background: rgba(2, 6, 23, 0.56);
+  border: 1px solid rgba(226, 232, 240, 0.18);
+  border-radius: 16px;
+  backdrop-filter: blur(8px);
+}
+
+.champion-result-score span {
+  color: #bfdbfe;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.champion-result-score > strong {
+  color: #f8fafc;
+  font-size: clamp(2rem, 6vw, 3.4rem);
+  line-height: 1;
+}
+
+.champion-result-score b {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.champion-result-pokemon {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(150px, 240px) minmax(0, 1fr);
+  align-items: center;
+  width: min(100%, 620px);
+  margin-inline: auto;
+  padding: 12px 24px;
+  gap: 20px;
+  background: rgba(15, 23, 42, 0.52);
+  border: 1px solid rgba(147, 197, 253, 0.2);
+  border-radius: 18px;
+  backdrop-filter: blur(7px);
+}
+
+.champion-result-pokemon img {
+  width: min(100%, 220px);
+  height: 200px;
+  object-fit: contain;
+  filter: drop-shadow(0 16px 18px rgba(2, 6, 23, 0.54));
+}
+
+.is-victory .champion-result-pokemon img {
+  filter:
+    drop-shadow(0 0 22px rgba(251, 191, 36, 0.4))
+    drop-shadow(0 16px 18px rgba(2, 6, 23, 0.54));
+}
+
+.champion-result-pokemon > div {
+  display: grid;
+  justify-items: start;
+  gap: 5px;
+  text-align: left;
+}
+
+.champion-result-pokemon span {
+  color: #93c5fd;
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.champion-result-pokemon strong {
+  color: #f8fafc;
+  font-size: clamp(1.5rem, 4vw, 2.4rem);
+}
+
+.champion-match-summary {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.champion-match-summary > div {
+  display: grid;
+  padding: 13px 15px;
+  gap: 4px;
+  background: rgba(2, 6, 23, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 12px;
+}
+
+.champion-match-summary > div:last-child {
+  grid-column: 1 / -1;
+}
+
+.champion-match-summary span {
+  color: #94a3b8;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.champion-match-summary strong {
+  color: #e2e8f0;
+  font-size: 0.9rem;
+}
+
+.champion-result-screen .post-match-actions {
+  position: relative;
+  z-index: 1;
+  justify-items: center;
+  margin-top: 0;
+}
+
+.champion-result-screen .post-match-actions > div {
+  justify-content: center;
+}
+
+.champion-result-particles {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.champion-result-particles i {
+  position: absolute;
+  bottom: -12px;
+  left: 8%;
+  width: 4px;
+  height: 4px;
+  background: #60a5fa;
+  border-radius: 50%;
+  box-shadow: 0 0 10px currentColor;
+  opacity: 0;
+  animation: champion-particle-rise 8s linear infinite;
+}
+
+.is-victory .champion-result-particles i {
+  color: #fde68a;
+  background: currentColor;
+}
+
+.is-defeat .champion-result-particles i {
+  color: #f87171;
+  background: currentColor;
+}
+
+.champion-result-particles i:nth-child(2) {
+  left: 18%;
+  animation-delay: -3s;
+}
+
+.champion-result-particles i:nth-child(3) {
+  left: 31%;
+  animation-delay: -6s;
+  animation-duration: 10s;
+}
+
+.champion-result-particles i:nth-child(4) {
+  left: 44%;
+  animation-delay: -1s;
+}
+
+.champion-result-particles i:nth-child(5) {
+  left: 58%;
+  animation-delay: -5s;
+  animation-duration: 11s;
+}
+
+.champion-result-particles i:nth-child(6) {
+  left: 71%;
+  animation-delay: -2s;
+}
+
+.champion-result-particles i:nth-child(7) {
+  left: 83%;
+  animation-delay: -7s;
+  animation-duration: 12s;
+}
+
+.champion-result-particles i:nth-child(8) {
+  left: 93%;
+  animation-delay: -4s;
+}
+
+@keyframes champion-particle-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.6);
+  }
+
+  22%,
+  70% {
+    opacity: 0.45;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-520px) scale(1.1);
+  }
+}
+
 .surrender-button {
   position: fixed;
   z-index: 20;
@@ -4277,6 +4594,53 @@ h1 {
     gap: 6px;
   }
 
+  .champion-result-screen {
+    margin-top: 16px;
+    padding: 28px 16px;
+    gap: 18px;
+    border-radius: 18px;
+  }
+
+  .champion-result-score {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  .champion-result-score > strong {
+    grid-row: 1;
+  }
+
+  .champion-result-pokemon {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .champion-result-pokemon img {
+    height: 170px;
+  }
+
+  .champion-result-pokemon > div {
+    justify-items: center;
+    text-align: center;
+  }
+
+  .champion-match-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .champion-match-summary > div:last-child {
+    grid-column: 1;
+  }
+
+  .champion-result-screen .post-match-actions > div {
+    display: grid;
+    width: 100%;
+  }
+
+  .champion-result-screen .post-match-actions .game-button {
+    width: 100%;
+  }
+
   .starter-options {
     grid-template-columns: 1fr;
   }
@@ -4314,6 +4678,10 @@ h1 {
   }
 
   .arena-effects {
+    display: none;
+  }
+
+  .champion-result-particles {
     display: none;
   }
 }
