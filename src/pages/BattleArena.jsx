@@ -34,6 +34,13 @@ import {
 
 const ROUND_WINS_NEEDED = 4
 const EMPTY_BATTLEFIELD_EFFECTS = []
+const BATTLE_ARENA_THEMES = [
+  'night-stadium',
+  'sky-temple',
+  'forest-shrine',
+  'volcanic-field',
+  'crystal-cavern',
+]
 const REVEALED_BATTLE_PHASES = new Set([
   'reveal',
   'score_breakdown',
@@ -250,6 +257,12 @@ function BattleArena({
   const [celebiWishError, setCelebiWishError] = useState('')
   const [postMatchAction, setPostMatchAction] = useState('')
   const [postMatchError, setPostMatchError] = useState('')
+  const [arenaTheme] = useState(
+    () =>
+      BATTLE_ARENA_THEMES[
+        Math.floor(Math.random() * BATTLE_ARENA_THEMES.length)
+      ],
+  )
   const [countdownValue, setCountdownValue] = useState(null)
   const [countdownCompletedRound, setCountdownCompletedRound] =
     useState(null)
@@ -1715,6 +1728,7 @@ function BattleArena({
                 logs={revealLogs}
                 yourTeamSlots={yourTeamSlots}
                 opponentTeamSlots={opponentTeamSlots}
+                arenaTheme={arenaTheme}
                 showContinue={
                   Boolean(savedRoundResult) &&
                   battlePhase === 'round_result' &&

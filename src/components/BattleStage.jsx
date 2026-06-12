@@ -1,17 +1,8 @@
-import { useState } from 'react'
 import {
   getDisplayPokemonImage,
   getNormalPokemonImage,
   getPokemonName,
 } from '../data/transformationAssets.js'
-
-const BATTLE_ARENAS = [
-  'forest',
-  'volcano',
-  'ocean',
-  'night',
-  'electric',
-]
 
 function isSamePokemon(pokemon, otherPokemon) {
   const pokemonId = pokemon?.id ?? pokemon?.pokemonId
@@ -56,6 +47,7 @@ function TeamTracker({ label, slots = [], side }) {
             >
               {image ? (
                 <img
+                  className="battle-team-slot-portrait"
                   src={image}
                   alt=""
                   width="42"
@@ -65,9 +57,14 @@ function TeamTracker({ label, slots = [], side }) {
                   }}
                 />
               ) : (
-                <b aria-hidden="true">?</b>
+                <span
+                  className="battle-team-slot-pokeball"
+                  aria-hidden="true"
+                >
+                  <i />
+                </span>
               )}
-              <small>{slot.unknown ? '?' : name}</small>
+              {!slot.unknown && <small>{name}</small>}
             </span>
           )
         })}
@@ -154,13 +151,8 @@ function BattleStage({
   countdownBackdrop = false,
   yourTeamSlots = [],
   opponentTeamSlots = [],
+  arenaTheme = 'night-stadium',
 }) {
-  const [arena] = useState(
-    () =>
-      BATTLE_ARENAS[
-        Math.floor(Math.random() * BATTLE_ARENAS.length)
-      ],
-  )
   const yourOutcome = !countdownBackdrop && winnerPokemon
     ? isSamePokemon(yourPokemon, winnerPokemon)
       ? 'winner'
@@ -193,7 +185,7 @@ function BattleStage({
       </header>
 
       <div
-        className={`battle-stage-matchup battle-arena-${arena}`}
+        className={`battle-stage-matchup battle-arena-${arenaTheme}`}
       >
         <TeamTracker label="You" slots={yourTeamSlots} side="you" />
         <Fighter

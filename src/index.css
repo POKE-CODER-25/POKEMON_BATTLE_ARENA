@@ -2912,6 +2912,10 @@ h1 {
   object-fit: contain;
 }
 
+.battle-team-slot-portrait {
+  animation: battle-team-slot-reveal 400ms ease-out both;
+}
+
 .battle-team-slot small {
   position: absolute;
   right: 50%;
@@ -2929,9 +2933,33 @@ h1 {
   transform: translateX(50%);
 }
 
-.battle-team-slot b {
-  color: #64748b;
-  font-size: 1rem;
+.battle-team-slot-pokeball {
+  position: relative;
+  display: block;
+  width: 30px;
+  height: 30px;
+  overflow: hidden;
+  background: linear-gradient(
+    to bottom,
+    #ef4444 0 43%,
+    #111827 43% 57%,
+    #f8fafc 57%
+  );
+  border: 3px solid #111827;
+  border-radius: 50%;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.32);
+}
+
+.battle-team-slot-pokeball i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  background: #f8fafc;
+  border: 3px solid #111827;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .battle-team-slot.is-used {
@@ -2949,66 +2977,175 @@ h1 {
 }
 
 .battle-team-slot.is-unknown {
-  border-style: dashed;
+  border-color: rgba(148, 163, 184, 0.2);
 }
 
-.battle-arena-forest {
+@keyframes battle-team-slot-reveal {
+  0% {
+    opacity: 0;
+    filter: brightness(3);
+    transform: scale(0.72);
+  }
+
+  42% {
+    opacity: 1;
+    filter: brightness(2);
+    transform: scale(1.08);
+  }
+
+  100% {
+    opacity: 1;
+    filter: brightness(1);
+    transform: scale(1);
+  }
+}
+
+.battle-arena-night-stadium {
   background-image:
-    radial-gradient(
-      ellipse at 50% 100%,
-      rgba(74, 222, 128, 0.38),
-      transparent 48%
+    linear-gradient(
+      100deg,
+      transparent 10%,
+      rgba(191, 219, 254, 0.2) 24%,
+      transparent 38%
     ),
-    radial-gradient(circle at 18% 28%, rgba(34, 197, 94, 0.42), transparent 24%),
-    radial-gradient(circle at 82% 18%, rgba(22, 163, 74, 0.36), transparent 26%),
-    linear-gradient(180deg, #18392e 0%, #14532d 48%, #052e16 100%);
+    linear-gradient(
+      260deg,
+      transparent 10%,
+      rgba(191, 219, 254, 0.16) 24%,
+      transparent 38%
+    ),
+    radial-gradient(
+      ellipse at 50% 108%,
+      rgba(59, 130, 246, 0.34),
+      transparent 54%
+    ),
+    radial-gradient(ellipse at 50% 14%, rgba(147, 197, 253, 0.16), transparent 36%),
+    linear-gradient(180deg, #07152f 0%, #172554 52%, #07111f 100%);
 }
 
-.battle-arena-volcano {
+.battle-arena-night-stadium::after {
   background-image:
+    radial-gradient(circle, rgba(219, 234, 254, 0.5) 0 1px, transparent 2px),
+    linear-gradient(
+      90deg,
+      transparent 0 8%,
+      rgba(96, 165, 250, 0.18) 8% 9%,
+      transparent 9% 91%,
+      rgba(96, 165, 250, 0.18) 91% 92%,
+      transparent 92%
+    );
+  background-size:
+    64px 64px,
+    100% 100%;
+  opacity: 0.2;
+}
+
+.battle-arena-sky-temple {
+  background-image:
+    radial-gradient(circle at 50% 4%, rgba(254, 240, 138, 0.68), transparent 28%),
+    radial-gradient(ellipse at 18% 72%, rgba(255, 255, 255, 0.42), transparent 28%),
+    radial-gradient(ellipse at 82% 66%, rgba(255, 255, 255, 0.36), transparent 30%),
+    linear-gradient(
+      90deg,
+      transparent 12%,
+      rgba(253, 224, 71, 0.12) 12% 13%,
+      transparent 13% 87%,
+      rgba(253, 224, 71, 0.12) 87% 88%,
+      transparent 88%
+    ),
+    linear-gradient(180deg, #60a5fa 0%, #93c5fd 44%, #475569 100%);
+}
+
+.battle-arena-sky-temple::after {
+  background-image:
+    radial-gradient(circle, rgba(254, 240, 138, 0.58) 0 1px, transparent 2px),
+    radial-gradient(circle, rgba(255, 255, 255, 0.52) 0 1px, transparent 2px);
+  background-size:
+    92px 92px,
+    138px 138px;
+  opacity: 0.22;
+}
+
+.battle-arena-forest-shrine {
+  background-image:
+    linear-gradient(
+      90deg,
+      rgba(5, 46, 22, 0.72),
+      transparent 24% 76%,
+      rgba(5, 46, 22, 0.72)
+    ),
     radial-gradient(
       ellipse at 50% 110%,
-      rgba(251, 146, 60, 0.92),
-      transparent 42%
+      rgba(74, 222, 128, 0.34),
+      transparent 50%
     ),
-    radial-gradient(circle at 22% 72%, rgba(239, 68, 68, 0.46), transparent 24%),
-    radial-gradient(circle at 78% 62%, rgba(245, 158, 11, 0.38), transparent 28%),
-    linear-gradient(180deg, #3f1d2e 0%, #7f1d1d 52%, #1c0a0a 100%);
+    radial-gradient(circle at 20% 18%, rgba(134, 239, 172, 0.28), transparent 24%),
+    radial-gradient(circle at 80% 24%, rgba(74, 222, 128, 0.24), transparent 28%),
+    linear-gradient(180deg, #123524 0%, #14532d 48%, #052e16 100%);
 }
 
-.battle-arena-ocean {
+.battle-arena-forest-shrine::after {
+  background-image:
+    radial-gradient(ellipse, rgba(134, 239, 172, 0.48) 0 2px, transparent 3px),
+    radial-gradient(ellipse, rgba(253, 224, 71, 0.28) 0 1px, transparent 2px);
+  background-size:
+    86px 104px,
+    126px 126px;
+  opacity: 0.18;
+}
+
+.battle-arena-volcanic-field {
   background-image:
     radial-gradient(
       ellipse at 50% 105%,
-      rgba(125, 211, 252, 0.52),
-      transparent 48%
+      rgba(249, 115, 22, 0.82),
+      transparent 44%
     ),
-    radial-gradient(circle at 16% 22%, rgba(56, 189, 248, 0.34), transparent 24%),
-    radial-gradient(circle at 84% 32%, rgba(14, 165, 233, 0.36), transparent 26%),
-    linear-gradient(180deg, #164e63 0%, #075985 48%, #082f49 100%);
+    linear-gradient(
+      168deg,
+      transparent 54%,
+      rgba(251, 146, 60, 0.42) 55% 57%,
+      transparent 58%
+    ),
+    radial-gradient(circle at 18% 70%, rgba(239, 68, 68, 0.4), transparent 24%),
+    radial-gradient(circle at 82% 64%, rgba(245, 158, 11, 0.34), transparent 26%),
+    linear-gradient(180deg, #3f1622 0%, #7f1d1d 50%, #1c0a0a 100%);
 }
 
-.battle-arena-night {
+.battle-arena-volcanic-field::after {
   background-image:
-    radial-gradient(circle at 72% 18%, rgba(254, 249, 195, 0.58) 0 4%, transparent 12%),
-    radial-gradient(circle at 18% 26%, rgba(191, 219, 254, 0.4) 0 1px, transparent 2px),
-    radial-gradient(circle at 42% 14%, rgba(255, 255, 255, 0.44) 0 1px, transparent 2px),
-    radial-gradient(circle at 86% 42%, rgba(191, 219, 254, 0.42) 0 1px, transparent 2px),
-    linear-gradient(180deg, #172554 0%, #312e81 48%, #0f172a 100%);
+    radial-gradient(circle, rgba(251, 146, 60, 0.72) 0 1px, transparent 2px),
+    radial-gradient(circle, rgba(254, 215, 170, 0.5) 0 1px, transparent 2px);
+  background-size:
+    72px 72px,
+    118px 118px;
+  opacity: 0.24;
 }
 
-.battle-arena-electric {
+.battle-arena-crystal-cavern {
   background-image:
     linear-gradient(
-      118deg,
-      transparent 0 35%,
-      rgba(250, 204, 21, 0.72) 36% 38%,
-      transparent 39% 58%,
-      rgba(96, 165, 250, 0.58) 59% 61%,
-      transparent 62%
+      125deg,
+      transparent 8%,
+      rgba(125, 211, 252, 0.28) 9% 14%,
+      transparent 15% 74%,
+      rgba(196, 181, 253, 0.22) 75% 82%,
+      transparent 83%
     ),
-    radial-gradient(circle at 50% 58%, rgba(250, 204, 21, 0.42), transparent 36%),
-    linear-gradient(180deg, #1e1b4b 0%, #312e81 48%, #111827 100%);
+    radial-gradient(ellipse at 50% 110%, rgba(56, 189, 248, 0.42), transparent 52%),
+    radial-gradient(circle at 20% 24%, rgba(165, 243, 252, 0.32), transparent 24%),
+    radial-gradient(circle at 82% 18%, rgba(196, 181, 253, 0.3), transparent 26%),
+    linear-gradient(180deg, #172554 0%, #164e63 48%, #0f172a 100%);
+}
+
+.battle-arena-crystal-cavern::after {
+  background-image:
+    radial-gradient(circle, rgba(165, 243, 252, 0.62) 0 1px, transparent 2px),
+    radial-gradient(circle, rgba(216, 180, 254, 0.48) 0 1px, transparent 2px);
+  background-size:
+    76px 76px,
+    124px 124px;
+  opacity: 0.22;
 }
 
 .battle-stage-fighter {
@@ -3654,7 +3791,8 @@ h1 {
 
   .battle-stage-matchup::after,
   .battle-stage-versus,
-  .battle-stage-result {
+  .battle-stage-result,
+  .battle-team-slot-portrait {
     animation: none;
   }
 }
