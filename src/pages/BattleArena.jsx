@@ -1390,6 +1390,7 @@ function BattleArena({
                 opponentPokemon={revealedOpponentPokemon}
                 yourFinalScore={revealedYourScore}
                 opponentFinalScore={revealedOpponentScore}
+                winnerPokemon={savedRoundResult?.winnerPokemon}
                 resultText={revealReason}
                 logs={revealLogs}
                 showContinue={

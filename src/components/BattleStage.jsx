@@ -22,13 +22,31 @@ function getPokemonImage(pokemon) {
   return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonId}.png`
 }
 
-function Fighter({ label, pokemon, score }) {
+function isSamePokemon(pokemon, otherPokemon) {
+  const pokemonId = pokemon?.id ?? pokemon?.pokemonId
+  const otherPokemonId = otherPokemon?.id ?? otherPokemon?.pokemonId
+
+  if (pokemonId && otherPokemonId) {
+    return String(pokemonId) === String(otherPokemonId)
+  }
+
+  return getPokemonName(pokemon) === getPokemonName(otherPokemon)
+}
+
+function Fighter({ label, pokemon, score, outcome }) {
   const name = getPokemonName(pokemon)
   const image = getPokemonImage(pokemon)
 
   return (
-    <article className="battle-stage-fighter">
-      <span>{label}</span>
+    <article
+      className={`battle-stage-fighter ${
+        outcome ? `is-${outcome}` : ''
+      }`}
+    >
+      <span className="battle-stage-fighter-label">{label}</span>
+      {outcome === 'winner' && (
+        <span className="battle-stage-winner-badge">Winner</span>
+      )}
       {image && (
         <img
           src={image}
@@ -40,9 +58,13 @@ function Fighter({ label, pokemon, score }) {
           }}
         />
       )}
-      <strong>{name}</strong>
-      <small>Final Score</small>
-      <b>{score}</b>
+      <div className="battle-stage-fighter-identity">
+        <strong>{name}</strong>
+        <span className="battle-stage-score">
+          <small>Final Score</small>
+          <b>{score}</b>
+        </span>
+      </div>
     </article>
   )
 }
@@ -55,6 +77,7 @@ function BattleStage({
   opponentPokemon,
   yourFinalScore,
   opponentFinalScore,
+  winnerPokemon,
   resultText,
   logs = [],
   showContinue = false,
@@ -71,6 +94,16 @@ function BattleStage({
         Math.floor(Math.random() * BATTLE_ARENAS.length)
       ],
   )
+  const yourOutcome = winnerPokemon
+    ? isSamePokemon(yourPokemon, winnerPokemon)
+      ? 'winner'
+      : 'loser'
+    : ''
+  const opponentOutcome = winnerPokemon
+    ? isSamePokemon(opponentPokemon, winnerPokemon)
+      ? 'winner'
+      : 'loser'
+    : ''
 
   return (
     <section className="battle-stage" aria-labelledby="battle-stage-title">
@@ -91,17 +124,19 @@ function BattleStage({
         className={`battle-stage-matchup battle-arena-${arena}`}
       >
         <Fighter
-          label="Your Pokemon"
+          label="You"
           pokemon={yourPokemon}
           score={yourFinalScore}
+          outcome={yourOutcome}
         />
         <div className="battle-stage-versus" aria-label="versus">
-          VS
+          <span>VS</span>
         </div>
         <Fighter
-          label="Opponent Pokemon"
+          label="Opponent"
           pokemon={opponentPokemon}
           score={opponentFinalScore}
+          outcome={opponentOutcome}
         />
       </div>
 
