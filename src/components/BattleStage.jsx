@@ -1,3 +1,13 @@
+import { useState } from 'react'
+
+const BATTLE_ARENAS = [
+  'forest',
+  'volcano',
+  'ocean',
+  'night',
+  'electric',
+]
+
 function getPokemonName(pokemon) {
   return pokemon?.name ?? pokemon?.pokemonName ?? 'Unknown Pokemon'
 }
@@ -55,6 +65,13 @@ function BattleStage({
   statusMessage = '',
   errorMessages = [],
 }) {
+  const [arena] = useState(
+    () =>
+      BATTLE_ARENAS[
+        Math.floor(Math.random() * BATTLE_ARENAS.length)
+      ],
+  )
+
   return (
     <section className="battle-stage" aria-labelledby="battle-stage-title">
       <header className="battle-stage-header">
@@ -70,7 +87,9 @@ function BattleStage({
         </div>
       </header>
 
-      <div className="battle-stage-matchup">
+      <div
+        className={`battle-stage-matchup battle-arena-${arena}`}
+      >
         <Fighter
           label="Your Pokemon"
           pokemon={yourPokemon}
