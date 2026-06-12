@@ -126,6 +126,9 @@ function BattleArena({
   const [celebiWishError, setCelebiWishError] = useState('')
   const [postMatchAction, setPostMatchAction] = useState('')
   const [postMatchError, setPostMatchError] = useState('')
+  const [countdownValue, setCountdownValue] = useState(null)
+  const [countdownCompletedRound, setCountdownCompletedRound] =
+    useState(null)
   const masterRoundInitializationRef = useRef(false)
   const masterRoundResolutionRef = useRef(false)
 
@@ -478,12 +481,20 @@ function BattleArena({
       revealedOpponentPokemon &&
       revealReason,
   )
-  const showBattleStage = Boolean(
+  const battleStageReady = Boolean(
     bothPlayersLocked &&
+      savedRoundResult &&
       hasRevealData &&
       !isMasterRoundPending &&
-      !masterRoundResult,
+      !masterRoundResult &&
+      battlePhase !== 'match_over',
   )
+  const isBattleCountdownActive =
+    battleStageReady && countdownValue !== null
+  const showBattleStage =
+    battleStageReady &&
+    countdownCompletedRound === currentRound &&
+    !isBattleCountdownActive
   const yourMasterPokemon = currentUserIsPlayerA
     ? masterRoundResult?.playerAPokemon
     : masterRoundResult?.playerBPokemon
@@ -496,6 +507,30 @@ function BattleArena({
   const opponentMasterFinalScore = currentUserIsPlayerA
     ? masterRoundResult?.playerBFinalScore
     : masterRoundResult?.playerAFinalScore
+
+  useEffect(() => {
+    if (
+      !battleStageReady ||
+      countdownCompletedRound === currentRound
+    ) {
+      return undefined
+    }
+
+    const timers = [
+      window.setTimeout(() => setCountdownValue('3'), 0),
+      window.setTimeout(() => setCountdownValue('2'), 700),
+      window.setTimeout(() => setCountdownValue('1'), 1400),
+      window.setTimeout(() => setCountdownValue('GO!'), 2100),
+      window.setTimeout(() => {
+        setCountdownCompletedRound(currentRound)
+        setCountdownValue(null)
+      }, 2700),
+    ]
+
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer))
+    }
+  }, [battleStageReady, countdownCompletedRound, currentRound])
 
   useEffect(() => {
     if (
@@ -1263,6 +1298,7 @@ function BattleArena({
                             isUsed ||
                             currentPlayerHasLocked ||
                             isLockingFighter ||
+                            isBattleCountdownActive ||
                             !selectionIsOpen
                           }
                           aria-pressed={isSelected}
@@ -1305,6 +1341,7 @@ function BattleArena({
                         selectedPokemonIsUsed ||
                         currentPlayerHasLocked ||
                         isLockingFighter ||
+                        isBattleCountdownActive ||
                         !selectionIsOpen
                       }
                       onClick={handleLockFighter}
@@ -1394,6 +1431,25 @@ function BattleArena({
         )}
 
       </section>
+
+      {isBattleCountdownActive && battlePhase !== 'match_over' && (
+        <div
+          className="battle-countdown-overlay"
+          role="status"
+          aria-live="assertive"
+          aria-label={`Battle starts in ${countdownValue}`}
+        >
+          <div
+            className={`battle-countdown-value ${
+              countdownValue === 'GO!' ? 'is-go' : ''
+            }`}
+            key={countdownValue}
+            aria-hidden="true"
+          >
+            {countdownValue}
+          </div>
+        </div>
+      )}
 
       {isRoomPlayer && (
         <>
