@@ -3,6 +3,7 @@ import {
   getNormalPokemonImage,
   getPokemonName,
 } from '../data/transformationAssets.js'
+import ArenaEffects from './ArenaEffects.jsx'
 
 function isSamePokemon(pokemon, otherPokemon) {
   const pokemonId = pokemon?.id ?? pokemon?.pokemonId
@@ -191,6 +192,7 @@ function BattleStage({
           backgroundPosition: 'center center',
         }}
       >
+        <ArenaEffects arenaId={arena.id} />
         <span className="battle-arena-name">{arena.name}</span>
         <TeamTracker label="You" slots={yourTeamSlots} side="you" />
         <Fighter

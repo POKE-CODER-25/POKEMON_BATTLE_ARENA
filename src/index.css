@@ -2903,6 +2903,417 @@ h1 {
   z-index: 3;
 }
 
+.battle-stage-matchup > .arena-effects {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.arena-effect-glow,
+.arena-effect-shimmer,
+.arena-effect-particles {
+  position: absolute;
+  inset: 0;
+}
+
+.arena-effect-particles i {
+  --particle-delay: 0s;
+  --particle-duration: 9s;
+  position: absolute;
+  left: 8%;
+  bottom: 8%;
+  width: 4px;
+  height: 4px;
+  background: currentColor;
+  border-radius: 50%;
+  box-shadow: 0 0 9px currentColor;
+  opacity: 0;
+  animation-delay: var(--particle-delay);
+  animation-duration: var(--particle-duration);
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+}
+
+.arena-effect-particles i:nth-child(2) {
+  --particle-delay: -2.8s;
+  --particle-duration: 11s;
+  left: 20%;
+  bottom: 22%;
+  width: 3px;
+  height: 3px;
+}
+
+.arena-effect-particles i:nth-child(3) {
+  --particle-delay: -5.2s;
+  --particle-duration: 13s;
+  left: 34%;
+  bottom: 10%;
+}
+
+.arena-effect-particles i:nth-child(4) {
+  --particle-delay: -1.4s;
+  --particle-duration: 10s;
+  left: 48%;
+  bottom: 28%;
+  width: 2px;
+  height: 2px;
+}
+
+.arena-effect-particles i:nth-child(5) {
+  --particle-delay: -7.4s;
+  --particle-duration: 14s;
+  left: 61%;
+  bottom: 14%;
+}
+
+.arena-effect-particles i:nth-child(6) {
+  --particle-delay: -3.7s;
+  --particle-duration: 12s;
+  left: 74%;
+  bottom: 24%;
+  width: 3px;
+  height: 3px;
+}
+
+.arena-effect-particles i:nth-child(7) {
+  --particle-delay: -6.1s;
+  --particle-duration: 15s;
+  left: 86%;
+  bottom: 9%;
+}
+
+.arena-effect-particles i:nth-child(8) {
+  --particle-delay: -9.2s;
+  --particle-duration: 16s;
+  left: 92%;
+  bottom: 34%;
+  width: 2px;
+  height: 2px;
+}
+
+.arena-effect-particles i:nth-child(9) {
+  --particle-delay: -4.5s;
+  --particle-duration: 12.5s;
+  left: 56%;
+  bottom: 4%;
+  width: 3px;
+  height: 3px;
+}
+
+.arena-effects-inferno {
+  color: #ff7b00;
+}
+
+.arena-effects-inferno .arena-effect-glow {
+  background: radial-gradient(
+    ellipse at 50% 100%,
+    rgba(255, 69, 0, 0.18),
+    transparent 54%
+  );
+  animation: arena-inferno-glow 5.5s ease-in-out infinite;
+}
+
+.arena-effects-inferno .arena-effect-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 28%,
+    rgba(255, 179, 71, 0.06) 48%,
+    transparent 68%
+  );
+  filter: blur(4px);
+  animation: arena-heat-shimmer 8s ease-in-out infinite;
+}
+
+.arena-effects-inferno .arena-effect-particles i {
+  animation-name: arena-ember-rise;
+}
+
+.arena-effects-inferno .arena-effect-particles i:nth-child(3n) {
+  color: #ffb347;
+}
+
+.arena-effects-inferno .arena-effect-particles i:nth-child(3n + 1) {
+  color: #ff4500;
+}
+
+.arena-effects-forest {
+  color: #7dd3fc;
+}
+
+.arena-effects-forest .arena-effect-glow {
+  background:
+    radial-gradient(circle at 24% 38%, rgba(96, 165, 250, 0.12), transparent 22%),
+    radial-gradient(circle at 76% 32%, rgba(196, 181, 253, 0.1), transparent 24%);
+  animation: arena-moonlight-glow 7s ease-in-out infinite;
+}
+
+.arena-effects-forest .arena-effect-shimmer {
+  background: linear-gradient(
+    112deg,
+    transparent 30%,
+    rgba(125, 211, 252, 0.08) 45%,
+    transparent 59%
+  );
+  animation: arena-light-sweep 12s ease-in-out infinite;
+}
+
+.arena-effects-forest .arena-effect-particles i {
+  animation-name: arena-spirit-drift;
+}
+
+.arena-effects-forest .arena-effect-particles i:nth-child(even) {
+  color: #c4b5fd;
+}
+
+.arena-effects-crystal {
+  color: #7dd3fc;
+}
+
+.arena-effects-crystal .arena-effect-glow {
+  background:
+    radial-gradient(circle at 18% 72%, rgba(147, 197, 253, 0.12), transparent 24%),
+    radial-gradient(circle at 82% 68%, rgba(196, 181, 253, 0.12), transparent 26%);
+  animation: arena-crystal-glow 6s ease-in-out infinite;
+}
+
+.arena-effects-crystal .arena-effect-shimmer {
+  background: linear-gradient(
+    118deg,
+    transparent 38%,
+    rgba(255, 255, 255, 0.11) 47%,
+    transparent 55%
+  );
+  animation: arena-crystal-ray 10s ease-in-out infinite;
+}
+
+.arena-effects-crystal .arena-effect-particles i {
+  border-radius: 1px;
+  transform: rotate(45deg);
+  animation-name: arena-crystal-dust;
+}
+
+.arena-effects-crystal .arena-effect-particles i:nth-child(even) {
+  color: #c4b5fd;
+}
+
+.arena-effects-celestial {
+  color: #93c5fd;
+}
+
+.arena-effects-celestial .arena-effect-glow {
+  background: radial-gradient(
+    circle at 50% 22%,
+    rgba(253, 230, 138, 0.14),
+    transparent 36%
+  );
+  animation: arena-divine-glow 6.5s ease-in-out infinite;
+}
+
+.arena-effects-celestial .arena-effect-shimmer {
+  background:
+    linear-gradient(102deg, transparent 26%, rgba(96, 165, 250, 0.08) 42%, transparent 58%),
+    linear-gradient(258deg, transparent 30%, rgba(253, 230, 138, 0.06) 46%, transparent 62%);
+  animation: arena-celestial-trails 13s ease-in-out infinite;
+}
+
+.arena-effects-celestial .arena-effect-particles i {
+  animation-name: arena-energy-mote;
+}
+
+.arena-effects-celestial .arena-effect-particles i:nth-child(3n) {
+  color: #fde68a;
+}
+
+.arena-effects-stadium {
+  color: #60a5fa;
+}
+
+.arena-effects-stadium .arena-effect-glow {
+  background:
+    radial-gradient(ellipse at 20% 0, rgba(96, 165, 250, 0.12), transparent 34%),
+    radial-gradient(ellipse at 80% 0, rgba(253, 230, 138, 0.1), transparent 34%);
+  animation: arena-stadium-pulse 5s ease-in-out infinite;
+}
+
+.arena-effects-stadium .arena-effect-shimmer {
+  background:
+    linear-gradient(112deg, transparent 20%, rgba(147, 197, 253, 0.09) 36%, transparent 50%),
+    linear-gradient(248deg, transparent 20%, rgba(253, 230, 138, 0.08) 36%, transparent 50%);
+  animation: arena-spotlight-sweep 11s ease-in-out infinite;
+}
+
+.arena-effects-stadium .arena-effect-particles i {
+  width: 12px;
+  height: 2px;
+  border-radius: 1px;
+  animation-name: arena-screen-flicker;
+}
+
+.arena-effects-stadium .arena-effect-particles i:nth-child(even) {
+  color: #fde68a;
+}
+
+@keyframes arena-ember-rise {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 20px, 0) scale(0.7);
+  }
+
+  18% {
+    opacity: 0.65;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(18px, -240px, 0) scale(0.2);
+  }
+}
+
+@keyframes arena-spirit-drift {
+  0% {
+    opacity: 0;
+    transform: translate3d(-8px, 18px, 0) scale(0.65);
+  }
+
+  28%,
+  64% {
+    opacity: 0.48;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(42px, -170px, 0) scale(1.15);
+  }
+}
+
+@keyframes arena-crystal-dust {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) rotate(45deg) scale(0.6);
+  }
+
+  42% {
+    opacity: 0.6;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(-20px, -150px, 0) rotate(135deg) scale(0.25);
+  }
+}
+
+@keyframes arena-energy-mote {
+  0% {
+    opacity: 0;
+    transform: translate3d(-16px, 10px, 0) scale(0.7);
+  }
+
+  30%,
+  70% {
+    opacity: 0.5;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(54px, -130px, 0) scale(1.1);
+  }
+}
+
+@keyframes arena-screen-flicker {
+  0%,
+  18%,
+  22%,
+  74%,
+  78%,
+  100% {
+    opacity: 0;
+  }
+
+  20%,
+  76% {
+    opacity: 0.38;
+  }
+}
+
+@keyframes arena-inferno-glow {
+  50% {
+    opacity: 0.72;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes arena-heat-shimmer {
+  50% {
+    opacity: 0.7;
+    transform: translateX(3%) skewX(-1deg);
+  }
+}
+
+@keyframes arena-moonlight-glow {
+  50% {
+    opacity: 0.62;
+  }
+}
+
+@keyframes arena-light-sweep {
+  50% {
+    transform: translateX(12%);
+  }
+}
+
+@keyframes arena-crystal-glow {
+  50% {
+    opacity: 0.72;
+    filter: brightness(1.12);
+  }
+}
+
+@keyframes arena-crystal-ray {
+  0%,
+  30% {
+    opacity: 0;
+    transform: translateX(-22%);
+  }
+
+  50% {
+    opacity: 0.48;
+  }
+
+  70%,
+  100% {
+    opacity: 0;
+    transform: translateX(24%);
+  }
+}
+
+@keyframes arena-divine-glow {
+  50% {
+    opacity: 0.7;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes arena-celestial-trails {
+  50% {
+    transform: translateX(8%);
+  }
+}
+
+@keyframes arena-stadium-pulse {
+  50% {
+    opacity: 0.72;
+    filter: brightness(1.08);
+  }
+}
+
+@keyframes arena-spotlight-sweep {
+  50% {
+    transform: translateX(7%);
+  }
+}
+
 .battle-team-tracker {
   position: absolute;
   z-index: 3;
@@ -3900,5 +4311,9 @@ h1 {
   .battle-stage-result,
   .battle-team-slot-portrait {
     animation: none;
+  }
+
+  .arena-effects {
+    display: none;
   }
 }
