@@ -99,6 +99,7 @@ function BattleStage({
   onContinue,
   statusMessage = '',
   errorMessages = [],
+  countdownBackdrop = false,
 }) {
   const [arena] = useState(
     () =>
@@ -106,19 +107,24 @@ function BattleStage({
         Math.floor(Math.random() * BATTLE_ARENAS.length)
       ],
   )
-  const yourOutcome = winnerPokemon
+  const yourOutcome = !countdownBackdrop && winnerPokemon
     ? isSamePokemon(yourPokemon, winnerPokemon)
       ? 'winner'
       : 'loser'
     : ''
-  const opponentOutcome = winnerPokemon
+  const opponentOutcome = !countdownBackdrop && winnerPokemon
     ? isSamePokemon(opponentPokemon, winnerPokemon)
       ? 'winner'
       : 'loser'
     : ''
 
   return (
-    <section className="battle-stage" aria-labelledby="battle-stage-title">
+    <section
+      className={`battle-stage ${
+        countdownBackdrop ? 'is-countdown-backdrop' : ''
+      }`}
+      aria-labelledby="battle-stage-title"
+    >
       <header className="battle-stage-header">
         <div>
           <span>Round</span>
@@ -140,7 +146,9 @@ function BattleStage({
           pokemon={yourPokemon}
           score={yourFinalScore}
           outcome={yourOutcome}
-          transformation={yourTransformation}
+          transformation={
+            countdownBackdrop ? null : yourTransformation
+          }
         />
         <div className="battle-stage-versus" aria-label="versus">
           <span>VS</span>
@@ -150,52 +158,60 @@ function BattleStage({
           pokemon={opponentPokemon}
           score={opponentFinalScore}
           outcome={opponentOutcome}
-          transformation={opponentTransformation}
+          transformation={
+            countdownBackdrop ? null : opponentTransformation
+          }
         />
       </div>
 
-      <div className="battle-stage-result">
-        <span>Round Result</span>
-        <strong>{resultText}</strong>
-      </div>
-
-      {logs.length > 0 && (
-        <div className="battle-stage-log">
-          <h2>Battle Log</h2>
-          <div>
-            {logs.map((log, index) => (
-              <p key={`${index}-${log}`}>{log}</p>
-            ))}
+      {!countdownBackdrop && (
+        <>
+          <div className="battle-stage-result">
+            <span>Round Result</span>
+            <strong>{resultText}</strong>
           </div>
-        </div>
-      )}
 
-      {(showContinue || currentPlayerContinued || statusMessage) && (
-        <div className="battle-continue-area">
-          {showContinue && !currentPlayerContinued && (
-            <button
-              className="game-button game-button-primary"
-              type="button"
-              disabled={continueDisabled}
-              onClick={onContinue}
-            >
-              {continueLabel}
-            </button>
+          {logs.length > 0 && (
+            <div className="battle-stage-log">
+              <h2>Battle Log</h2>
+              <div>
+                {logs.map((log, index) => (
+                  <p key={`${index}-${log}`}>{log}</p>
+                ))}
+              </div>
+            </div>
           )}
 
-          {currentPlayerContinued && (
-            <p>Waiting for opponent to continue...</p>
+          {(showContinue ||
+            currentPlayerContinued ||
+            statusMessage) && (
+            <div className="battle-continue-area">
+              {showContinue && !currentPlayerContinued && (
+                <button
+                  className="game-button game-button-primary"
+                  type="button"
+                  disabled={continueDisabled}
+                  onClick={onContinue}
+                >
+                  {continueLabel}
+                </button>
+              )}
+
+              {currentPlayerContinued && (
+                <p>Waiting for opponent to continue...</p>
+              )}
+
+              {statusMessage && <p>{statusMessage}</p>}
+            </div>
           )}
 
-          {statusMessage && <p>{statusMessage}</p>}
-        </div>
+          {errorMessages.filter(Boolean).map((message) => (
+            <p className="battle-lock-error" role="alert" key={message}>
+              {message}
+            </p>
+          ))}
+        </>
       )}
-
-      {errorMessages.filter(Boolean).map((message) => (
-        <p className="battle-lock-error" role="alert" key={message}>
-          {message}
-        </p>
-      ))}
     </section>
   )
 }

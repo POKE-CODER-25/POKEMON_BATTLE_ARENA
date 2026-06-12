@@ -1473,7 +1473,9 @@ function BattleArena({
               </section>
             )}
 
-            {!isMasterRoundPending && !showBattleStage && (
+            {!isMasterRoundPending &&
+              !showBattleStage &&
+              !isBattleCountdownActive && (
               <section className="battle-arena-summary">
                 <div className="battle-arena-your-team">
                   <div className="battle-section-heading">
@@ -1605,7 +1607,7 @@ function BattleArena({
               </section>
             )}
 
-            {showBattleStage && (
+            {(showBattleStage || isBattleCountdownActive) && (
               <BattleStage
                 roundNumber={currentRound}
                 yourTrainerScore={yourScore}
@@ -1651,6 +1653,7 @@ function BattleArena({
                   roundSaveError,
                   continueErrorMessage,
                 ]}
+                countdownBackdrop={isBattleCountdownActive}
               />
             )}
 
@@ -1661,14 +1664,22 @@ function BattleArena({
 
       {isBattleCountdownActive && battlePhase !== 'match_over' && (
         <div
-          className="battle-countdown-overlay"
+          className={`battle-countdown-overlay ${
+            countdownValue === '1' ? 'is-one' : ''
+          } ${countdownValue === 'GO!' ? 'is-go' : ''}`}
           role="status"
           aria-live="assertive"
           aria-label={`Battle starts in ${countdownValue}`}
         >
           <div
             className={`battle-countdown-value ${
-              countdownValue === 'GO!' ? 'is-go' : ''
+              countdownValue === '3'
+                ? 'is-three'
+                : countdownValue === '2'
+                  ? 'is-two'
+                  : countdownValue === '1'
+                    ? 'is-one'
+                    : 'is-go'
             }`}
             key={countdownValue}
             aria-hidden="true"
