@@ -1,4 +1,9 @@
 import { useState } from 'react'
+import {
+  getDisplayPokemonImage,
+  getNormalPokemonImage,
+  getPokemonName,
+} from '../data/transformationAssets.js'
 
 const BATTLE_ARENAS = [
   'forest',
@@ -7,20 +12,6 @@ const BATTLE_ARENAS = [
   'night',
   'electric',
 ]
-
-function getPokemonName(pokemon) {
-  return pokemon?.name ?? pokemon?.pokemonName ?? 'Unknown Pokemon'
-}
-
-function getPokemonImage(pokemon) {
-  const pokemonId = pokemon?.id ?? pokemon?.pokemonId
-
-  if (!pokemonId) {
-    return null
-  }
-
-  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonId}.png`
-}
 
 function isSamePokemon(pokemon, otherPokemon) {
   const pokemonId = pokemon?.id ?? pokemon?.pokemonId
@@ -33,9 +24,16 @@ function isSamePokemon(pokemon, otherPokemon) {
   return getPokemonName(pokemon) === getPokemonName(otherPokemon)
 }
 
-function Fighter({ label, pokemon, score, outcome }) {
+function Fighter({
+  label,
+  pokemon,
+  score,
+  outcome,
+  transformation,
+}) {
   const name = getPokemonName(pokemon)
-  const image = getPokemonImage(pokemon)
+  const normalImage = getNormalPokemonImage(pokemon)
+  const image = getDisplayPokemonImage(pokemon, transformation)
 
   return (
     <article
@@ -54,12 +52,24 @@ function Fighter({ label, pokemon, score, outcome }) {
           width="240"
           height="240"
           onError={(event) => {
-            event.currentTarget.hidden = true
+            if (
+              normalImage &&
+              event.currentTarget.src !== normalImage
+            ) {
+              event.currentTarget.src = normalImage
+            } else {
+              event.currentTarget.hidden = true
+            }
           }}
         />
       )}
       <div className="battle-stage-fighter-identity">
-        <strong>{name}</strong>
+        <span className="battle-stage-fighter-name">
+          <strong>{name}</strong>
+          {transformation?.transformedForm && (
+            <small>{transformation.transformedForm}</small>
+          )}
+        </span>
         <span className="battle-stage-score">
           <small>Final Score</small>
           <b>{score}</b>
@@ -77,6 +87,8 @@ function BattleStage({
   opponentPokemon,
   yourFinalScore,
   opponentFinalScore,
+  yourTransformation,
+  opponentTransformation,
   winnerPokemon,
   resultText,
   logs = [],
@@ -128,6 +140,7 @@ function BattleStage({
           pokemon={yourPokemon}
           score={yourFinalScore}
           outcome={yourOutcome}
+          transformation={yourTransformation}
         />
         <div className="battle-stage-versus" aria-label="versus">
           <span>VS</span>
@@ -137,6 +150,7 @@ function BattleStage({
           pokemon={opponentPokemon}
           score={opponentFinalScore}
           outcome={opponentOutcome}
+          transformation={opponentTransformation}
         />
       </div>
 

@@ -8,6 +8,12 @@ import { resolveBattleRound } from '../data/battleRoundResolver.js'
 import { getJirachiCopyableTraits } from '../data/advancedTraitInteractionResolver.js'
 import { allBattlePokemon } from '../data/pokemonBattleData.js'
 import {
+  getDisplayPokemonImage,
+  getNormalPokemonImage,
+  getPokemonName,
+  getTransformationFormForPokemon,
+} from '../data/transformationAssets.js'
+import {
   getDraftPickLabel,
   getOrderedDraftPicks,
 } from '../data/draftTeamStructure.js'
@@ -44,6 +50,113 @@ const BATTLE_PHASE_LABELS = {
   round_result: 'Round Result',
   master_round_pending: 'Master Round Pending',
   match_over: 'Match Over',
+}
+
+function getTransformationEvents({
+  appliedEffects = [],
+  logs = [],
+  playerAPokemon,
+  playerBPokemon,
+}) {
+  const events = []
+  const eventKeys = new Set()
+  const battlePokemon = [playerAPokemon, playerBPokemon]
+
+  const addEvent = (event) => {
+    const key = `${event.type}:${event.pokemonName.toLowerCase()}`
+
+    if (!eventKeys.has(key)) {
+      eventKeys.add(key)
+      events.push(event)
+    }
+  }
+
+  appliedEffects.forEach((effect) => {
+    const source = String(effect?.source ?? '')
+    const trait = String(effect?.trait ?? '')
+    const transformedForm = String(effect?.transformedForm ?? '')
+    const isMegaEvolution =
+      source.toLowerCase().includes('mega evolution') ||
+      trait.toLowerCase().includes('mega evolution')
+    const isBattleBond =
+      source.toLowerCase().includes('ash greninja') ||
+      source.toLowerCase().includes('battle bond') ||
+      trait.toLowerCase().includes('ash greninja') ||
+      trait.toLowerCase().includes('battle bond') ||
+      transformedForm.toLowerCase() === 'ash greninja'
+
+    if (!isMegaEvolution && !isBattleBond) {
+      return
+    }
+
+    const pokemon =
+      effect.pokemon ??
+      effect.sourcePokemon ??
+      (effect.side === 'PLAYER_A'
+        ? playerAPokemon
+        : playerBPokemon)
+
+    addEvent({
+      type: isMegaEvolution ? 'mega' : 'battle-bond',
+      pokemon,
+      pokemonName: getPokemonName(pokemon),
+      image: getNormalPokemonImage(pokemon),
+      succeeded: Boolean(effect.applied),
+      transformedForm:
+        effect.transformedForm ??
+        (effect.applied
+          ? getTransformationFormForPokemon(pokemon)
+          : null),
+    })
+  })
+
+  logs.forEach((log) => {
+    const megaSuccessMatch = log.match(/^(.+?) Mega Evolved\.?$/i)
+    const megaFailureMatch = log.match(
+      /^(.+?) failed to Mega Evolve\.?$/i,
+    )
+    const battleBondSuccessMatch = log.match(
+      /^(.+?) transformed into Ash Greninja\.?$/i,
+    )
+    const battleBondFailureMatch = log.match(
+      /^(.+?) failed to become Ash Greninja\.?$/i,
+    )
+    const match =
+      megaSuccessMatch ??
+      megaFailureMatch ??
+      battleBondSuccessMatch ??
+      battleBondFailureMatch
+
+    if (!match) {
+      return
+    }
+
+    const pokemonName = match[1]
+    const pokemon = battlePokemon.find(
+      (candidate) =>
+        getPokemonName(candidate).toLowerCase() ===
+        pokemonName.toLowerCase(),
+    )
+
+    addEvent({
+      type:
+        megaSuccessMatch || megaFailureMatch
+          ? 'mega'
+          : 'battle-bond',
+      pokemon,
+      pokemonName,
+      image: getNormalPokemonImage(pokemon),
+      succeeded: Boolean(
+        megaSuccessMatch || battleBondSuccessMatch,
+      ),
+      transformedForm:
+        megaSuccessMatch || battleBondSuccessMatch
+          ? getTransformationFormForPokemon(pokemon)
+          : null,
+    })
+  })
+
+  return events
 }
 
 function findSelectedPokemon(selection, team = []) {
@@ -129,6 +242,12 @@ function BattleArena({
   const [countdownValue, setCountdownValue] = useState(null)
   const [countdownCompletedRound, setCountdownCompletedRound] =
     useState(null)
+  const [transformationCinematicIndex, setTransformationCinematicIndex] =
+    useState(null)
+  const [
+    transformationCinematicCompletedRound,
+    setTransformationCinematicCompletedRound,
+  ] = useState(null)
   const masterRoundInitializationRef = useRef(false)
   const masterRoundResolutionRef = useRef(false)
 
@@ -474,12 +593,33 @@ function BattleArena({
       : previewPlayerAState?.finalScore
   const revealReason =
     savedRoundResult?.reason ?? canonicalBattleResult?.winnerResult.reason
-  const revealLogs =
-    savedRoundResult?.logs ?? canonicalBattleResult?.logs ?? []
+  const revealLogs = useMemo(
+    () => savedRoundResult?.logs ?? canonicalBattleResult?.logs ?? [],
+    [canonicalBattleResult?.logs, savedRoundResult?.logs],
+  )
   const hasRevealData = Boolean(
     revealedYourPokemon &&
       revealedOpponentPokemon &&
       revealReason,
+  )
+  const transformationEvents = useMemo(
+    () =>
+      getTransformationEvents({
+        appliedEffects: canonicalBattleResult?.appliedEffects,
+        logs: revealLogs,
+        playerAPokemon:
+          savedRoundResult?.playerAPokemon ??
+          canonicalBattleResult?.playerAState?.pokemon,
+        playerBPokemon:
+          savedRoundResult?.playerBPokemon ??
+          canonicalBattleResult?.playerBState?.pokemon,
+      }),
+    [
+      canonicalBattleResult,
+      revealLogs,
+      savedRoundResult?.playerAPokemon,
+      savedRoundResult?.playerBPokemon,
+    ],
   )
   const battleStageReady = Boolean(
     bothPlayersLocked &&
@@ -491,10 +631,58 @@ function BattleArena({
   )
   const isBattleCountdownActive =
     battleStageReady && countdownValue !== null
+  const transformationCinematicRequired =
+    transformationEvents.length > 0
+  const successfulTransformationByPokemon = useMemo(() => {
+    const transformations = new Map()
+
+    transformationEvents.forEach((event) => {
+      if (!event.succeeded || !event.transformedForm) {
+        return
+      }
+
+      const pokemonId =
+        event.pokemon?.id ?? event.pokemon?.pokemonId
+      const key = pokemonId
+        ? `id:${pokemonId}`
+        : `name:${event.pokemonName.toLowerCase()}`
+
+      transformations.set(key, event)
+    })
+
+    return transformations
+  }, [transformationEvents])
+  const getSuccessfulTransformation = (pokemon) => {
+    const pokemonId = pokemon?.id ?? pokemon?.pokemonId
+    const key = pokemonId
+      ? `id:${pokemonId}`
+      : `name:${getPokemonName(pokemon).toLowerCase()}`
+
+    return successfulTransformationByPokemon.get(key) ?? null
+  }
+  const yourTransformation =
+    getSuccessfulTransformation(revealedYourPokemon)
+  const opponentTransformation =
+    getSuccessfulTransformation(revealedOpponentPokemon)
+  const transformationCinematicCompleted =
+    !transformationCinematicRequired ||
+    transformationCinematicCompletedRound === currentRound
+  const activeTransformationEvent =
+    transformationCinematicIndex === null
+      ? null
+      : transformationEvents[transformationCinematicIndex] ?? null
+  const isTransformationCinematicActive = Boolean(
+    battleStageReady &&
+      countdownCompletedRound === currentRound &&
+      !transformationCinematicCompleted &&
+      activeTransformationEvent,
+  )
   const showBattleStage =
     battleStageReady &&
     countdownCompletedRound === currentRound &&
-    !isBattleCountdownActive
+    !isBattleCountdownActive &&
+    transformationCinematicCompleted &&
+    !isTransformationCinematicActive
   const yourMasterPokemon = currentUserIsPlayerA
     ? masterRoundResult?.playerAPokemon
     : masterRoundResult?.playerBPokemon
@@ -531,6 +719,42 @@ function BattleArena({
       timers.forEach((timer) => window.clearTimeout(timer))
     }
   }, [battleStageReady, countdownCompletedRound, currentRound])
+
+  useEffect(() => {
+    if (
+      !battleStageReady ||
+      countdownCompletedRound !== currentRound ||
+      !transformationCinematicRequired ||
+      transformationCinematicCompletedRound === currentRound
+    ) {
+      return undefined
+    }
+
+    const timers = transformationEvents.map((_, index) =>
+      window.setTimeout(
+        () => setTransformationCinematicIndex(index),
+        index * 2100,
+      ),
+    )
+
+    timers.push(
+      window.setTimeout(() => {
+        setTransformationCinematicCompletedRound(currentRound)
+        setTransformationCinematicIndex(null)
+      }, transformationEvents.length * 2100),
+    )
+
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer))
+    }
+  }, [
+    battleStageReady,
+    countdownCompletedRound,
+    currentRound,
+    transformationCinematicCompletedRound,
+    transformationCinematicRequired,
+    transformationEvents,
+  ])
 
   useEffect(() => {
     if (
@@ -1390,6 +1614,8 @@ function BattleArena({
                 opponentPokemon={revealedOpponentPokemon}
                 yourFinalScore={revealedYourScore}
                 opponentFinalScore={revealedOpponentScore}
+                yourTransformation={yourTransformation}
+                opponentTransformation={opponentTransformation}
                 winnerPokemon={savedRoundResult?.winnerPokemon}
                 resultText={revealReason}
                 logs={revealLogs}
@@ -1449,6 +1675,99 @@ function BattleArena({
           >
             {countdownValue}
           </div>
+        </div>
+      )}
+
+      {isTransformationCinematicActive &&
+        battlePhase !== 'match_over' && (
+        <div
+          className={`mega-cinematic-overlay ${
+            activeTransformationEvent.succeeded
+              ? 'is-success'
+              : 'is-failure'
+          } ${
+            activeTransformationEvent.type === 'battle-bond'
+              ? 'is-battle-bond'
+              : 'is-mega'
+          }`}
+          role="status"
+          aria-live="assertive"
+          aria-label={`${activeTransformationEvent.type === 'battle-bond' ? 'Battle Bond' : 'Mega Evolution'} ${activeTransformationEvent.succeeded ? 'succeeded' : 'failed'} for ${activeTransformationEvent.pokemonName}`}
+          key={`${currentRound}-${transformationCinematicIndex}`}
+        >
+          <div className="mega-cinematic-energy" aria-hidden="true" />
+          <p className="mega-cinematic-title">
+            {activeTransformationEvent.type === 'battle-bond'
+              ? 'Battle Bond'
+              : 'Mega Evolution'}
+          </p>
+          <div className="mega-cinematic-pokemon">
+            {activeTransformationEvent.image && (
+              <>
+                <img
+                  className="mega-cinematic-normal-form"
+                  src={activeTransformationEvent.image}
+                  alt=""
+                  width="320"
+                  height="320"
+                  onError={(event) => {
+                    event.currentTarget.hidden = true
+                  }}
+                />
+                {activeTransformationEvent.succeeded && (
+                  <img
+                    className="mega-cinematic-transformed-form"
+                    src={getDisplayPokemonImage(
+                      activeTransformationEvent.pokemon,
+                      activeTransformationEvent,
+                    )}
+                    alt=""
+                    width="320"
+                    height="320"
+                    onError={(event) => {
+                      if (
+                        activeTransformationEvent.image &&
+                        event.currentTarget.src !==
+                          activeTransformationEvent.image
+                      ) {
+                        event.currentTarget.src =
+                          activeTransformationEvent.image
+                      } else {
+                        event.currentTarget.hidden = true
+                      }
+                    }}
+                  />
+                )}
+              </>
+            )}
+            {activeTransformationEvent.succeeded && (
+              <span className="mega-cinematic-form-name">
+                {activeTransformationEvent.transformedForm ??
+                  (activeTransformationEvent.type === 'battle-bond'
+                    ? 'Ash Greninja'
+                    : 'Mega Form')}
+              </span>
+            )}
+          </div>
+          <div className="mega-cinematic-name">
+            <strong>
+              {activeTransformationEvent.pokemonName}
+            </strong>
+            {activeTransformationEvent.transformedForm && (
+              <span>
+                {activeTransformationEvent.transformedForm}
+              </span>
+            )}
+          </div>
+          <strong className="mega-cinematic-status">
+            {activeTransformationEvent.type === 'battle-bond'
+              ? activeTransformationEvent.succeeded
+                ? 'Ash-Greninja Awakened'
+                : 'Battle Bond Failed'
+              : activeTransformationEvent.succeeded
+                ? 'Mega Evolution Success'
+                : 'Mega Evolution Failed'}
+          </strong>
         </div>
       )}
 
