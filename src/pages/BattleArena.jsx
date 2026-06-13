@@ -557,6 +557,15 @@ function getSuccessfulTransformationFromLogs(pokemon, logs = []) {
     return 'Gigantamax Snorlax'
   }
 
+  if (
+    pokemonName === 'Regigigas' &&
+    logs.some((log) =>
+      /^(Titan Awakening:\s*\+15|Slow Start:\s*\+7)/i.test(log),
+    )
+  ) {
+    return 'Titan Regigigas'
+  }
+
   if (pokemonName === 'Rayquaza' || pokemonName === 'Necrozma') {
     const godKillerLog = logs.find((log) =>
       /^God Killer awakened .+\.?$/i.test(log),
@@ -717,6 +726,10 @@ function BattleArena({
   const [postMatchError, setPostMatchError] = useState('')
   const [viewedMatchResultKey, setViewedMatchResultKey] =
     useState(null)
+  const [ceremonyScores, setCeremonyScores] = useState({
+    your: 0,
+    opponent: 0,
+  })
   const [countdownValue, setCountdownValue] = useState(null)
   const [countdownCompletedRound, setCountdownCompletedRound] =
     useState(null)
@@ -1423,17 +1436,67 @@ function BattleArena({
     ],
   )
   const finalMatchTitle = currentPlayerWonMatch
-    ? 'Victory'
+    ? 'Champion'
     : currentPlayerLostMatch
-      ? 'Defeat'
+      ? 'Fallen Challenger'
       : 'Match Complete'
   const finalMatchMessage = currentPlayerWonMatch
-    ? 'You won the match!'
+    ? 'You conquered the arena.'
     : currentPlayerLostMatch
-      ? 'You lost the match.'
+      ? 'A stronger trainer prevailed.'
       : masterRoundResult?.resultType === 'TRUE_WARRIORS'
         ? 'The match ends in legendary honor.'
         : 'The match ended without a winner.'
+  const matchResultLogs = [
+    ...(battleState?.roundResults ?? []).flatMap(
+      (result) => result.logs ?? [],
+    ),
+    ...(masterRoundResult?.logs ?? []),
+  ]
+  const ceremonyTitle =
+    matchMvp?.transformedForm === 'Mega Rayquaza' ||
+    matchMvp?.transformedForm === 'Ultra Necrozma'
+      ? 'God Killer'
+      : matchMvp?.transformedForm === 'Titan Regigigas'
+        ? 'Titan Ascendant'
+        : matchResultLogs.some((log) =>
+              /Celebi Future Wish/i.test(log),
+            )
+          ? 'Future Chosen'
+          : masterRoundResult && currentPlayerWonMatch
+            ? 'Master Round Winner'
+            : currentPlayerWonMatch
+              ? 'Arena Champion'
+              : 'Honored Challenger'
+
+  useEffect(() => {
+    if (!showFinalMatchScreen) {
+      return undefined
+    }
+
+    const timers = [
+      window.setTimeout(
+        () => setCeremonyScores({ your: 0, opponent: 0 }),
+        0,
+      ),
+    ]
+    const highestScore = Math.max(yourScore, opponentScore, 1)
+
+    for (let step = 1; step <= highestScore; step += 1) {
+      timers.push(
+        window.setTimeout(() => {
+          setCeremonyScores({
+            your: Math.min(step, yourScore),
+            opponent: Math.min(step, opponentScore),
+          })
+        }, 1150 + step * 180),
+      )
+    }
+
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer))
+    }
+  }, [opponentScore, showFinalMatchScreen, yourScore])
   const battleStageYourPokemon =
     yourMasterPokemon ?? revealedYourPokemon
   const battleStageOpponentPokemon =
@@ -2524,8 +2587,9 @@ function BattleArena({
                       : 'is-draw'
                 } ${masterRoundResult ? 'is-master-finale' : ''}`}
               >
+                <div className="champion-ceremony-light" aria-hidden="true" />
                 <div className="champion-result-particles" aria-hidden="true">
-                  {Array.from({ length: 8 }, (_, index) => (
+                  {Array.from({ length: 14 }, (_, index) => (
                     <i key={index} />
                   ))}
                 </div>
@@ -2538,18 +2602,36 @@ function BattleArena({
                   </p>
                   <h2>{finalMatchTitle}</h2>
                   <strong>{finalMatchMessage}</strong>
+                  <span>{ceremonyTitle}</span>
                 </header>
 
                 <div className="champion-result-score">
-                  <span>You</span>
-                  <div>
-                    <small>Final Score</small>
-                    <strong>
-                      {yourScore} <b>-</b> {opponentScore}
-                    </strong>
+                  <div
+                    className={`champion-score-podium is-you ${
+                      currentPlayerWonMatch ? 'is-winner' : ''
+                    }`}
+                  >
+                    <span>You</span>
+                    <strong>{ceremonyScores.your}</strong>
                   </div>
-                  <span>Opponent</span>
+                  <b>VS</b>
+                  <div
+                    className={`champion-score-podium is-opponent ${
+                      currentPlayerLostMatch ? 'is-winner' : ''
+                    }`}
+                  >
+                    <strong>{ceremonyScores.opponent}</strong>
+                    <span>Opponent</span>
+                  </div>
                 </div>
+
+                {masterRoundResult && (
+                  <div className="champion-master-recognition">
+                    <span aria-hidden="true">&#9876;</span>
+                    <strong>Master Round Decided the Match</strong>
+                    <span aria-hidden="true">&#9876;</span>
+                  </div>
+                )}
 
                 {matchMvp && (
                   <div className="champion-mvp-card">
@@ -2593,8 +2675,8 @@ function BattleArena({
                           : `Round ${matchMvp.order}`}
                       </small>
                       <b>
-                        <span>Final Score</span>
-                        {matchMvp.score}
+                        <span>Highest Score Achieved</span>
+                        {matchMvp.score} Points
                       </b>
                     </div>
                   </div>
@@ -2602,20 +2684,24 @@ function BattleArena({
 
                 <div className="champion-match-summary">
                   <div>
-                    <span>Rounds Won By You</span>
+                    <span>Rounds Won</span>
                     <strong>{yourScore}</strong>
                   </div>
                   <div>
-                    <span>Rounds Won By Opponent</span>
+                    <span>Rounds Lost</span>
                     <strong>{opponentScore}</strong>
                   </div>
                   <div>
-                    <span>Final Reason</span>
-                    <strong>
-                      {battleState.matchOverReason ??
-                        masterRoundResult?.reason ??
-                        'Match complete.'}
-                    </strong>
+                    <span>Highest Score</span>
+                    <strong>{matchMvp?.score ?? 0}</strong>
+                  </div>
+                  <div>
+                    <span>Arena Played</span>
+                    <strong>{battleArena.name}</strong>
+                  </div>
+                  <div>
+                    <span>Master Round</span>
+                    <strong>{masterRoundResult ? 'Yes' : 'No'}</strong>
                   </div>
                 </div>
                 <p className="eyebrow">Match Over</p>
@@ -2673,6 +2759,14 @@ function BattleArena({
                       {postMatchAction === 'return-home'
                         ? 'Leaving...'
                         : 'Return Home'}
+                    </button>
+                    <button
+                      className="game-button champion-history-button"
+                      type="button"
+                      disabled
+                      title="Battle History coming soon"
+                    >
+                      Battle History
                     </button>
                   </div>
 

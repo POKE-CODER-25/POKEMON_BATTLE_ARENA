@@ -4101,17 +4101,20 @@ h1 {
 .champion-result-screen {
   position: relative;
   display: grid;
-  width: min(100%, 900px);
+  width: min(100%, 1040px);
+  min-height: min(900px, calc(100dvh - 48px));
   margin: 24px auto;
   padding: clamp(28px, 5vw, 54px);
   overflow: hidden;
-  gap: 24px;
+  align-content: center;
+  gap: 26px;
   color: #e2e8f0;
   border: 1px solid rgba(148, 163, 184, 0.28);
   border-radius: 24px;
   box-shadow: 0 26px 70px rgba(2, 6, 23, 0.48);
   text-align: center;
   isolation: isolate;
+  animation: champion-ceremony-enter 900ms ease both;
 }
 
 .champion-result-screen::before {
@@ -4121,7 +4124,11 @@ h1 {
   content: '';
   background:
     radial-gradient(circle at 50% 0, rgba(96, 165, 250, 0.2), transparent 42%),
-    linear-gradient(rgba(2, 6, 23, 0.7), rgba(2, 6, 23, 0.9));
+    linear-gradient(rgba(2, 6, 23, 0.82), rgba(2, 6, 23, 0.96)),
+    var(--battle-arena-image);
+  background-position: center;
+  background-size: cover;
+  animation: champion-arena-darken 2s ease both;
 }
 
 .champion-result-screen.is-victory {
@@ -4138,13 +4145,18 @@ h1 {
 }
 
 .champion-result-screen.is-defeat {
-  border-color: rgba(248, 113, 113, 0.4);
+  border-color: rgba(191, 219, 254, 0.46);
+  box-shadow:
+    0 0 48px rgba(147, 197, 253, 0.14),
+    0 26px 70px rgba(2, 6, 23, 0.54);
 }
 
 .champion-result-screen.is-defeat::before {
   background:
-    radial-gradient(circle at 50% 0, rgba(127, 29, 29, 0.3), transparent 46%),
-    linear-gradient(rgba(15, 23, 42, 0.74), rgba(2, 6, 23, 0.94));
+    radial-gradient(circle at 50% 0, rgba(191, 219, 254, 0.22), transparent 44%),
+    radial-gradient(circle at 18% 78%, rgba(37, 99, 235, 0.18), transparent 34%),
+    linear-gradient(rgba(15, 23, 42, 0.8), rgba(2, 6, 23, 0.97)),
+    var(--battle-arena-image);
 }
 
 .champion-result-screen.is-master-finale {
@@ -4174,6 +4186,8 @@ h1 {
   display: grid;
   justify-items: center;
   gap: 7px;
+  opacity: 0;
+  animation: champion-title-reveal 1.2s ease 450ms both;
 }
 
 .champion-result-header p,
@@ -4211,8 +4225,10 @@ h1 {
 }
 
 .is-defeat .champion-result-header h2 {
-  color: #fca5a5;
-  text-shadow: 0 0 36px rgba(239, 68, 68, 0.42);
+  color: #e2e8f0;
+  text-shadow:
+    0 0 20px rgba(255, 255, 255, 0.28),
+    0 0 46px rgba(96, 165, 250, 0.52);
 }
 
 .champion-result-header > strong {
@@ -4220,13 +4236,63 @@ h1 {
   font-size: clamp(1rem, 2.4vw, 1.35rem);
 }
 
+.champion-result-header > span {
+  margin-top: 7px;
+  padding: 7px 14px;
+  color: #0f172a;
+  background: linear-gradient(135deg, #fef3c7, #f59e0b);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 999px;
+  box-shadow: 0 0 26px rgba(251, 191, 36, 0.3);
+  font-size: 0.65rem;
+  font-weight: 1000;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.is-defeat .champion-result-header > span {
+  color: #0f172a;
+  background: linear-gradient(135deg, #f8fafc, #93c5fd);
+  box-shadow: 0 0 24px rgba(147, 197, 253, 0.24);
+}
+
+.champion-ceremony-light {
+  position: absolute;
+  z-index: 0;
+  top: -38%;
+  left: 50%;
+  width: min(86%, 760px);
+  height: 104%;
+  background: linear-gradient(
+    180deg,
+    rgba(254, 240, 138, 0.42),
+    rgba(251, 191, 36, 0.08) 68%,
+    transparent
+  );
+  clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%);
+  filter: blur(5px);
+  opacity: 0;
+  transform: translateX(-50%);
+  pointer-events: none;
+  animation: champion-ceremony-light 2.4s ease 200ms both;
+}
+
+.is-defeat .champion-ceremony-light {
+  background: linear-gradient(
+    180deg,
+    rgba(226, 232, 240, 0.34),
+    rgba(96, 165, 250, 0.08) 68%,
+    transparent
+  );
+}
+
 .champion-result-score {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(70px, 1fr) auto minmax(70px, 1fr);
+  grid-template-columns: minmax(120px, 1fr) auto minmax(120px, 1fr);
   align-items: center;
-  width: min(100%, 520px);
+  width: min(100%, 620px);
   margin-inline: auto;
   padding: 14px 20px;
   gap: 16px;
@@ -4234,9 +4300,38 @@ h1 {
   border: 1px solid rgba(226, 232, 240, 0.18);
   border-radius: 16px;
   backdrop-filter: blur(8px);
+  opacity: 0;
+  animation: champion-score-reveal 900ms ease 1.05s both;
 }
 
-.champion-result-score span {
+.champion-score-podium {
+  display: grid;
+  min-height: 108px;
+  padding: 13px 20px;
+  place-items: center;
+  gap: 2px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 14px;
+  box-shadow: inset 0 0 24px rgba(96, 165, 250, 0.04);
+}
+
+.champion-score-podium.is-winner {
+  border-color: rgba(253, 224, 71, 0.7);
+  box-shadow:
+    0 0 30px rgba(251, 191, 36, 0.22),
+    inset 0 0 28px rgba(251, 191, 36, 0.1);
+  transform: translateY(-9px) scale(1.04);
+}
+
+.is-defeat .champion-score-podium.is-winner {
+  border-color: rgba(191, 219, 254, 0.62);
+  box-shadow:
+    0 0 28px rgba(96, 165, 250, 0.2),
+    inset 0 0 26px rgba(147, 197, 253, 0.08);
+}
+
+.champion-score-podium span {
   color: #bfdbfe;
   font-size: 0.68rem;
   font-weight: 900;
@@ -4244,29 +4339,56 @@ h1 {
   text-transform: uppercase;
 }
 
-.champion-result-score > div {
-  display: grid;
-  justify-items: center;
-  gap: 3px;
-}
-
-.champion-result-score small {
-  color: #94a3b8;
-  font-size: 0.58rem;
-  font-weight: 900;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.champion-result-score strong {
+.champion-score-podium strong {
   color: #f8fafc;
-  font-size: clamp(2rem, 6vw, 3.4rem);
+  font-size: clamp(3rem, 8vw, 5rem);
   line-height: 1;
+  text-shadow: 0 0 24px rgba(96, 165, 250, 0.28);
 }
 
-.champion-result-score b {
-  color: #64748b;
-  font-weight: 500;
+.champion-score-podium.is-winner strong {
+  color: #fde68a;
+  text-shadow:
+    0 0 16px rgba(255, 255, 255, 0.4),
+    0 0 34px rgba(251, 191, 36, 0.7);
+}
+
+.is-defeat .champion-score-podium.is-winner strong {
+  color: #f8fafc;
+  text-shadow: 0 0 34px rgba(147, 197, 253, 0.7);
+}
+
+.champion-result-score > b {
+  color: #fde68a;
+  font-size: clamp(1rem, 3vw, 1.6rem);
+  font-weight: 1000;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 20px rgba(251, 191, 36, 0.54);
+}
+
+.champion-master-recognition {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, 720px);
+  margin: -10px auto 0;
+  padding: 10px 18px;
+  gap: 12px;
+  color: #ffedd5;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(124, 45, 18, 0.78),
+    transparent
+  );
+  border-block: 1px solid rgba(251, 146, 60, 0.5);
+  font-size: clamp(0.72rem, 2vw, 1rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0;
+  animation: champion-recognition-reveal 800ms ease 1.75s both;
 }
 
 .champion-mvp-card {
@@ -4289,6 +4411,8 @@ h1 {
     inset 0 0 28px rgba(251, 191, 36, 0.08),
     0 18px 42px rgba(2, 6, 23, 0.34);
   backdrop-filter: blur(9px);
+  opacity: 0;
+  animation: champion-mvp-card-reveal 900ms ease 2s both;
 }
 
 .champion-mvp-card::after {
@@ -4361,6 +4485,7 @@ h1 {
   filter:
     drop-shadow(0 0 20px rgba(251, 191, 36, 0.36))
     drop-shadow(0 18px 20px rgba(2, 6, 23, 0.62));
+  animation: champion-mvp-float 3s ease-in-out 2.8s infinite;
 }
 
 .champion-mvp-details {
@@ -4427,8 +4552,10 @@ h1 {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
+  opacity: 0;
+  animation: champion-summary-reveal 750ms ease 2.55s both;
 }
 
 .champion-match-summary > div {
@@ -4438,10 +4565,6 @@ h1 {
   background: rgba(2, 6, 23, 0.5);
   border: 1px solid rgba(148, 163, 184, 0.16);
   border-radius: 12px;
-}
-
-.champion-match-summary > div:last-child {
-  grid-column: 1 / -1;
 }
 
 .champion-match-summary span {
@@ -4462,10 +4585,20 @@ h1 {
   z-index: 1;
   justify-items: center;
   margin-top: 0;
+  opacity: 0;
+  animation: champion-actions-reveal 650ms ease 3s both;
 }
 
 .champion-result-screen .post-match-actions > div {
   justify-content: center;
+}
+
+.champion-history-button:disabled {
+  color: #94a3b8;
+  background: rgba(15, 23, 42, 0.62);
+  border-color: rgba(148, 163, 184, 0.22);
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .champion-result-particles {
@@ -4495,7 +4628,7 @@ h1 {
 }
 
 .is-defeat .champion-result-particles i {
-  color: #f87171;
+  color: #bfdbfe;
   background: currentColor;
 }
 
@@ -4543,6 +4676,164 @@ h1 {
 .champion-result-particles i:nth-child(8) {
   left: 93%;
   animation-delay: -4s;
+}
+
+.champion-result-particles i:nth-child(9) {
+  left: 13%;
+  animation-delay: -8s;
+}
+
+.champion-result-particles i:nth-child(10) {
+  left: 26%;
+  animation-delay: -2.5s;
+}
+
+.champion-result-particles i:nth-child(11) {
+  left: 39%;
+  animation-delay: -5.5s;
+}
+
+.champion-result-particles i:nth-child(12) {
+  left: 64%;
+  animation-delay: -7.5s;
+}
+
+.champion-result-particles i:nth-child(13) {
+  left: 77%;
+  animation-delay: -1.5s;
+}
+
+.champion-result-particles i:nth-child(14) {
+  left: 88%;
+  animation-delay: -4.5s;
+}
+
+@keyframes champion-ceremony-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+}
+
+@keyframes champion-arena-darken {
+  from {
+    filter: brightness(1.15);
+  }
+
+  to {
+    filter: brightness(0.82);
+  }
+}
+
+@keyframes champion-title-reveal {
+  0% {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(16px) scale(0.92);
+  }
+
+  70% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1.04);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes champion-ceremony-light {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scaleX(0.3);
+  }
+
+  55% {
+    opacity: 0.86;
+    transform: translateX(-50%) scaleX(1.08);
+  }
+
+  100% {
+    opacity: 0.54;
+    transform: translateX(-50%) scaleX(1);
+  }
+}
+
+@keyframes champion-score-reveal {
+  from {
+    opacity: 0;
+    filter: blur(5px);
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+@keyframes champion-recognition-reveal {
+  from {
+    opacity: 0;
+    transform: scaleX(0.7);
+  }
+
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes champion-mvp-card-reveal {
+  from {
+    opacity: 0;
+    filter: brightness(1.8);
+    transform: translateY(22px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    filter: brightness(1);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes champion-mvp-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes champion-summary-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes champion-actions-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes champion-particle-rise {
@@ -9566,12 +9857,15 @@ h1 {
   }
 
   .champion-result-score {
-    grid-template-columns: 1fr;
-    gap: 5px;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    padding: 10px;
+    gap: 8px;
   }
 
   .champion-result-score > div {
-    grid-row: 1;
+    grid-row: auto;
+    min-height: 94px;
+    padding-inline: 10px;
   }
 
   .champion-mvp-card {
@@ -9601,11 +9895,11 @@ h1 {
   }
 
   .champion-match-summary {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .champion-match-summary > div:last-child {
-    grid-column: 1;
+    grid-column: 1 / -1;
   }
 
   .champion-result-screen .post-match-actions > div {
@@ -9801,6 +10095,16 @@ h1 {
   .battle-victory-burst i,
   .champion-mvp-spotlight,
   .champion-mvp-art::before,
+  .champion-result-screen,
+  .champion-result-screen::before,
+  .champion-ceremony-light,
+  .champion-result-header,
+  .champion-result-score,
+  .champion-master-recognition,
+  .champion-mvp-card,
+  .champion-mvp-art img,
+  .champion-match-summary,
+  .champion-result-screen .post-match-actions,
   .celebi-time-circle,
   .celebi-wish-atmosphere i,
   .celebi-wish-source::before,
