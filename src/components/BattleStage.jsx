@@ -47,6 +47,10 @@ function AnimatedScore({ score, active }) {
 }
 
 function TeamTracker({ label, slots = [], side, visible }) {
+  if (slots.length === 0) {
+    return null
+  }
+
   return (
     <aside
       className={`battle-team-tracker is-${side} ${

@@ -535,6 +535,12 @@ function BattleArena({
   )
   const isMasterRoundPortalActive =
     isMasterRoundActivationScreen && bothPlayersMasterRoundReady
+  const isMasterRoundWorld = Boolean(
+    isMasterRoundActivationScreen ||
+      isMasterRoundPending ||
+      isMasterSelectionPortalActive ||
+      (masterRoundResult && hostScore === 3 && guestScore === 3),
+  )
   const hostBattlefieldEffects =
     battleState?.battlefieldEffects?.[room?.hostUid] ??
     EMPTY_BATTLEFIELD_EFFECTS
@@ -1753,9 +1759,24 @@ function BattleArena({
 
   return (
     <main
-      className="page-shell draft-page-shell battle-arena-page"
+      className={`page-shell draft-page-shell battle-arena-page ${
+        isMasterRoundWorld ? 'is-master-world' : ''
+      }`}
       style={battleArenaStyle}
     >
+      {isMasterRoundWorld && (
+        <div className="master-world-particles" aria-hidden="true">
+          {Array.from({ length: 22 }, (_, index) => (
+            <i
+              key={index}
+              style={{
+                '--world-particle-index': index,
+                '--world-particle-delay': `${(index % 8) * 140}ms`,
+              }}
+            />
+          ))}
+        </div>
+      )}
       <section className="draft-container battle-arena-container">
         <header className="draft-header battle-arena-header">
           <div>
@@ -2477,8 +2498,12 @@ function BattleArena({
                 winnerPokemon={battleStageWinnerPokemon}
                 resultText={battleStageResultText}
                 logs={battleStageLogs}
-                yourTeamSlots={yourTeamSlots}
-                opponentTeamSlots={opponentTeamSlots}
+                yourTeamSlots={
+                  isMasterRoundBattle ? [] : yourTeamSlots
+                }
+                opponentTeamSlots={
+                  isMasterRoundBattle ? [] : opponentTeamSlots
+                }
                 arena={battleArena}
                 masterRound={isMasterRoundBattle}
                 showContinue={
@@ -2499,7 +2524,7 @@ function BattleArena({
                     : pendingCelebiWish
                       ? 'Resolve Celebi Future Wish'
                       : isTiedNormalRoundAwaitingContinue
-                        ? 'Continue to Master Round'
+                        ? 'Continue?'
                       : 'Continue to Next Round'
                 }
                 currentPlayerContinued={
