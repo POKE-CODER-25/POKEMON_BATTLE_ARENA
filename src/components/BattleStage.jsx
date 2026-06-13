@@ -121,6 +121,7 @@ function Fighter({
   visible,
   active,
   scoreVisible,
+  masterRound,
 }) {
   const name = getPokemonName(pokemon)
   const normalImage = getNormalPokemonImage(pokemon)
@@ -155,6 +156,12 @@ function Fighter({
               event.currentTarget.hidden = true
             }
           }}
+        />
+      )}
+      {masterRound && (
+        <span
+          className={`master-fighter-entry-portal is-${side}`}
+          aria-hidden="true"
         />
       )}
       <div className="battle-stage-fighter-identity">
@@ -344,6 +351,7 @@ function BattleStage({
               visible={entranceStep >= 1}
               active={activeAnalysisSide === 'your'}
               scoreVisible={revealedScoreSides.includes('your')}
+              masterRound={masterRound}
             />
             <div
               className={`battle-stage-versus ${
@@ -373,6 +381,7 @@ function BattleStage({
               visible={entranceStep >= 2}
               active={activeAnalysisSide === 'opponent'}
               scoreVisible={revealedScoreSides.includes('opponent')}
+              masterRound={masterRound}
             />
             <TeamTracker
               label="Opponent"
@@ -392,7 +401,9 @@ function BattleStage({
               }`}
               aria-hidden={!showWinner}
             >
-              <span>Round Winner</span>
+              <span>
+                {masterRound ? 'Master Round Winner' : 'Round Winner'}
+              </span>
               <strong>
                 {winnerPokemon
                   ? getPokemonName(winnerPokemon)

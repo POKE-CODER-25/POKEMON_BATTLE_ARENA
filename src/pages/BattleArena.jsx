@@ -1041,7 +1041,7 @@ function BattleArena({
         setCompletedMasterRoundAnnouncementKey(
           masterRoundAnnouncementKey,
         ),
-      2000,
+      2800,
     )
 
     return () => window.clearTimeout(timer)
@@ -1061,16 +1061,26 @@ function BattleArena({
       return undefined
     }
 
-    const timers = [
-      window.setTimeout(() => setCountdownValue('3'), 0),
-      window.setTimeout(() => setCountdownValue('2'), 700),
-      window.setTimeout(() => setCountdownValue('1'), 1400),
-      window.setTimeout(() => setCountdownValue('GO!'), 2100),
-      window.setTimeout(() => {
-        setCountdownCompletedRound(battleStageKey)
-        setCountdownValue(null)
-      }, 2700),
-    ]
+    const timers = isMasterRoundBattle
+      ? [
+          window.setTimeout(() => setCountdownValue('3'), 0),
+          window.setTimeout(() => setCountdownValue('2'), 800),
+          window.setTimeout(() => setCountdownValue('1'), 1600),
+          window.setTimeout(() => {
+            setCountdownCompletedRound(battleStageKey)
+            setCountdownValue(null)
+          }, 2400),
+        ]
+      : [
+          window.setTimeout(() => setCountdownValue('3'), 0),
+          window.setTimeout(() => setCountdownValue('2'), 700),
+          window.setTimeout(() => setCountdownValue('1'), 1400),
+          window.setTimeout(() => setCountdownValue('GO!'), 2100),
+          window.setTimeout(() => {
+            setCountdownCompletedRound(battleStageKey)
+            setCountdownValue(null)
+          }, 2700),
+        ]
 
     return () => {
       timers.forEach((timer) => window.clearTimeout(timer))
@@ -1080,6 +1090,7 @@ function BattleArena({
     battleStageReady,
     countdownCompletedRound,
     isMasterRoundAnnouncementActive,
+    isMasterRoundBattle,
   ])
 
   useEffect(() => {
@@ -1125,11 +1136,11 @@ function BattleArena({
       setTransformationCinematicIndex(null)
     }, 0)
 
-    schedule(() => setBattleEntranceStep(1), 250)
-    schedule(() => setBattleEntranceStep(2), 1000)
+    schedule(() => setBattleEntranceStep(1), isMasterRoundBattle ? 350 : 250)
+    schedule(() => setBattleEntranceStep(2), isMasterRoundBattle ? 1250 : 1000)
     schedule(() => setBattleTeamsVisible(true), 1750)
 
-    let cursor = 2450
+    let cursor = isMasterRoundBattle ? 2250 : 2450
     const notificationDuration = 1050
     const notificationGap = 160
     const transformationDuration = 1600
@@ -1140,7 +1151,9 @@ function BattleArena({
         : -1
       const baseCard = cards.find((card) => card.id === 'base')
       const remainingCards = cards.filter(
-        (card) => card.id !== 'base',
+        (card) =>
+          card.id !== 'base' &&
+          (!isMasterRoundBattle || card.id !== 'final'),
       )
 
       schedule(() => setActiveAnalysisSide(side), cursor)
@@ -1223,6 +1236,19 @@ function BattleArena({
       cursor += 350
     })
 
+    if (isMasterRoundBattle) {
+      schedule(
+        () => setRevealedScoreSides(['your']),
+        cursor,
+      )
+      cursor += 850
+      schedule(
+        () => setRevealedScoreSides(['your', 'opponent']),
+        cursor,
+      )
+      cursor += 1850
+    }
+
     schedule(() => setShowScoreComparison(true), cursor)
     cursor += 2400
     schedule(() => setShowBattleWinner(true), cursor)
@@ -1247,6 +1273,7 @@ function BattleArena({
     transformationCinematicRequired,
     transformationEvents,
     yourBattleAnalysis,
+    isMasterRoundBattle,
   ])
 
   useEffect(() => {
@@ -2631,7 +2658,7 @@ function BattleArena({
             activeTransformationEvent.type === 'battle-bond'
               ? 'is-battle-bond'
               : 'is-mega'
-          }`}
+          } ${isMasterRoundBattle ? 'is-master-round' : ''}`}
           role="status"
           aria-live="assertive"
           aria-label={`${activeTransformationEvent.type === 'battle-bond' ? 'Battle Bond' : 'Mega Evolution'} ${activeTransformationEvent.succeeded ? 'succeeded' : 'failed'} for ${activeTransformationEvent.pokemonName}`}

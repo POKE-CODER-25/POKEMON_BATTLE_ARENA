@@ -2050,7 +2050,9 @@ h1 {
     linear-gradient(90deg, transparent, rgba(2, 6, 23, 0.54), transparent);
   text-align: center;
   pointer-events: all;
-  animation: master-round-screen-pulse 2s ease-in-out both;
+  animation:
+    master-round-screen-pulse 2.8s ease-in-out both,
+    master-round-intro-shake 380ms ease-in-out 1.75s both;
 }
 
 .master-round-announcement::before,
@@ -2115,7 +2117,20 @@ h1 {
     -5px 0 24px color-mix(in srgb, var(--master-primary) 82%, transparent),
     5px 0 24px color-mix(in srgb, var(--master-secondary) 76%, transparent),
     0 0 48px rgba(255, 255, 255, 0.28);
-  animation: master-round-title-in 2s cubic-bezier(0.18, 0.8, 0.24, 1) both;
+  animation: master-round-title-in 2.8s cubic-bezier(0.18, 0.8, 0.24, 1) both;
+}
+
+.master-round-announcement strong::after {
+  display: block;
+  height: 0.12em;
+  margin-top: 0.12em;
+  content: '';
+  background:
+    linear-gradient(115deg, transparent 18%, #1c0a00 19% 22%, transparent 23% 44%, #7c2d12 45% 48%, transparent 49%),
+    linear-gradient(64deg, transparent 28%, #431407 29% 32%, transparent 33%);
+  opacity: 0;
+  filter: drop-shadow(0 0 8px #f97316);
+  animation: master-round-title-crack 2.8s ease-in both;
 }
 
 .master-round-announcement-energy {
@@ -2131,7 +2146,7 @@ h1 {
     82px 82px,
     126px 126px;
   opacity: 0;
-  animation: master-round-particles 2s ease-out both;
+  animation: master-round-particles 2.8s ease-out both;
 }
 
 .master-round-announcement.is-inferno-colosseum {
@@ -2161,17 +2176,50 @@ h1 {
     transform: scale(0.7);
   }
 
-  35%,
-  78% {
+  24%,
+  68% {
     opacity: 1;
     filter: blur(0) brightness(1.15);
     transform: scale(1);
   }
 
+  76% {
+    opacity: 1;
+    filter: brightness(2.4);
+    transform: scale(1.04);
+  }
+
   100% {
     opacity: 0;
-    filter: blur(2px);
-    transform: scale(1.08);
+    filter: blur(5px) brightness(3);
+    transform: scale(1.42);
+  }
+}
+
+@keyframes master-round-title-crack {
+  0%,
+  60% {
+    opacity: 0;
+  }
+
+  68%,
+  78% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scaleX(1.7);
+  }
+}
+
+@keyframes master-round-intro-shake {
+  25% {
+    transform: translate3d(-3px, 1px, 0);
+  }
+
+  55% {
+    transform: translate3d(3px, -1px, 0);
   }
 }
 
@@ -2601,6 +2649,49 @@ h1 {
 
 .mega-cinematic-overlay.is-failure .mega-cinematic-energy {
   animation-name: transformation-energy-failure;
+}
+
+.mega-cinematic-overlay.is-master-round {
+  background-image:
+    radial-gradient(circle at center, rgba(249, 115, 22, 0.4), transparent 34%),
+    linear-gradient(145deg, rgba(2, 2, 2, 0.82), rgba(67, 20, 7, 0.86)),
+    var(--battle-arena-image);
+  animation: master-transformation-screen-pulse 1.55s ease-out both;
+}
+
+.mega-cinematic-overlay.is-master-round::before,
+.mega-cinematic-overlay.is-master-round::after {
+  border-color: rgba(253, 224, 71, 0.74);
+  box-shadow:
+    0 0 58px rgba(249, 115, 22, 0.72),
+    0 0 88px rgba(253, 224, 71, 0.24),
+    inset 0 0 52px rgba(251, 146, 60, 0.3);
+}
+
+.mega-cinematic-overlay.is-master-round .mega-cinematic-energy {
+  filter: hue-rotate(-28deg) saturate(1.3) brightness(1.22);
+}
+
+.mega-cinematic-overlay.is-master-round .mega-cinematic-status,
+.mega-cinematic-overlay.is-master-round .mega-cinematic-title {
+  color: #fde68a;
+  text-shadow:
+    0 0 18px rgba(255, 255, 255, 0.42),
+    0 0 38px rgba(249, 115, 22, 0.82);
+}
+
+@keyframes master-transformation-screen-pulse {
+  0% {
+    filter: brightness(0.8);
+  }
+
+  34% {
+    filter: brightness(1.5);
+  }
+
+  100% {
+    filter: brightness(1);
+  }
 }
 
 @keyframes mega-title-reveal {
@@ -4663,9 +4754,24 @@ h1 {
 }
 
 .battle-stage-versus.is-master-round.is-comparison {
+  position: relative;
   animation:
     battle-score-comparison 520ms ease-out both,
     master-round-vs-energy 1.5s ease-in-out 520ms infinite alternate;
+}
+
+.battle-stage-versus.is-master-round.is-comparison::before {
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  width: max-content;
+  content: 'VS SCORE PANEL';
+  color: #fdba74;
+  font-size: 0.62rem;
+  font-weight: 1000;
+  letter-spacing: 0.16em;
+  text-shadow: 0 0 12px rgba(249, 115, 22, 0.72);
+  transform: translateX(-50%);
 }
 
 .battle-stage.is-master-round {
@@ -4743,6 +4849,54 @@ h1 {
   border-color: rgba(251, 146, 60, 0.66);
 }
 
+.battle-stage.is-master-round .battle-stage-fighter::before {
+  border-color: rgba(251, 146, 60, 0.52);
+  background:
+    radial-gradient(circle, rgba(253, 224, 71, 0.16), transparent 58%),
+    radial-gradient(circle, rgba(249, 115, 22, 0.12), transparent 72%);
+  box-shadow:
+    0 0 34px rgba(249, 115, 22, 0.32),
+    inset 0 0 26px rgba(253, 224, 71, 0.12);
+  animation: master-fighter-aura 1.8s ease-in-out infinite alternate;
+}
+
+.master-fighter-entry-portal {
+  position: absolute;
+  z-index: -1;
+  bottom: 70px;
+  width: min(82%, 280px);
+  aspect-ratio: 1;
+  border: 4px solid rgba(253, 224, 71, 0.82);
+  border-radius: 50%;
+  box-shadow:
+    0 0 30px rgba(249, 115, 22, 0.8),
+    0 0 58px rgba(234, 88, 12, 0.5),
+    inset 0 0 28px rgba(251, 191, 36, 0.34);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.battle-stage-fighter.is-entered .master-fighter-entry-portal {
+  animation: master-fighter-portal-entry 900ms ease-out both;
+}
+
+.battle-stage.is-master-round .battle-stage-fighter.is-you.is-entered {
+  animation: master-fighter-enter-left 760ms cubic-bezier(0.16, 0.84, 0.22, 1.12)
+    both;
+}
+
+.battle-stage.is-master-round
+  .battle-stage-fighter.is-opponent.is-entered {
+  animation: master-fighter-enter-right 760ms cubic-bezier(0.16, 0.84, 0.22, 1.12)
+    both;
+}
+
+.battle-stage.is-master-round .battle-stage-fighter img {
+  filter:
+    drop-shadow(0 0 20px rgba(251, 146, 60, 0.28))
+    drop-shadow(0 20px 16px rgba(2, 2, 2, 0.68));
+}
+
 .battle-stage-versus.is-master-round {
   color: #fde68a;
   background:
@@ -4762,6 +4916,8 @@ h1 {
     0 0 0 2px rgba(2, 2, 2, 0.82),
     0 10px 30px rgba(2, 2, 2, 0.58),
     0 0 28px rgba(249, 115, 22, 0.34);
+  animation: master-battle-card 1050ms cubic-bezier(0.18, 0.76, 0.24, 1)
+    both;
 }
 
 .battle-stage.is-master-round .battle-stage-score {
@@ -4796,6 +4952,133 @@ h1 {
   border-color: rgba(251, 146, 60, 0.72);
 }
 
+.battle-stage.is-master-round
+  .battle-stage-result.is-arena-result.is-visible {
+  animation:
+    master-winner-banner-in 760ms cubic-bezier(0.18, 0.8, 0.2, 1.12) both,
+    battle-winner-glow 1.2s ease-in-out 760ms infinite alternate;
+}
+
+.battle-stage.is-master-round .battle-stage-fighter.is-winner::before {
+  animation: master-winner-pulse 1.15s ease-out both,
+    battle-winner-spotlight-pulse 1.2s ease-in-out 1.15s infinite alternate;
+}
+
+@keyframes master-fighter-aura {
+  to {
+    opacity: 0.86;
+    box-shadow:
+      0 0 46px rgba(249, 115, 22, 0.44),
+      inset 0 0 34px rgba(253, 224, 71, 0.18);
+    transform: scale(1.035);
+  }
+}
+
+@keyframes master-fighter-portal-entry {
+  0% {
+    opacity: 0;
+    filter: brightness(2);
+    transform: scale(0.35) rotate(-35deg);
+  }
+
+  24%,
+  72% {
+    opacity: 0.92;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.24) rotate(45deg);
+  }
+}
+
+@keyframes master-fighter-enter-left {
+  0% {
+    opacity: 0;
+    filter: brightness(2.2);
+    transform: translateX(-54%) scale(0.72);
+  }
+
+  72% {
+    opacity: 1;
+    transform: translateX(2%) translateY(-10px) scale(1.06);
+  }
+
+  100% {
+    opacity: 1;
+    filter: brightness(1);
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes master-fighter-enter-right {
+  0% {
+    opacity: 0;
+    filter: brightness(2.2);
+    transform: translateX(54%) scale(0.72);
+  }
+
+  72% {
+    opacity: 1;
+    transform: translateX(-2%) translateY(-10px) scale(1.06);
+  }
+
+  100% {
+    opacity: 1;
+    filter: brightness(1);
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes master-battle-card {
+  0% {
+    opacity: 0;
+    filter: brightness(1.8);
+    transform: translateY(18px) translateX(-22px) scale(0.94);
+  }
+
+  15%,
+  80% {
+    opacity: 1;
+    transform: translateY(0) translateX(0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    filter: brightness(1.2);
+    transform: translateY(-12px) translateX(18px) scale(0.98);
+  }
+}
+
+@keyframes master-winner-pulse {
+  from {
+    opacity: 0;
+    transform: scale(0.52);
+  }
+
+  55% {
+    opacity: 1;
+    box-shadow:
+      0 0 110px rgba(253, 224, 71, 0.88),
+      inset 0 0 64px rgba(251, 146, 60, 0.42);
+    transform: scale(1.18);
+  }
+}
+
+@keyframes master-winner-banner-in {
+  from {
+    opacity: 0;
+    filter: brightness(2);
+    transform: translateX(-50%) translateY(18px) scale(0.72);
+  }
+
+  to {
+    opacity: 1;
+    filter: brightness(1);
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
 .battle-stage.is-master-round .battle-stage-log {
   background: rgba(28, 10, 0, 0.42);
   border-color: rgba(251, 146, 60, 0.2);
@@ -4812,8 +5095,9 @@ h1 {
 
 .battle-countdown-overlay.is-master-round {
   background:
-    radial-gradient(circle at center, rgba(249, 115, 22, 0.24), transparent 48%),
-    rgba(0, 0, 0, 0.34);
+    radial-gradient(circle at center, rgba(249, 115, 22, 0.2), transparent 48%),
+    rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(1px);
 }
 
 .battle-countdown-overlay.is-master-round::before {
@@ -4836,6 +5120,38 @@ h1 {
 .battle-countdown-overlay.is-master-round
   .battle-countdown-value.is-go {
   color: #fde047;
+}
+
+.battle-countdown-overlay.is-master-round .battle-countdown-value::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 180%;
+  aspect-ratio: 1;
+  content: '';
+  background-image:
+    radial-gradient(circle, #fb923c 0 2px, transparent 3px),
+    radial-gradient(circle, #fde047 0 1px, transparent 2px);
+  background-position:
+    0 0,
+    28px 42px;
+  background-size:
+    54px 54px,
+    82px 82px;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.4);
+  animation: master-countdown-sparks 800ms ease-out both;
+}
+
+@keyframes master-countdown-sparks {
+  18% {
+    opacity: 0.9;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.35) rotate(20deg);
+  }
 }
 
 @keyframes master-round-header-shine {
@@ -7222,7 +7538,23 @@ h1 {
   .master-round-announcement::after,
   .master-round-announcement > span,
   .master-round-announcement strong,
+  .master-round-announcement strong::after,
   .master-round-announcement-energy,
+  .battle-countdown-overlay.is-master-round
+    .battle-countdown-value::after,
+  .battle-stage.is-master-round .battle-stage-fighter::before,
+  .battle-stage.is-master-round
+    .battle-stage-fighter.is-you.is-entered,
+  .battle-stage.is-master-round
+    .battle-stage-fighter.is-opponent.is-entered,
+  .battle-stage-fighter.is-entered
+    .master-fighter-entry-portal,
+  .battle-stage.is-master-round .battle-ability-notification,
+  .battle-stage.is-master-round
+    .battle-stage-result.is-arena-result.is-visible,
+  .battle-stage.is-master-round
+    .battle-stage-fighter.is-winner::before,
+  .mega-cinematic-overlay.is-master-round,
   .battle-stage-score.is-revealed,
   .battle-stage-score.is-winning-score,
   .battle-stage-fighter.is-winner img,
