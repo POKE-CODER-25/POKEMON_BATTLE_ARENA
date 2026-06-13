@@ -1915,6 +1915,8 @@ export async function initializeMasterRoundOptions(roomCode) {
 
     transaction.update(battleStateReference, {
       masterRound: {
+        activationReady:
+          battleState.masterRound?.activationReady ?? {},
         options: {
           [room.hostUid]: serializeMasterRoundOptions(
             hostOptions.candidates,
@@ -1938,6 +1940,74 @@ export async function initializeMasterRoundOptions(roomCode) {
         phase: 'choose_master_pokeball',
       },
       updatedAt: timestamp,
+    })
+
+    return true
+  })
+}
+
+export async function markMasterRoundActivationReady({
+  roomCode,
+  playerUid,
+}) {
+  if (!roomCode || !playerUid) {
+    throw new Error('Master Round activation data is incomplete.')
+  }
+
+  const normalizedRoomCode = roomCode.trim().toUpperCase()
+  const roomReference = doc(db, 'rooms', normalizedRoomCode)
+  const battleStateReference = doc(roomReference, 'battle', 'state')
+
+  return runTransaction(db, async (transaction) => {
+    const [roomSnapshot, battleStateSnapshot] = await Promise.all([
+      transaction.get(roomReference),
+      transaction.get(battleStateReference),
+    ])
+
+    if (!roomSnapshot.exists()) {
+      throw new Error('Room not found')
+    }
+
+    if (!battleStateSnapshot.exists()) {
+      throw new Error('Battle state is not initialized.')
+    }
+
+    const room = roomSnapshot.data()
+    const battleState = battleStateSnapshot.data()
+    const bothPlayersContinued =
+      Boolean(battleState.roundContinue?.[room.hostUid]) &&
+      Boolean(battleState.roundContinue?.[room.guestUid])
+    const hostScore =
+      battleState.playerScores?.[room.hostUid] ??
+      battleState.hostScore ??
+      0
+    const guestScore =
+      battleState.playerScores?.[room.guestUid] ??
+      battleState.guestScore ??
+      0
+
+    if (!room.players?.[playerUid]) {
+      throw new Error('You are not a player in this room.')
+    }
+
+    if (
+      battleState.phase !== 'master_round_pending' ||
+      hostScore !== 3 ||
+      guestScore !== 3 ||
+      !bothPlayersContinued
+    ) {
+      throw new Error('Master Round activation is not available yet.')
+    }
+
+    transaction.update(battleStateReference, {
+      masterRound: {
+        ...(battleState.masterRound ?? {}),
+        activationReady: {
+          ...(battleState.masterRound?.activationReady ?? {}),
+          [playerUid]: true,
+        },
+      },
+      updatedAt: serverTimestamp(),
     })
 
     return true

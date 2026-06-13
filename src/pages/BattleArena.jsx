@@ -27,6 +27,7 @@ import {
   initializeMasterRoundOptions,
   lockBattlePokemon,
   lockMasterRoundPokemon,
+  markMasterRoundActivationReady,
   requestPlayAgain,
   resolveAndSaveMasterRound,
   returnHomeAfterMatch,
@@ -246,6 +247,12 @@ function BattleArena({
   const [isLockingMasterRound, setIsLockingMasterRound] =
     useState(false)
   const [masterRoundError, setMasterRoundError] = useState('')
+  const [isActivatingMasterRound, setIsActivatingMasterRound] =
+    useState(false)
+  const [
+    completedMasterRoundPortalKey,
+    setCompletedMasterRoundPortalKey,
+  ] = useState(null)
   const [isSavingJirachiCopy, setIsSavingJirachiCopy] = useState(false)
   const [jirachiCopyError, setJirachiCopyError] = useState('')
   const [isSavingCelebiWish, setIsSavingCelebiWish] = useState(false)
@@ -458,6 +465,25 @@ function BattleArena({
       battleState?.roundContinue?.[room.hostUid] &&
       battleState?.roundContinue?.[room.guestUid],
   )
+  const masterRoundActivationReadyByUid =
+    battleState?.masterRound?.activationReady ?? {}
+  const currentPlayerMasterRoundReady = Boolean(
+    masterRoundActivationReadyByUid[currentUser?.uid],
+  )
+  const bothPlayersMasterRoundReady = Boolean(
+    room?.hostUid &&
+      room?.guestUid &&
+      masterRoundActivationReadyByUid[room.hostUid] &&
+      masterRoundActivationReadyByUid[room.guestUid],
+  )
+  const masterRoundActivationKey = [
+    battleState?.createdAt?.seconds ?? '',
+    battleState?.createdAt?.nanoseconds ?? '',
+    currentRound,
+  ].join(':')
+  const masterRoundPortalComplete =
+    completedMasterRoundPortalKey === masterRoundActivationKey ||
+    battleState?.masterRound?.phase === 'choose_master_pokeball'
   const postMatch = battleState?.postMatch ?? {
     playAgainRequests: {},
     returnedHome: {},
@@ -475,12 +501,22 @@ function BattleArena({
   const isSurrenderMatch = Boolean(battleState?.surrender)
   const opponentSurrendered =
     battleState?.surrender?.surrenderedBy === opponentUid
-  const masterRoundActivationReady =
+  const masterRoundSelectionReady =
     !masterRoundResult &&
-    (battlePhase === 'master_round_pending' ||
-      battleState?.masterRound?.phase === 'choose_master_pokeball') &&
-    bothRoundPlayersContinued
-  const isMasterRoundPending = masterRoundActivationReady
+    (battleState?.masterRound?.phase === 'choose_master_pokeball' ||
+      (battlePhase === 'master_round_pending' &&
+        bothRoundPlayersContinued &&
+        bothPlayersMasterRoundReady &&
+        masterRoundPortalComplete))
+  const isMasterRoundPending = masterRoundSelectionReady
+  const isMasterRoundActivationScreen = Boolean(
+    !masterRoundResult &&
+      battlePhase === 'master_round_pending' &&
+      bothRoundPlayersContinued &&
+      !masterRoundPortalComplete,
+  )
+  const isMasterRoundPortalActive =
+    isMasterRoundActivationScreen && bothPlayersMasterRoundReady
   const hostBattlefieldEffects =
     battleState?.battlefieldEffects?.[room?.hostUid] ??
     EMPTY_BATTLEFIELD_EFFECTS
@@ -698,7 +734,8 @@ function BattleArena({
       : bothPlayersLocked &&
           savedRoundResult &&
           hasRevealData &&
-          !masterRoundActivationReady,
+          !isMasterRoundActivationScreen &&
+          !masterRoundSelectionReady,
   )
   const isMasterRoundBattle = Boolean(
     masterRoundResult && hostScore === 3 && guestScore === 3,
@@ -1230,6 +1267,29 @@ function BattleArena({
   ])
 
   useEffect(() => {
+    if (
+      !isMasterRoundPortalActive ||
+      completedMasterRoundPortalKey === masterRoundActivationKey
+    ) {
+      return undefined
+    }
+
+    const timer = window.setTimeout(
+      () =>
+        setCompletedMasterRoundPortalKey(
+          masterRoundActivationKey,
+        ),
+      2600,
+    )
+
+    return () => window.clearTimeout(timer)
+  }, [
+    completedMasterRoundPortalKey,
+    isMasterRoundPortalActive,
+    masterRoundActivationKey,
+  ])
+
+  useEffect(() => {
     const options = battleState?.masterRound?.options
     const hasBothPlayersOptions = Boolean(
       room?.hostUid &&
@@ -1241,6 +1301,8 @@ function BattleArena({
     if (
       battlePhase !== 'master_round_pending' ||
       !bothRoundPlayersContinued ||
+      !bothPlayersMasterRoundReady ||
+      !masterRoundPortalComplete ||
       hasBothPlayersOptions ||
       masterRoundInitializationRef.current ||
       !room?.hostUid ||
@@ -1279,7 +1341,9 @@ function BattleArena({
     battleState?.jirachiCopies,
     battleState?.masterRound?.options,
     bothRoundPlayersContinued,
+    bothPlayersMasterRoundReady,
     displayRoomCode,
+    masterRoundPortalComplete,
     room?.guestUid,
     room?.hostUid,
   ])
@@ -1395,6 +1459,34 @@ function BattleArena({
       )
     } finally {
       setIsContinuingRound(false)
+    }
+  }
+
+  async function handleMasterRoundActivation() {
+    if (
+      currentPlayerMasterRoundReady ||
+      isActivatingMasterRound ||
+      !isMasterRoundActivationScreen
+    ) {
+      return
+    }
+
+    setIsActivatingMasterRound(true)
+    setMasterRoundError('')
+
+    try {
+      await markMasterRoundActivationReady({
+        roomCode: displayRoomCode,
+        playerUid: currentUser.uid,
+      })
+    } catch (error) {
+      setMasterRoundError(
+        error instanceof Error
+          ? error.message
+          : 'Could not activate the Master Round.',
+      )
+    } finally {
+      setIsActivatingMasterRound(false)
     }
   }
 
@@ -1902,6 +1994,104 @@ function BattleArena({
               </section>
             )}
 
+            {isMasterRoundActivationScreen && (
+              <section
+                className={`master-round-activation-screen ${
+                  currentPlayerMasterRoundReady
+                    ? 'is-player-ready'
+                    : ''
+                } ${
+                  isMasterRoundPortalActive ? 'is-portal-active' : ''
+                }`}
+                aria-labelledby="master-round-activation-title"
+              >
+                <div
+                  className="master-round-activation-particles"
+                  aria-hidden="true"
+                >
+                  {Array.from({ length: 18 }, (_, index) => (
+                    <i
+                      key={index}
+                      style={{
+                        '--activation-index': index,
+                        '--activation-delay': `${(index % 6) * 120}ms`,
+                      }}
+                    />
+                  ))}
+                </div>
+                <div
+                  className="master-round-portal"
+                  aria-hidden="true"
+                >
+                  <span />
+                  <span />
+                  <span />
+                </div>
+
+                <header className="master-round-activation-header">
+                  <span aria-hidden="true">&#9876;</span>
+                  <div>
+                    <p>Final Showdown Begins</p>
+                    <h2 id="master-round-activation-title">
+                      Master Round Triggered
+                    </h2>
+                    <strong>
+                      The battle has reached 3 - 3.
+                    </strong>
+                  </div>
+                  <span aria-hidden="true">&#9876;</span>
+                </header>
+
+                <button
+                  className="master-round-activation-button"
+                  type="button"
+                  disabled={
+                    currentPlayerMasterRoundReady ||
+                    isActivatingMasterRound
+                  }
+                  onClick={handleMasterRoundActivation}
+                >
+                  <span>Master Round</span>
+                  <i aria-hidden="true" />
+                </button>
+
+                <div
+                  className="master-round-activation-status"
+                  role="status"
+                  aria-live="polite"
+                >
+                  {isMasterRoundPortalActive ? (
+                    <>
+                      <strong>Portal Opening</strong>
+                      <span>Entering the final battlefield...</span>
+                    </>
+                  ) : currentPlayerMasterRoundReady ? (
+                    <>
+                      <strong>You Are Ready</strong>
+                      <span>Waiting for opponent...</span>
+                    </>
+                  ) : (
+                    <>
+                      <strong>
+                        {isActivatingMasterRound
+                          ? 'Charging...'
+                          : 'Enter the Final Showdown'}
+                      </strong>
+                      <span>
+                        Both trainers must activate the Master Round.
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                {masterRoundError && (
+                  <p className="battle-lock-error" role="alert">
+                    {masterRoundError}
+                  </p>
+                )}
+              </section>
+            )}
+
             {isMasterRoundPending && (
               <section className="draft-state-panel master-round-panel">
                 <p className="eyebrow">MASTER ROUND</p>
@@ -1954,6 +2144,7 @@ function BattleArena({
             )}
 
             {!isMasterRoundPending &&
+              !isMasterRoundActivationScreen &&
               !showBattleStage &&
               !isBattleCountdownActive && (
               <section className="battle-arena-summary">

@@ -3288,6 +3288,414 @@ h1 {
   font-size: 1.15rem;
 }
 
+.master-round-activation-screen {
+  position: relative;
+  display: grid;
+  min-height: min(74vh, 760px);
+  padding: clamp(36px, 7vw, 84px) clamp(20px, 5vw, 64px);
+  overflow: hidden;
+  place-items: center;
+  align-content: center;
+  gap: 28px;
+  color: #fff7ed;
+  background:
+    radial-gradient(circle at 50% 58%, rgba(249, 115, 22, 0.28), transparent 24%),
+    radial-gradient(circle at 50% 44%, rgba(251, 191, 36, 0.14), transparent 38%),
+    linear-gradient(145deg, #020202, #120704 48%, #020202);
+  border: 1px solid rgba(251, 146, 60, 0.46);
+  border-radius: 22px;
+  box-shadow:
+    inset 0 0 90px rgba(127, 29, 29, 0.34),
+    0 0 44px rgba(249, 115, 22, 0.16);
+  isolation: isolate;
+}
+
+.master-round-activation-screen::before,
+.master-round-activation-screen::after {
+  position: absolute;
+  z-index: -1;
+  content: '';
+  pointer-events: none;
+}
+
+.master-round-activation-screen::before {
+  inset: 0;
+  background:
+    linear-gradient(118deg, transparent 46%, rgba(251, 146, 60, 0.22) 47% 48%, transparent 49%),
+    linear-gradient(64deg, transparent 42%, rgba(253, 224, 71, 0.14) 43% 44%, transparent 45%),
+    linear-gradient(156deg, transparent 56%, rgba(239, 68, 68, 0.15) 57% 58%, transparent 59%);
+  opacity: 0.48;
+  animation: master-activation-ground-pulse 2.2s ease-in-out infinite alternate;
+}
+
+.master-round-activation-screen::after {
+  right: -15%;
+  bottom: -46%;
+  left: -15%;
+  height: 72%;
+  background:
+    radial-gradient(ellipse at 50% 100%, rgba(249, 115, 22, 0.72), transparent 58%),
+    radial-gradient(ellipse at 50% 100%, rgba(253, 224, 71, 0.34), transparent 42%);
+  filter: blur(8px);
+  animation: master-activation-aura 1.7s ease-in-out infinite alternate;
+}
+
+.master-round-activation-header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(14px, 3vw, 34px);
+  text-align: center;
+}
+
+.master-round-activation-header > span {
+  color: #fbbf24;
+  font-size: clamp(1.8rem, 5vw, 3.8rem);
+  filter: drop-shadow(0 0 18px rgba(249, 115, 22, 0.86));
+}
+
+.master-round-activation-header > span:last-child {
+  transform: scaleX(-1);
+}
+
+.master-round-activation-header p {
+  margin: 0 0 5px;
+  color: #fdba74;
+  font-size: 0.72rem;
+  font-weight: 1000;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.master-round-activation-header h2 {
+  margin: 0;
+  color: #fff7ed;
+  font-size: clamp(2rem, 6vw, 4.4rem);
+  font-style: italic;
+  line-height: 0.98;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 18px rgba(255, 255, 255, 0.24),
+    0 0 34px rgba(251, 146, 60, 0.68),
+    0 0 58px rgba(234, 88, 12, 0.42);
+}
+
+.master-round-activation-header strong {
+  display: block;
+  margin-top: 10px;
+  color: #fde68a;
+  font-size: clamp(0.9rem, 2vw, 1.15rem);
+}
+
+.master-round-activation-button {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  width: min(78vw, 440px);
+  min-height: clamp(120px, 18vw, 164px);
+  padding: 20px 34px;
+  place-items: center;
+  overflow: hidden;
+  color: #1c0a00;
+  background:
+    radial-gradient(circle at 50% 14%, #fff7ae, transparent 30%),
+    linear-gradient(145deg, #fde047, #f97316 58%, #9a3412);
+  border: 3px solid #ffedd5;
+  border-radius: 28px;
+  box-shadow:
+    0 0 0 5px rgba(124, 45, 18, 0.72),
+    0 0 38px rgba(251, 146, 60, 0.82),
+    0 0 78px rgba(234, 88, 12, 0.46),
+    inset 0 0 32px rgba(255, 247, 237, 0.42);
+  cursor: pointer;
+  animation: master-activation-button-pulse 1.25s ease-in-out infinite alternate;
+}
+
+.master-round-activation-button::before,
+.master-round-activation-button::after {
+  position: absolute;
+  content: '';
+  pointer-events: none;
+}
+
+.master-round-activation-button::before {
+  inset: -40%;
+  background: conic-gradient(
+    transparent,
+    rgba(255, 255, 255, 0.58),
+    transparent 24%
+  );
+  animation: master-activation-button-shine 2.4s linear infinite;
+}
+
+.master-round-activation-button::after {
+  inset: 8px;
+  border: 1px solid rgba(124, 45, 18, 0.42);
+  border-radius: 19px;
+}
+
+.master-round-activation-button span {
+  position: relative;
+  z-index: 2;
+  font-size: clamp(1.8rem, 6vw, 3.8rem);
+  font-style: italic;
+  font-weight: 1000;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 0 rgba(255, 247, 237, 0.42);
+}
+
+.master-round-activation-button i {
+  position: absolute;
+  z-index: 3;
+  inset: 18% 12%;
+  opacity: 0;
+  background:
+    linear-gradient(118deg, transparent 46%, #431407 47% 50%, transparent 51%),
+    linear-gradient(62deg, transparent 44%, #7c2d12 45% 48%, transparent 49%),
+    linear-gradient(154deg, transparent 54%, #431407 55% 58%, transparent 59%);
+}
+
+.master-round-activation-screen.is-player-ready
+  .master-round-activation-button {
+  filter: saturate(1.08);
+  cursor: default;
+  animation:
+    master-activation-ready-shake 520ms ease-out both,
+    master-activation-ready-glow 1.1s ease-in-out 520ms infinite alternate;
+}
+
+.master-round-activation-screen.is-player-ready
+  .master-round-activation-button i {
+  opacity: 0.72;
+}
+
+.master-round-activation-status {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  text-align: center;
+}
+
+.master-round-activation-status strong {
+  color: #fde68a;
+  font-size: clamp(1rem, 2.5vw, 1.35rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.master-round-activation-status span {
+  color: #fed7aa;
+  font-size: 0.84rem;
+}
+
+.master-round-activation-particles {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.master-round-activation-particles i {
+  --activation-index: 0;
+  position: absolute;
+  left: calc(4% + (var(--activation-index) * 5.4%));
+  bottom: -5%;
+  width: calc(3px + (var(--activation-index) % 3) * 2px);
+  height: calc(7px + (var(--activation-index) % 4) * 3px);
+  background: #fb923c;
+  border-radius: 60% 40% 60% 40%;
+  box-shadow:
+    0 0 10px #f97316,
+    0 0 18px #fde047;
+  opacity: 0;
+  animation: master-activation-ember 2.8s ease-out var(--activation-delay)
+    infinite;
+}
+
+.master-round-portal {
+  position: absolute;
+  z-index: 5;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  width: min(20vw, 160px);
+  aspect-ratio: 1;
+  place-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0.1);
+}
+
+.master-round-portal span {
+  position: absolute;
+  inset: 0;
+  border: 5px solid #fde047;
+  border-radius: 50%;
+  box-shadow:
+    0 0 34px #f97316,
+    0 0 68px rgba(234, 88, 12, 0.72),
+    inset 0 0 34px #fbbf24;
+}
+
+.master-round-portal span:nth-child(2) {
+  inset: 14%;
+  border-color: #fff7ed;
+}
+
+.master-round-portal span:nth-child(3) {
+  inset: 30%;
+  background: #020202;
+  border-color: #fb923c;
+}
+
+.master-round-activation-screen.is-portal-active {
+  animation: master-portal-screen-shake 520ms ease-out both,
+    master-portal-screen-zoom 2.6s ease-in 520ms both;
+}
+
+.master-round-activation-screen.is-portal-active
+  .master-round-activation-button {
+  animation: master-activation-shatter 720ms ease-in both;
+}
+
+.master-round-activation-screen.is-portal-active .master-round-portal {
+  animation: master-portal-open 2.6s cubic-bezier(0.16, 0.72, 0.2, 1) both;
+}
+
+@keyframes master-activation-ground-pulse {
+  to {
+    opacity: 0.86;
+    filter: brightness(1.35);
+  }
+}
+
+@keyframes master-activation-aura {
+  to {
+    opacity: 0.82;
+    transform: scaleY(1.12);
+  }
+}
+
+@keyframes master-activation-button-pulse {
+  to {
+    filter: brightness(1.12);
+    box-shadow:
+      0 0 0 5px rgba(124, 45, 18, 0.78),
+      0 0 52px rgba(251, 146, 60, 0.96),
+      0 0 96px rgba(234, 88, 12, 0.58),
+      inset 0 0 40px rgba(255, 247, 237, 0.5);
+    transform: scale(1.025);
+  }
+}
+
+@keyframes master-activation-button-shine {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes master-activation-ready-shake {
+  25% {
+    transform: translateX(-5px) rotate(-0.5deg);
+  }
+
+  55% {
+    transform: translateX(5px) rotate(0.5deg);
+  }
+}
+
+@keyframes master-activation-ready-glow {
+  to {
+    filter: brightness(1.18);
+    box-shadow:
+      0 0 0 5px rgba(124, 45, 18, 0.82),
+      0 0 64px rgba(251, 146, 60, 1),
+      0 0 110px rgba(234, 88, 12, 0.68),
+      inset 0 0 48px rgba(255, 247, 237, 0.54);
+  }
+}
+
+@keyframes master-activation-ember {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.5) rotate(0);
+  }
+
+  18% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-72vh) translateX(24px) scale(1.1) rotate(160deg);
+  }
+}
+
+@keyframes master-portal-screen-shake {
+  20% {
+    transform: translate3d(-3px, 1px, 0);
+  }
+
+  45% {
+    transform: translate3d(3px, -1px, 0);
+  }
+}
+
+@keyframes master-activation-shatter {
+  0% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+
+  45% {
+    filter: brightness(2.2);
+    transform: scale(1.08);
+  }
+
+  100% {
+    opacity: 0;
+    filter: brightness(3);
+    transform: scale(1.32);
+  }
+}
+
+@keyframes master-portal-open {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.1) rotate(0);
+  }
+
+  24% {
+    opacity: 1;
+  }
+
+  72% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(2.8) rotate(220deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(8) rotate(360deg);
+  }
+}
+
+@keyframes master-portal-screen-zoom {
+  70% {
+    filter: brightness(1.15);
+  }
+
+  100% {
+    filter: brightness(0);
+  }
+}
+
 .battle-stage {
   display: grid;
   margin-bottom: 24px;
@@ -5900,6 +6308,18 @@ h1 {
   .battle-stage-versus.is-comparison,
   .battle-stage-versus.is-victory-react,
   .battle-stage-versus.is-comparison.is-victory-react,
+  .master-round-activation-screen::before,
+  .master-round-activation-screen::after,
+  .master-round-activation-button,
+  .master-round-activation-button::before,
+  .master-round-activation-particles i,
+  .master-round-activation-screen.is-player-ready
+    .master-round-activation-button,
+  .master-round-activation-screen.is-portal-active,
+  .master-round-activation-screen.is-portal-active
+    .master-round-activation-button,
+  .master-round-activation-screen.is-portal-active
+    .master-round-portal,
   .battle-stage-matchup.is-master-round,
   .battle-stage-header.is-master-round::after,
   .battle-stage.is-master-round .battle-team-tracker.is-visible,
