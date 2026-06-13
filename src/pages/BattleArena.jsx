@@ -203,6 +203,128 @@ function createSeededRandom(seedValue) {
   }
 }
 
+function getSuccessfulTransformationFromLogs(pokemon, logs = []) {
+  const pokemonName = getPokemonName(pokemon)
+
+  if (
+    logs.some((log) =>
+      new RegExp(`^${pokemonName} Mega Evolved\\.?$`, 'i').test(log),
+    )
+  ) {
+    return getTransformationFormForPokemon(pokemon)
+  }
+
+  if (
+    pokemonName === 'Greninja' &&
+    logs.some((log) =>
+      /Greninja transformed into Ash Greninja\.?/i.test(log),
+    )
+  ) {
+    return 'Ash Greninja'
+  }
+
+  if (
+    pokemonName === 'Snorlax' &&
+    logs.some((log) => /Sleeping Monster awakened\.?/i.test(log))
+  ) {
+    return 'Gigantamax Snorlax'
+  }
+
+  if (pokemonName === 'Rayquaza' || pokemonName === 'Necrozma') {
+    const godKillerLog = logs.find((log) =>
+      /^God Killer awakened .+\.?$/i.test(log),
+    )
+
+    return (
+      godKillerLog?.match(/^God Killer awakened (.+?)\.?$/i)?.[1] ??
+      null
+    )
+  }
+
+  return null
+}
+
+function getMatchMvp({
+  roundResults = [],
+  masterRoundResult,
+  matchWinnerUid,
+  currentUserUid,
+}) {
+  const results = [
+    ...roundResults.map((result) => ({
+      result,
+      order: Number(result.roundNumber) || 0,
+      isMasterRound: false,
+    })),
+    ...(masterRoundResult
+      ? [
+          {
+            result: masterRoundResult,
+            order: 7,
+            isMasterRound: true,
+          },
+        ]
+      : []),
+  ]
+  const candidates = results.flatMap(
+    ({ result, order, isMasterRound }) => [
+      {
+        pokemon: result.playerAPokemon,
+        score: Number(result.playerAFinalScore) || 0,
+        playerUid: result.playerAUid,
+        logs: result.logs ?? [],
+        order,
+        isMasterRound,
+      },
+      {
+        pokemon: result.playerBPokemon,
+        score: Number(result.playerBFinalScore) || 0,
+        playerUid: result.playerBUid,
+        logs: result.logs ?? [],
+        order,
+        isMasterRound,
+      },
+    ],
+  )
+
+  candidates.sort((candidateA, candidateB) => {
+    const scoreDifference = candidateB.score - candidateA.score
+
+    if (scoreDifference !== 0) {
+      return scoreDifference
+    }
+
+    const candidateAWonMatch = candidateA.playerUid === matchWinnerUid
+    const candidateBWonMatch = candidateB.playerUid === matchWinnerUid
+
+    if (candidateAWonMatch !== candidateBWonMatch) {
+      return candidateAWonMatch ? -1 : 1
+    }
+
+    return candidateB.order - candidateA.order
+  })
+
+  const mvp = candidates[0]
+
+  if (!mvp?.pokemon) {
+    return null
+  }
+
+  const transformedForm = getSuccessfulTransformationFromLogs(
+    mvp.pokemon,
+    mvp.logs,
+  )
+
+  return {
+    ...mvp,
+    transformedForm,
+    displayName: transformedForm ?? getPokemonName(mvp.pokemon),
+    image: getDisplayPokemonImage(mvp.pokemon, transformedForm),
+    ownership:
+      mvp.playerUid === currentUserUid ? 'YOU' : 'OPPONENT',
+  }
+}
+
 function RoundScoreRow({ label, score }) {
   return (
     <div className="round-score-row">
@@ -929,25 +1051,21 @@ function BattleArena({
     battleState?.matchWinnerUid &&
       battleState.matchWinnerUid !== currentUser?.uid,
   )
-  const finalNormalRoundResult =
-    battleState?.roundResults?.[battleState.roundResults.length - 1] ??
-    null
-  const finalRoundWinnerPokemon = finalNormalRoundResult
-    ? finalNormalRoundResult.resultType === 'PLAYER_A_WIN'
-      ? finalNormalRoundResult.playerAPokemon
-      : finalNormalRoundResult.resultType === 'PLAYER_B_WIN'
-        ? finalNormalRoundResult.playerBPokemon
-        : null
-    : null
-  const finalMatchPokemon =
-    masterRoundResult?.winnerPokemon ??
-    finalRoundWinnerPokemon ??
-    (currentUserIsPlayerA
-      ? finalNormalRoundResult?.playerAPokemon
-      : finalNormalRoundResult?.playerBPokemon) ??
-    null
-  const finalMatchPokemonImage =
-    getNormalPokemonImage(finalMatchPokemon)
+  const matchMvp = useMemo(
+    () =>
+      getMatchMvp({
+        roundResults: battleState?.roundResults ?? [],
+        masterRoundResult,
+        matchWinnerUid: battleState?.matchWinnerUid ?? null,
+        currentUserUid: currentUser?.uid,
+      }),
+    [
+      battleState?.matchWinnerUid,
+      battleState?.roundResults,
+      currentUser?.uid,
+      masterRoundResult,
+    ],
+  )
   const finalMatchTitle = currentPlayerWonMatch
     ? 'Victory'
     : currentPlayerLostMatch
@@ -1974,7 +2092,7 @@ function BattleArena({
                     : currentPlayerLostMatch
                       ? 'is-defeat'
                       : 'is-draw'
-                }`}
+                } ${masterRoundResult ? 'is-master-finale' : ''}`}
               >
                 <div className="champion-result-particles" aria-hidden="true">
                   {Array.from({ length: 8 }, (_, index) => (
@@ -1983,41 +2101,71 @@ function BattleArena({
                 </div>
 
                 <header className="champion-result-header">
-                  <p>Final Match Result</p>
+                  <p>
+                    {masterRoundResult
+                      ? 'Master Round Decided the Match'
+                      : 'Champion Decided'}
+                  </p>
                   <h2>{finalMatchTitle}</h2>
                   <strong>{finalMatchMessage}</strong>
                 </header>
 
                 <div className="champion-result-score">
                   <span>You</span>
-                  <strong>
-                    {yourScore} <b>-</b> {opponentScore}
-                  </strong>
+                  <div>
+                    <small>Final Score</small>
+                    <strong>
+                      {yourScore} <b>-</b> {opponentScore}
+                    </strong>
+                  </div>
                   <span>Opponent</span>
                 </div>
 
-                {finalMatchPokemon && (
-                  <div className="champion-result-pokemon">
-                    {finalMatchPokemonImage && (
-                      <img
-                        src={finalMatchPokemonImage}
-                        alt={getPokemonName(finalMatchPokemon)}
-                        width="220"
-                        height="220"
-                        onError={(event) => {
-                          event.currentTarget.hidden = true
-                        }}
-                      />
-                    )}
-                    <div>
-                      <span>
-                        {masterRoundResult
-                          ? 'Master Round Champion'
-                          : 'Final Round Pokémon'}
-                      </span>
-                      <strong>
-                        {getPokemonName(finalMatchPokemon)}
-                      </strong>
+                {matchMvp && (
+                  <div className="champion-mvp-card">
+                    <div
+                      className="champion-mvp-spotlight"
+                      aria-hidden="true"
+                    />
+                    <div className="champion-mvp-art">
+                      {matchMvp.image && (
+                        <img
+                          src={matchMvp.image}
+                          alt={matchMvp.displayName}
+                          width="280"
+                          height="280"
+                          onError={(event) => {
+                            const fallbackImage = getNormalPokemonImage(
+                              matchMvp.pokemon,
+                            )
+
+                            if (
+                              fallbackImage &&
+                              event.currentTarget.src !== fallbackImage
+                            ) {
+                              event.currentTarget.src = fallbackImage
+                              return
+                            }
+
+                            event.currentTarget.hidden = true
+                          }}
+                        />
+                      )}
+                    </div>
+                    <div className="champion-mvp-details">
+                      <span>Match MVP</span>
+                      <strong>{matchMvp.displayName}</strong>
+                      <small>
+                        {matchMvp.ownership}
+                        {' / '}
+                        {matchMvp.isMasterRound
+                          ? 'Master Round'
+                          : `Round ${matchMvp.order}`}
+                      </small>
+                      <b>
+                        <span>Final Score</span>
+                        {matchMvp.score}
+                      </b>
                     </div>
                   </div>
                 )}
