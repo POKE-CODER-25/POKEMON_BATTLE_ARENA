@@ -252,6 +252,7 @@ function BattleStage({
   yourTeamSlots = [],
   opponentTeamSlots = [],
   arena,
+  masterRound = false,
   entranceStep = 0,
   teamsVisible = false,
   activeAnalysisSide = null,
@@ -284,14 +285,20 @@ function BattleStage({
     <section
       className={`battle-stage ${
         countdownBackdrop ? 'is-countdown-backdrop' : ''
-      }`}
+      } ${masterRound ? 'is-master-round' : ''}`}
       aria-labelledby="battle-stage-title"
     >
       {arenaUiVisible && (
-        <header className="battle-stage-header">
+        <header
+          className={`battle-stage-header ${
+            masterRound ? 'is-master-round' : ''
+          }`}
+        >
           <div>
-            <span>Round</span>
-            <strong id="battle-stage-title">{roundNumber}</strong>
+            <span>{masterRound ? 'Final Showdown' : 'Round'}</span>
+            <strong id="battle-stage-title">
+              {masterRound ? 'Master Round' : roundNumber}
+            </strong>
           </div>
           <div>
             <span>Trainer Score</span>
@@ -303,7 +310,9 @@ function BattleStage({
       )}
 
       <div
-        className="battle-stage-matchup"
+        className={`battle-stage-matchup ${
+          masterRound ? `is-master-round is-${arena.id}` : ''
+        }`}
         style={{
           backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.25), rgba(0, 0, 0, 0.25)), url("${arena.image}")`,
           backgroundPosition: 'center center',
@@ -338,7 +347,7 @@ function BattleStage({
               } ${
                 showScoreComparison ? 'is-comparison' : ''
               } ${showWinner ? 'is-victory-react' : ''
-              }`}
+              } ${masterRound ? 'is-master-round' : ''}`}
               aria-label="versus"
             >
               {showScoreComparison ? (

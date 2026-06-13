@@ -257,6 +257,10 @@ function BattleArena({
   const [countdownValue, setCountdownValue] = useState(null)
   const [countdownCompletedRound, setCountdownCompletedRound] =
     useState(null)
+  const [
+    completedMasterRoundAnnouncementKey,
+    setCompletedMasterRoundAnnouncementKey,
+  ] = useState(null)
   const [transformationCinematicIndex, setTransformationCinematicIndex] =
     useState(null)
   const [battleEntranceStep, setBattleEntranceStep] = useState(0)
@@ -680,7 +684,25 @@ function BattleArena({
           hasRevealData &&
           !isMasterRoundPending,
   )
-  const battleStageKey = masterRoundResult ? 'master' : currentRound
+  const isMasterRoundBattle = Boolean(
+    masterRoundResult && hostScore === 3 && guestScore === 3,
+  )
+  const masterRoundAnnouncementKey = masterRoundResult
+    ? [
+        masterRoundResult.createdAt?.seconds ?? '',
+        masterRoundResult.createdAt?.nanoseconds ?? '',
+        masterRoundResult.playerAPokemon?.pokemonId ?? '',
+        masterRoundResult.playerBPokemon?.pokemonId ?? '',
+      ].join(':')
+    : null
+  const battleStageKey = masterRoundResult
+    ? `master:${masterRoundAnnouncementKey}`
+    : currentRound
+  const isMasterRoundAnnouncementActive =
+    battleStageReady &&
+    isMasterRoundBattle &&
+    completedMasterRoundAnnouncementKey !==
+      masterRoundAnnouncementKey
   const isBattleCountdownActive =
     battleStageReady && countdownValue !== null
   const transformationCinematicRequired =
@@ -929,6 +951,33 @@ function BattleArena({
   useEffect(() => {
     if (
       !battleStageReady ||
+      !isMasterRoundBattle ||
+      completedMasterRoundAnnouncementKey ===
+        masterRoundAnnouncementKey
+    ) {
+      return undefined
+    }
+
+    const timer = window.setTimeout(
+      () =>
+        setCompletedMasterRoundAnnouncementKey(
+          masterRoundAnnouncementKey,
+        ),
+      2000,
+    )
+
+    return () => window.clearTimeout(timer)
+  }, [
+    battleStageReady,
+    completedMasterRoundAnnouncementKey,
+    isMasterRoundBattle,
+    masterRoundAnnouncementKey,
+  ])
+
+  useEffect(() => {
+    if (
+      !battleStageReady ||
+      isMasterRoundAnnouncementActive ||
       countdownCompletedRound === battleStageKey
     ) {
       return undefined
@@ -948,7 +997,12 @@ function BattleArena({
     return () => {
       timers.forEach((timer) => window.clearTimeout(timer))
     }
-  }, [battleStageKey, battleStageReady, countdownCompletedRound])
+  }, [
+    battleStageKey,
+    battleStageReady,
+    countdownCompletedRound,
+    isMasterRoundAnnouncementActive,
+  ])
 
   useEffect(() => {
     if (
@@ -2009,7 +2063,9 @@ function BattleArena({
               </section>
             )}
 
-            {(showBattleStage || isBattleCountdownActive) &&
+            {(showBattleStage ||
+              isBattleCountdownActive ||
+              isMasterRoundAnnouncementActive) &&
               !showFinalMatchScreen && (
               <BattleStage
                 roundNumber={masterRoundResult ? 'Master' : currentRound}
@@ -2034,13 +2090,10 @@ function BattleArena({
                 winnerPokemon={battleStageWinnerPokemon}
                 resultText={battleStageResultText}
                 logs={battleStageLogs}
-                yourTeamSlots={
-                  masterRoundResult ? [] : yourTeamSlots
-                }
-                opponentTeamSlots={
-                  masterRoundResult ? [] : opponentTeamSlots
-                }
+                yourTeamSlots={yourTeamSlots}
+                opponentTeamSlots={opponentTeamSlots}
                 arena={battleArena}
+                masterRound={isMasterRoundBattle}
                 showContinue={
                   hasFinalBattleResult ||
                   (Boolean(savedRoundResult) &&
@@ -2082,7 +2135,10 @@ function BattleArena({
                   roundSaveError,
                   continueErrorMessage,
                 ]}
-                countdownBackdrop={isBattleCountdownActive}
+                countdownBackdrop={
+                  isBattleCountdownActive ||
+                  isMasterRoundAnnouncementActive
+                }
                 entranceStep={battleEntranceStep}
                 teamsVisible={battleTeamsVisible}
                 activeAnalysisSide={activeAnalysisSide}
@@ -2106,7 +2162,9 @@ function BattleArena({
         <div
           className={`battle-countdown-overlay ${
             countdownValue === '1' ? 'is-one' : ''
-          } ${countdownValue === 'GO!' ? 'is-go' : ''}`}
+          } ${countdownValue === 'GO!' ? 'is-go' : ''} ${
+            isMasterRoundBattle ? 'is-master-round' : ''
+          }`}
           role="status"
           aria-live="assertive"
           aria-label={`Battle starts in ${countdownValue}`}
@@ -2126,6 +2184,23 @@ function BattleArena({
           >
             {countdownValue}
           </div>
+        </div>
+      )}
+
+      {isMasterRoundAnnouncementActive && (
+        <div
+          className={`master-round-announcement is-${battleArena.id}`}
+          role="status"
+          aria-live="assertive"
+          aria-label="Master Round. Final showdown."
+        >
+          <div className="master-round-announcement-energy" />
+          <span aria-hidden="true">&#9876;</span>
+          <div>
+            <small>Final Showdown</small>
+            <strong>Master Round</strong>
+          </div>
+          <span aria-hidden="true">&#9876;</span>
         </div>
       )}
 
