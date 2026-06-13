@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import {
   getDisplayPokemonImage,
   getNormalPokemonImage,
@@ -80,16 +81,46 @@ function Fighter({
   score,
   outcome,
   transformation,
+  showFinalScore,
+  spotlight,
 }) {
   const name = getPokemonName(pokemon)
   const normalImage = getNormalPokemonImage(pokemon)
   const image = getDisplayPokemonImage(pokemon, transformation)
+  const numericScore = Number(score) || 0
+  const scoreCountStart = Math.max(0, numericScore - 6)
+  const [displayScore, setDisplayScore] = useState(scoreCountStart)
+
+  useEffect(() => {
+    if (!showFinalScore) {
+      return undefined
+    }
+
+    const finalScore = numericScore
+    const startScore = scoreCountStart
+    const steps = Math.max(1, finalScore - startScore)
+    let step = 0
+
+    const timer = window.setInterval(() => {
+      step += 1
+      setDisplayScore(
+        step >= steps ? finalScore : startScore + step,
+      )
+
+      if (step >= steps) {
+        window.clearInterval(timer)
+      }
+    }, 90)
+
+    return () => window.clearInterval(timer)
+  }, [numericScore, scoreCountStart, showFinalScore])
+  const visibleScore = showFinalScore ? displayScore : scoreCountStart
 
   return (
     <article
       className={`battle-stage-fighter ${
         outcome ? `is-${outcome}` : ''
-      }`}
+      } ${spotlight ? 'is-spotlighted' : ''}`}
     >
       <span className="battle-stage-fighter-label">{label}</span>
       {outcome === 'winner' && (
@@ -120,9 +151,13 @@ function Fighter({
             <small>{transformation.transformedForm}</small>
           )}
         </span>
-        <span className="battle-stage-score">
+        <span
+          className={`battle-stage-score ${
+            showFinalScore ? 'is-revealed' : 'is-hidden'
+          }`}
+        >
           <small>Final Score</small>
-          <b>{score}</b>
+          <b>{visibleScore}</b>
         </span>
       </div>
     </article>
@@ -153,17 +188,24 @@ function BattleStage({
   yourTeamSlots = [],
   opponentTeamSlots = [],
   arena,
+  analysisCards = [],
+  visibleAnalysisCardCount = 0,
+  showFinalScores = false,
+  showWinner = false,
+  presentationComplete = false,
 }) {
-  const yourOutcome = !countdownBackdrop && winnerPokemon
+  const yourOutcome = !countdownBackdrop && showWinner && winnerPokemon
     ? isSamePokemon(yourPokemon, winnerPokemon)
       ? 'winner'
       : 'loser'
     : ''
-  const opponentOutcome = !countdownBackdrop && winnerPokemon
+  const opponentOutcome = !countdownBackdrop && showWinner && winnerPokemon
     ? isSamePokemon(opponentPokemon, winnerPokemon)
       ? 'winner'
       : 'loser'
     : ''
+  const spotlight =
+    !countdownBackdrop && visibleAnalysisCardCount === 0
 
   return (
     <section
@@ -203,6 +245,8 @@ function BattleStage({
           transformation={
             countdownBackdrop ? null : yourTransformation
           }
+          showFinalScore={showFinalScores}
+          spotlight={spotlight}
         />
         <div className="battle-stage-versus" aria-label="versus">
           <span>VS</span>
@@ -215,6 +259,8 @@ function BattleStage({
           transformation={
             countdownBackdrop ? null : opponentTransformation
           }
+          showFinalScore={showFinalScores}
+          spotlight={spotlight}
         />
         <TeamTracker
           label="Opponent"
@@ -225,7 +271,65 @@ function BattleStage({
 
       {!countdownBackdrop && (
         <>
-          <div className="battle-stage-result">
+          <section
+            className="battle-analysis-sequence"
+            aria-label="Animated battle analysis"
+          >
+            <header>
+              <span>Live Analysis</span>
+              <strong>
+                {visibleAnalysisCardCount < analysisCards.length
+                  ? 'Calculating battle impact'
+                  : 'Analysis complete'}
+              </strong>
+            </header>
+            <div className="battle-analysis-cards">
+              {analysisCards
+                .slice(0, visibleAnalysisCardCount)
+                .map((card, index) => (
+                  <article
+                    className={`battle-analysis-card is-${card.id}`}
+                    style={{
+                      '--analysis-depth':
+                        visibleAnalysisCardCount - index - 1,
+                    }}
+                    key={card.id}
+                  >
+                    <span className="battle-analysis-icon" aria-hidden="true">
+                      {card.icon}
+                    </span>
+                    <div>
+                      <strong>{card.label}</strong>
+                      {card.entries.map((entry) => (
+                        <p key={entry.text}>
+                          <span>{entry.text}</span>
+                          {entry.value && <b>{entry.value}</b>}
+                        </p>
+                      ))}
+                    </div>
+                  </article>
+                ))}
+            </div>
+          </section>
+
+          <div
+            className={`battle-stage-final-score ${
+              showFinalScores ? 'is-visible' : ''
+            }`}
+            aria-hidden={!showFinalScores}
+          >
+            <span>Final Score</span>
+            <strong>
+              {yourFinalScore} <i>vs</i> {opponentFinalScore}
+            </strong>
+          </div>
+
+          <div
+            className={`battle-stage-result ${
+              showWinner ? 'is-visible' : ''
+            }`}
+            aria-hidden={!showWinner}
+          >
             <span>Round Winner</span>
             <strong>
               {winnerPokemon
@@ -246,7 +350,7 @@ function BattleStage({
             </details>
           )}
 
-          {(showContinue ||
+          {presentationComplete && (showContinue ||
             currentPlayerContinued ||
             statusMessage) && (
             <div className="battle-continue-area">
@@ -269,11 +373,12 @@ function BattleStage({
             </div>
           )}
 
-          {errorMessages.filter(Boolean).map((message) => (
+          {presentationComplete &&
+            errorMessages.filter(Boolean).map((message) => (
             <p className="battle-lock-error" role="alert" key={message}>
               {message}
             </p>
-          ))}
+            ))}
         </>
       )}
     </section>
