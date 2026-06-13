@@ -47,6 +47,14 @@ function getBaseScoreFromLogs(logs, playerIndex) {
   return Number(baseScores[playerIndex]) || null
 }
 
+function getCelebiWishAmount(state) {
+  const wish = state?.protectedBonuses?.find(
+    (bonus) => bonus?.source === 'Celebi Future Wish',
+  )
+
+  return Number(wish?.amount) || 0
+}
+
 export function createFighterAnalysis({
   state,
   pokemon,
@@ -56,14 +64,17 @@ export function createFighterAnalysis({
 }) {
   const fallbackBaseScore =
     Number(pokemon?.score) || getBaseScoreFromLogs(logs, playerIndex)
+  const celebiWishAmount = getCelebiWishAmount(state)
 
-  return CARD_DEFINITIONS.map((definition) => {
+  const cards = CARD_DEFINITIONS.map((definition) => {
     const positiveValue = sumStateValues(state, definition.valueKeys)
     const penaltyValue = sumStateValues(state, definition.penaltyKeys)
     const value =
       definition.id === 'base'
         ? Number(state?.baseScore) || fallbackBaseScore
-        : positiveValue - penaltyValue
+        : positiveValue -
+          penaltyValue -
+          (definition.id === 'trait' ? celebiWishAmount : 0)
 
     return value
       ? {
@@ -73,7 +84,21 @@ export function createFighterAnalysis({
           value,
         }
       : null
-  }).filter(Boolean).concat({
+  }).filter(Boolean)
+  const typeCardIndex = cards.findIndex((card) => card.id === 'type')
+  const wishInsertIndex =
+    typeCardIndex >= 0 ? typeCardIndex : Math.min(1, cards.length)
+
+  if (celebiWishAmount) {
+    cards.splice(wishInsertIndex, 0, {
+      id: 'celebi-wish',
+      label: 'Celebi Future Wish',
+      icon: '\u2727',
+      value: celebiWishAmount,
+    })
+  }
+
+  return cards.concat({
     id: 'final',
     label: 'Final Score',
     icon: '\u2606',

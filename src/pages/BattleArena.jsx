@@ -577,6 +577,9 @@ function BattleArena({
   const [jirachiCopyError, setJirachiCopyError] = useState('')
   const [isSavingCelebiWish, setIsSavingCelebiWish] = useState(false)
   const [celebiWishError, setCelebiWishError] = useState('')
+  const [pendingCelebiWishTarget, setPendingCelebiWishTarget] =
+    useState(null)
+  const [grantedCelebiWish, setGrantedCelebiWish] = useState(null)
   const [postMatchAction, setPostMatchAction] = useState('')
   const [postMatchError, setPostMatchError] = useState('')
   const [viewedMatchResultKey, setViewedMatchResultKey] =
@@ -1930,11 +1933,20 @@ function BattleArena({
     setCelebiWishError('')
 
     try {
-      await assignCelebiWish({
+      const wish = await assignCelebiWish({
         roomCode: displayRoomCode,
         playerUid: currentUser.uid,
         targetPokemonId: pokemon.id,
       })
+      setPendingCelebiWishTarget(null)
+      setGrantedCelebiWish({
+        pokemon,
+        amount: wish?.amount ?? 10,
+      })
+
+      window.setTimeout(() => {
+        setGrantedCelebiWish(null)
+      }, 2700)
     } catch (error) {
       setCelebiWishError(
         error instanceof Error
@@ -2278,46 +2290,119 @@ function BattleArena({
 
             {pendingCelebiWish?.playerUid === currentUser.uid && (
               <section className="draft-state-panel celebi-wish-panel">
-                <p className="eyebrow">Celebi Future Wish</p>
-                <h2>
-                  Celebi won this round. Choose one unused teammate to
-                  receive +10.
-                </h2>
+                <div className="celebi-wish-atmosphere" aria-hidden="true">
+                  <span className="celebi-time-circle" />
+                  {Array.from({ length: 12 }, (_, index) => (
+                    <i key={index} />
+                  ))}
+                </div>
+                <header className="celebi-wish-header">
+                  <div className="celebi-wish-source">
+                    <img
+                      src={getNormalPokemonImage({
+                        id: pendingCelebiWish.sourcePokemonId,
+                      })}
+                      alt="Celebi"
+                      width="150"
+                      height="150"
+                    />
+                  </div>
+                  <div>
+                    <p className="eyebrow">Ancient Forest Magic</p>
+                    <h2>Celebi Future Wish</h2>
+                    <p>
+                      Choose one unused Pok&eacute;mon to receive +10 power.
+                    </p>
+                  </div>
+                </header>
 
                 {validCelebiWishTargets.length > 0 ? (
                   <div className="celebi-wish-options">
                     {validCelebiWishTargets.map((pokemon) => (
                       <button
-                        className="game-button"
+                        className="celebi-wish-card"
                         type="button"
                         key={pokemon.id}
                         disabled={isSavingCelebiWish}
-                        onClick={() =>
-                          handleAssignCelebiWish(pokemon)
-                        }
+                        onClick={() => setPendingCelebiWishTarget(pokemon)}
                       >
-                        {pokemon.name}
+                        <img
+                          src={getNormalPokemonImage(pokemon)}
+                          alt=""
+                          width="140"
+                          height="140"
+                        />
+                        <strong>{pokemon.name}</strong>
+                        <span>Base Power {pokemon.score}</span>
+                        <b>+10 Future Wish</b>
                       </button>
                     ))}
                   </div>
                 ) : (
-                  <>
-                    <p>No valid Pok&eacute;mon remain for Celebi&apos;s wish.</p>
+                  <div className="celebi-wish-empty">
+                    <strong>No future target available.</strong>
                     <button
                       className="game-button"
                       type="button"
                       disabled={isSavingCelebiWish}
                       onClick={handleDismissCelebiWish}
                     >
-                      Dismiss Future Wish
+                      Continue
                     </button>
-                  </>
+                  </div>
                 )}
 
                 {celebiWishError && (
                   <p className="battle-lock-error" role="alert">
                     {celebiWishError}
                   </p>
+                )}
+
+                {pendingCelebiWishTarget && (
+                  <div
+                    className="celebi-wish-confirm-backdrop"
+                    role="presentation"
+                  >
+                    <div
+                      className="celebi-wish-confirm"
+                      role="dialog"
+                      aria-modal="true"
+                      aria-labelledby="celebi-wish-confirm-title"
+                    >
+                      <span aria-hidden="true">&#10023;</span>
+                      <h3 id="celebi-wish-confirm-title">
+                        Grant Future Wish to{' '}
+                        {pendingCelebiWishTarget.name}?
+                      </h3>
+                      <p>This Pok&eacute;mon will receive +10 power.</p>
+                      <div>
+                        <button
+                          className="game-button game-button-primary"
+                          type="button"
+                          disabled={isSavingCelebiWish}
+                          onClick={() =>
+                            handleAssignCelebiWish(
+                              pendingCelebiWishTarget,
+                            )
+                          }
+                        >
+                          {isSavingCelebiWish
+                            ? 'Granting...'
+                            : 'Grant Wish'}
+                        </button>
+                        <button
+                          className="game-button"
+                          type="button"
+                          disabled={isSavingCelebiWish}
+                          onClick={() =>
+                            setPendingCelebiWishTarget(null)
+                          }
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </section>
             )}
@@ -3028,6 +3113,44 @@ function BattleArena({
             <strong>Master Round</strong>
           </div>
           <span aria-hidden="true">&#9876;</span>
+        </div>
+      )}
+
+      {grantedCelebiWish && (
+        <div
+          className="celebi-wish-cinematic"
+          role="status"
+          aria-live="assertive"
+          aria-label={`Future Wish granted to ${grantedCelebiWish.pokemon.name}`}
+        >
+          <div className="celebi-wish-cinematic-circle" aria-hidden="true" />
+          <div className="celebi-wish-cinematic-particles" aria-hidden="true">
+            {Array.from({ length: 18 }, (_, index) => (
+              <i key={index} />
+            ))}
+          </div>
+          <div className="celebi-wish-cinematic-pokemon">
+            <img
+              className="is-celebi"
+              src={getNormalPokemonImage({ id: 251 })}
+              alt=""
+              width="230"
+              height="230"
+            />
+            <span aria-hidden="true" />
+            <img
+              className="is-target"
+              src={getNormalPokemonImage(grantedCelebiWish.pokemon)}
+              alt={grantedCelebiWish.pokemon.name}
+              width="280"
+              height="280"
+            />
+          </div>
+          <div className="celebi-wish-cinematic-copy">
+            <span>Future Wish Granted</span>
+            <strong>+{grantedCelebiWish.amount} Power</strong>
+            <small>{grantedCelebiWish.pokemon.name}</small>
+          </div>
         </div>
       )}
 

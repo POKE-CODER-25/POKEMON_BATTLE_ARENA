@@ -3575,8 +3575,20 @@ h1 {
 }
 
 .celebi-wish-panel {
+  position: relative;
   display: grid;
-  gap: 12px;
+  padding: clamp(24px, 4vw, 42px);
+  overflow: hidden;
+  gap: 24px;
+  background:
+    radial-gradient(circle at 18% 14%, rgba(45, 212, 191, 0.2), transparent 34%),
+    radial-gradient(circle at 82% 72%, rgba(96, 165, 250, 0.15), transparent 36%),
+    linear-gradient(145deg, rgba(4, 47, 46, 0.94), rgba(7, 26, 48, 0.96));
+  border: 1px solid rgba(94, 234, 212, 0.38);
+  box-shadow:
+    inset 0 0 42px rgba(45, 212, 191, 0.08),
+    0 24px 58px rgba(2, 44, 34, 0.32);
+  isolation: isolate;
 }
 
 .celebi-wish-panel .eyebrow,
@@ -3585,15 +3597,486 @@ h1 {
   margin: 0;
 }
 
+.celebi-wish-atmosphere {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.celebi-time-circle {
+  position: absolute;
+  top: 50%;
+  left: 15%;
+  width: min(38vw, 330px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(94, 234, 212, 0.26);
+  border-radius: 50%;
+  box-shadow:
+    0 0 42px rgba(45, 212, 191, 0.16),
+    inset 0 0 34px rgba(96, 165, 250, 0.1);
+  opacity: 0.66;
+  transform: translate(-50%, -50%);
+  animation: celebi-time-spin 12s linear infinite;
+}
+
+.celebi-time-circle::before,
+.celebi-time-circle::after {
+  position: absolute;
+  inset: 12%;
+  content: '';
+  border: 1px dashed rgba(147, 197, 253, 0.3);
+  border-radius: 50%;
+}
+
+.celebi-time-circle::after {
+  inset: 28%;
+  border-style: solid;
+}
+
+.celebi-wish-atmosphere i {
+  position: absolute;
+  bottom: -24px;
+  left: calc(7% * var(--wish-particle, 1));
+  width: 8px;
+  height: 14px;
+  background: linear-gradient(145deg, #99f6e4, #22c55e);
+  border-radius: 100% 0 100% 0;
+  box-shadow: 0 0 10px rgba(94, 234, 212, 0.7);
+  opacity: 0;
+  animation: celebi-leaf-rise 7s linear infinite;
+}
+
+.celebi-wish-atmosphere i:nth-child(2) { --wish-particle: 2; animation-delay: -2s; }
+.celebi-wish-atmosphere i:nth-child(3) { --wish-particle: 3; animation-delay: -5s; }
+.celebi-wish-atmosphere i:nth-child(4) { --wish-particle: 4; animation-delay: -1s; }
+.celebi-wish-atmosphere i:nth-child(5) { --wish-particle: 5; animation-delay: -6s; }
+.celebi-wish-atmosphere i:nth-child(6) { --wish-particle: 6; animation-delay: -3s; }
+.celebi-wish-atmosphere i:nth-child(7) { --wish-particle: 7; animation-delay: -7s; }
+.celebi-wish-atmosphere i:nth-child(8) { --wish-particle: 8; animation-delay: -4s; }
+.celebi-wish-atmosphere i:nth-child(9) { --wish-particle: 9; animation-delay: -1.5s; }
+.celebi-wish-atmosphere i:nth-child(10) { --wish-particle: 10; animation-delay: -5.5s; }
+.celebi-wish-atmosphere i:nth-child(11) { --wish-particle: 11; animation-delay: -2.5s; }
+.celebi-wish-atmosphere i:nth-child(12) { --wish-particle: 12; animation-delay: -6.5s; }
+.celebi-wish-atmosphere i:nth-child(13) { --wish-particle: 13; animation-delay: -3.5s; }
+
+.celebi-wish-header {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  align-items: center;
+  gap: 22px;
+  text-align: left;
+}
+
+.celebi-wish-source {
+  position: relative;
+  display: grid;
+  aspect-ratio: 1;
+  place-items: center;
+}
+
+.celebi-wish-source::before {
+  position: absolute;
+  inset: 14%;
+  content: '';
+  background: radial-gradient(circle, rgba(153, 246, 228, 0.42), transparent 68%);
+  border-radius: 50%;
+  animation: celebi-aura-pulse 2.2s ease-in-out infinite;
+}
+
+.celebi-wish-source img {
+  position: relative;
+  width: 100%;
+  height: 150px;
+  object-fit: contain;
+  filter:
+    drop-shadow(0 0 18px rgba(94, 234, 212, 0.58))
+    drop-shadow(0 14px 16px rgba(2, 6, 23, 0.48));
+  animation: celebi-float 2.8s ease-in-out infinite;
+}
+
+.celebi-wish-header > div:last-child {
+  display: grid;
+  gap: 8px;
+}
+
+.celebi-wish-header .eyebrow {
+  color: #99f6e4;
+  letter-spacing: 0.18em;
+}
+
+.celebi-wish-header h2 {
+  color: #ecfeff;
+  font-size: clamp(1.8rem, 5vw, 3.4rem);
+  line-height: 1;
+  text-transform: uppercase;
+  text-shadow: 0 0 24px rgba(45, 212, 191, 0.38);
+}
+
+.celebi-wish-header p:last-child {
+  color: #bfdbfe;
+}
+
 .celebi-wish-options {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+}
+
+.celebi-wish-card {
+  display: grid;
+  min-width: 0;
+  padding: 14px;
+  place-items: center;
+  gap: 5px;
+  color: #e0f2fe;
+  background:
+    linear-gradient(160deg, rgba(15, 118, 110, 0.28), rgba(15, 23, 42, 0.72));
+  border: 1px solid rgba(94, 234, 212, 0.26);
+  border-radius: 18px;
+  box-shadow: inset 0 0 22px rgba(45, 212, 191, 0.05);
+  cursor: pointer;
+  font: inherit;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.celebi-wish-card:hover:not(:disabled),
+.celebi-wish-card:focus-visible {
+  border-color: rgba(153, 246, 228, 0.74);
+  box-shadow:
+    inset 0 0 24px rgba(45, 212, 191, 0.1),
+    0 0 26px rgba(45, 212, 191, 0.18);
+  outline: none;
+  transform: translateY(-5px);
+}
+
+.celebi-wish-card:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.celebi-wish-card img {
+  width: min(100%, 140px);
+  height: 120px;
+  object-fit: contain;
+  filter: drop-shadow(0 12px 12px rgba(2, 6, 23, 0.46));
+}
+
+.celebi-wish-card strong {
+  color: #f0fdfa;
+  font-size: 1rem;
+}
+
+.celebi-wish-card span {
+  color: #93c5fd;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.celebi-wish-card b {
+  margin-top: 5px;
+  padding: 6px 9px;
+  color: #052e2b;
+  background: linear-gradient(135deg, #99f6e4, #60a5fa);
+  border-radius: 999px;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.celebi-wish-empty {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  padding: 22px;
+  gap: 14px;
+  color: #ccfbf1;
+  background: rgba(2, 44, 34, 0.38);
+  border: 1px solid rgba(94, 234, 212, 0.18);
+  border-radius: 16px;
+}
+
+.celebi-wish-confirm-backdrop {
+  position: fixed;
+  z-index: 80;
+  display: grid;
+  inset: 0;
+  padding: 20px;
+  background: rgba(2, 12, 20, 0.76);
+  place-items: center;
+  backdrop-filter: blur(8px);
+}
+
+.celebi-wish-confirm {
+  display: grid;
+  width: min(100%, 480px);
+  padding: clamp(24px, 5vw, 38px);
+  justify-items: center;
+  gap: 12px;
+  color: #e0f2fe;
+  background:
+    radial-gradient(circle at 50% 0, rgba(45, 212, 191, 0.22), transparent 46%),
+    linear-gradient(145deg, #052e2b, #0f172a);
+  border: 1px solid rgba(94, 234, 212, 0.52);
+  border-radius: 22px;
+  box-shadow: 0 28px 80px rgba(2, 6, 23, 0.62);
+  text-align: center;
+  animation: celebi-confirm-enter 240ms ease-out both;
+}
+
+.celebi-wish-confirm > span {
+  color: #99f6e4;
+  font-size: 2rem;
+  text-shadow: 0 0 20px currentColor;
+}
+
+.celebi-wish-confirm h3 {
+  margin: 0;
+  color: #f0fdfa;
+  font-size: clamp(1.35rem, 4vw, 2rem);
+}
+
+.celebi-wish-confirm > div {
   display: flex;
-  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 8px;
   gap: 10px;
 }
 
-.celebi-wish-options .game-button,
-.celebi-wish-panel > .game-button {
-  width: auto;
+.celebi-wish-cinematic {
+  position: fixed;
+  z-index: 110;
+  display: grid;
+  inset: 0;
+  overflow: hidden;
+  color: #ecfeff;
+  background:
+    radial-gradient(circle at center, rgba(20, 184, 166, 0.32), transparent 36%),
+    linear-gradient(145deg, rgba(2, 44, 34, 0.96), rgba(7, 26, 48, 0.97));
+  place-items: center;
+  isolation: isolate;
+  animation: celebi-cinematic-screen 2.7s ease both;
+}
+
+.celebi-wish-cinematic-circle {
+  position: absolute;
+  z-index: -1;
+  width: min(76vw, 620px);
+  aspect-ratio: 1;
+  border: 2px solid rgba(153, 246, 228, 0.48);
+  border-radius: 50%;
+  box-shadow:
+    0 0 70px rgba(45, 212, 191, 0.36),
+    inset 0 0 70px rgba(96, 165, 250, 0.16);
+  animation: celebi-cinematic-circle 2.7s ease-out both;
+}
+
+.celebi-wish-cinematic-circle::before,
+.celebi-wish-cinematic-circle::after {
+  position: absolute;
+  inset: 10%;
+  content: '';
+  border: 1px dashed rgba(147, 197, 253, 0.5);
+  border-radius: 50%;
+}
+
+.celebi-wish-cinematic-circle::after {
+  inset: 25%;
+  border-style: solid;
+}
+
+.celebi-wish-cinematic-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.celebi-wish-cinematic-particles i {
+  position: absolute;
+  top: 48%;
+  left: 28%;
+  width: 7px;
+  height: 7px;
+  background: #99f6e4;
+  border-radius: 50%;
+  box-shadow: 0 0 14px currentColor;
+  animation: celebi-energy-transfer 1.5s ease-in-out both;
+  animation-delay: calc((var(--wish-index, 0) * 55ms) + 350ms);
+}
+
+.celebi-wish-cinematic-particles i:nth-child(3n) {
+  color: #60a5fa;
+  background: currentColor;
+}
+
+.celebi-wish-cinematic-particles i:nth-child(2n) {
+  --wish-offset: -54px;
+}
+
+.celebi-wish-cinematic-particles i:nth-child(3n) {
+  --wish-offset: 52px;
+}
+
+.celebi-wish-cinematic-particles i:nth-child(1) { --wish-index: 1; }
+.celebi-wish-cinematic-particles i:nth-child(2) { --wish-index: 2; }
+.celebi-wish-cinematic-particles i:nth-child(3) { --wish-index: 3; }
+.celebi-wish-cinematic-particles i:nth-child(4) { --wish-index: 4; }
+.celebi-wish-cinematic-particles i:nth-child(5) { --wish-index: 5; }
+.celebi-wish-cinematic-particles i:nth-child(6) { --wish-index: 6; }
+.celebi-wish-cinematic-particles i:nth-child(7) { --wish-index: 7; }
+.celebi-wish-cinematic-particles i:nth-child(8) { --wish-index: 8; }
+.celebi-wish-cinematic-particles i:nth-child(9) { --wish-index: 9; }
+.celebi-wish-cinematic-particles i:nth-child(10) { --wish-index: 10; }
+.celebi-wish-cinematic-particles i:nth-child(11) { --wish-index: 11; }
+.celebi-wish-cinematic-particles i:nth-child(12) { --wish-index: 12; }
+.celebi-wish-cinematic-particles i:nth-child(13) { --wish-index: 13; }
+.celebi-wish-cinematic-particles i:nth-child(14) { --wish-index: 14; }
+.celebi-wish-cinematic-particles i:nth-child(15) { --wish-index: 15; }
+.celebi-wish-cinematic-particles i:nth-child(16) { --wish-index: 16; }
+.celebi-wish-cinematic-particles i:nth-child(17) { --wish-index: 17; }
+.celebi-wish-cinematic-particles i:nth-child(18) { --wish-index: 18; }
+
+.celebi-wish-cinematic-pokemon {
+  display: grid;
+  grid-template-columns: minmax(130px, 230px) minmax(100px, 180px) minmax(150px, 280px);
+  align-items: center;
+  width: min(90vw, 820px);
+}
+
+.celebi-wish-cinematic-pokemon img {
+  width: 100%;
+  object-fit: contain;
+}
+
+.celebi-wish-cinematic-pokemon .is-celebi {
+  filter: drop-shadow(0 0 28px rgba(94, 234, 212, 0.72));
+  animation: celebi-cinematic-source 2.7s ease both;
+}
+
+.celebi-wish-cinematic-pokemon .is-target {
+  filter:
+    drop-shadow(0 0 30px rgba(96, 165, 250, 0.65))
+    drop-shadow(0 18px 18px rgba(2, 6, 23, 0.56));
+  animation: celebi-cinematic-target 2.7s ease both;
+}
+
+.celebi-wish-cinematic-pokemon span {
+  height: 3px;
+  background: linear-gradient(90deg, #5eead4, #93c5fd);
+  box-shadow: 0 0 18px #5eead4;
+  transform-origin: left;
+  animation: celebi-wish-beam 2.7s ease both;
+}
+
+.celebi-wish-cinematic-copy {
+  position: absolute;
+  bottom: clamp(34px, 8vh, 90px);
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  text-align: center;
+  text-transform: uppercase;
+  animation: celebi-copy-reveal 2.7s ease both;
+}
+
+.celebi-wish-cinematic-copy span {
+  color: #99f6e4;
+  font-size: clamp(1.2rem, 4vw, 2.2rem);
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 24px rgba(45, 212, 191, 0.7);
+}
+
+.celebi-wish-cinematic-copy strong {
+  color: #eff6ff;
+  font-size: clamp(2rem, 7vw, 4.8rem);
+  line-height: 1;
+  text-shadow:
+    0 0 18px rgba(255, 255, 255, 0.46),
+    0 0 38px rgba(96, 165, 250, 0.72);
+}
+
+.celebi-wish-cinematic-copy small {
+  color: #bfdbfe;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+@keyframes celebi-time-spin {
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes celebi-leaf-rise {
+  0% { opacity: 0; transform: translateY(0) rotate(0); }
+  18%, 76% { opacity: 0.55; }
+  100% { opacity: 0; transform: translate(28px, -520px) rotate(300deg); }
+}
+
+@keyframes celebi-aura-pulse {
+  0%, 100% { opacity: 0.58; transform: scale(0.88); }
+  50% { opacity: 1; transform: scale(1.12); }
+}
+
+@keyframes celebi-float {
+  0%, 100% { transform: translateY(3px); }
+  50% { transform: translateY(-7px); }
+}
+
+@keyframes celebi-confirm-enter {
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes celebi-cinematic-screen {
+  0% { opacity: 0; }
+  10%, 88% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes celebi-cinematic-circle {
+  0% { opacity: 0; transform: scale(0.3) rotate(-40deg); }
+  36%, 82% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.18) rotate(80deg); }
+}
+
+@keyframes celebi-cinematic-source {
+  0% { opacity: 0; transform: translateX(-40px) scale(0.8); }
+  22%, 78% { opacity: 1; transform: translateX(0) scale(1); }
+  100% { opacity: 0; transform: translateX(-16px) scale(1.08); }
+}
+
+@keyframes celebi-cinematic-target {
+  0%, 24% { opacity: 0; filter: brightness(0.5); transform: scale(0.78); }
+  58%, 86% { opacity: 1; filter: brightness(1.35); transform: scale(1.08); }
+  100% { opacity: 0; filter: brightness(1); transform: scale(1); }
+}
+
+@keyframes celebi-wish-beam {
+  0%, 20% { opacity: 0; transform: scaleX(0); }
+  42%, 72% { opacity: 1; transform: scaleX(1); }
+  90%, 100% { opacity: 0; transform: scaleX(1); }
+}
+
+@keyframes celebi-energy-transfer {
+  0% { opacity: 0; transform: translate(0, var(--wish-offset, 0)) scale(0.3); }
+  24% { opacity: 1; }
+  100% { opacity: 0; transform: translate(44vw, var(--wish-offset, 0)) scale(1.4); }
+}
+
+@keyframes celebi-copy-reveal {
+  0%, 48% { opacity: 0; transform: translateY(14px) scale(0.94); }
+  62%, 88% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; }
 }
 
 .master-round-panel .eyebrow,
@@ -6804,6 +7287,20 @@ h1 {
     0 0 26px rgba(251, 191, 36, 0.28);
 }
 
+.battle-ability-notification.is-celebi-wish {
+  background:
+    linear-gradient(90deg, rgba(13, 148, 136, 0.96), rgba(15, 23, 42, 0.98));
+  border-color: rgba(94, 234, 212, 0.8);
+  box-shadow:
+    0 0 0 2px rgba(2, 6, 23, 0.76),
+    0 10px 28px rgba(2, 6, 23, 0.5),
+    0 0 26px rgba(45, 212, 191, 0.3);
+}
+
+.battle-ability-notification.is-celebi-wish > span {
+  color: #99f6e4;
+}
+
 .battle-ability-notification > span {
   color: #fde68a;
   font-size: 1.25rem;
@@ -7660,6 +8157,58 @@ h1 {
     height: 124px;
   }
 
+  .celebi-wish-panel {
+    padding: 22px 14px;
+  }
+
+  .celebi-wish-header {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .celebi-wish-source {
+    width: 120px;
+  }
+
+  .celebi-wish-source img {
+    height: 120px;
+  }
+
+  .celebi-wish-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .celebi-wish-card {
+    padding: 10px 8px;
+  }
+
+  .celebi-wish-card img {
+    height: 96px;
+  }
+
+  .celebi-wish-confirm > div {
+    display: grid;
+    width: 100%;
+  }
+
+  .celebi-wish-confirm .game-button {
+    width: 100%;
+  }
+
+  .celebi-wish-cinematic-pokemon {
+    grid-template-columns: minmax(82px, 1fr) 54px minmax(105px, 1.2fr);
+    width: 94vw;
+  }
+
+  .celebi-wish-cinematic-pokemon img {
+    height: 180px;
+  }
+
+  .celebi-wish-cinematic-copy {
+    bottom: 12vh;
+  }
+
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -7748,6 +8297,18 @@ h1 {
   .battle-victory-burst i,
   .champion-mvp-spotlight,
   .champion-mvp-art::before,
+  .celebi-time-circle,
+  .celebi-wish-atmosphere i,
+  .celebi-wish-source::before,
+  .celebi-wish-source img,
+  .celebi-wish-confirm,
+  .celebi-wish-cinematic,
+  .celebi-wish-cinematic-circle,
+  .celebi-wish-cinematic-particles i,
+  .celebi-wish-cinematic-pokemon .is-celebi,
+  .celebi-wish-cinematic-pokemon .is-target,
+  .celebi-wish-cinematic-pokemon span,
+  .celebi-wish-cinematic-copy,
   .battle-analysis-card,
   .battle-analysis-card::after,
   .battle-stage-final-score.is-visible {
@@ -7759,6 +8320,11 @@ h1 {
   }
 
   .champion-result-particles {
+    display: none;
+  }
+
+  .celebi-wish-atmosphere i,
+  .celebi-wish-cinematic-particles {
     display: none;
   }
 }
