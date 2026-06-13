@@ -34,6 +34,7 @@ import {
 } from '../services/roomService.js'
 
 const ROUND_WINS_NEEDED = 4
+const MASTER_PORTAL_TRAVEL_DURATION = 5400
 const EMPTY_BATTLEFIELD_EFFECTS = []
 const REVEALED_BATTLE_PHASES = new Set([
   'reveal',
@@ -51,6 +52,77 @@ const BATTLE_PHASE_LABELS = {
   round_result: 'Round Result',
   master_round_pending: 'Master Round Pending',
   match_over: 'Match Over',
+}
+
+function MasterPortalTravel({ destination }) {
+  return (
+    <div
+      className="master-dimensional-travel"
+      role="status"
+      aria-live="assertive"
+      aria-label={`Reality fracturing. Travelling to ${destination}.`}
+    >
+      <div className="master-travel-void" aria-hidden="true" />
+      <div className="master-travel-cracks" aria-hidden="true">
+        {Array.from({ length: 10 }, (_, index) => (
+          <i
+            key={index}
+            style={{
+              '--travel-index': index,
+              '--travel-angle': `${index * 36}deg`,
+            }}
+          />
+        ))}
+      </div>
+      <div className="master-travel-debris" aria-hidden="true">
+        {Array.from({ length: 14 }, (_, index) => (
+          <i
+            key={index}
+            style={{
+              '--travel-index': index,
+              '--travel-x': `${4 + ((index * 17) % 92)}%`,
+              '--travel-y': `${8 + ((index * 23) % 76)}%`,
+              '--travel-delay': `${(index % 7) * 70}ms`,
+            }}
+          />
+        ))}
+      </div>
+      <div className="master-travel-portal" aria-hidden="true">
+        {Array.from({ length: 5 }, (_, index) => (
+          <span key={index} />
+        ))}
+        <b />
+      </div>
+      <div className="master-travel-tunnel" aria-hidden="true">
+        <div className="master-travel-rings">
+          {Array.from({ length: 6 }, (_, index) => (
+            <i key={index} style={{ '--travel-index': index }} />
+          ))}
+        </div>
+        <div className="master-travel-streaks">
+          {Array.from({ length: 20 }, (_, index) => (
+            <i
+              key={index}
+              style={{
+                '--travel-index': index,
+                '--travel-angle': `${index * 18}deg`,
+                '--travel-delay': `${(index % 5) * 90}ms`,
+              }}
+            />
+          ))}
+        </div>
+      </div>
+      <div className="master-travel-copy">
+        <span className="is-fracture">Reality Fracturing</span>
+        <span className="is-rift">Dimensional Rift</span>
+        <div className="is-destination">
+          <small>{destination}</small>
+          <strong>&#9876; Master Round &#9876;</strong>
+        </div>
+        <span className="is-arrival">Final Showdown</span>
+      </div>
+    </div>
+  )
 }
 
 function getTransformationEvents({
@@ -1788,7 +1860,7 @@ function BattleArena({
         setCompletedMasterRoundPortalKey(
           masterRoundActivationKey,
         ),
-      2600,
+      MASTER_PORTAL_TRAVEL_DURATION,
     )
 
     return () => window.clearTimeout(timer)
@@ -1869,7 +1941,7 @@ function BattleArena({
         setCompletedMasterSelectionPortalKey(
           masterSelectionPortalKey,
         ),
-      2600,
+      MASTER_PORTAL_TRAVEL_DURATION,
     )
 
     return () => window.clearTimeout(timer)
@@ -2638,15 +2710,6 @@ function BattleArena({
                     />
                   ))}
                 </div>
-                <div
-                  className="master-round-portal"
-                  aria-hidden="true"
-                >
-                  <span />
-                  <span />
-                  <span />
-                </div>
-
                 <header className="master-round-activation-header">
                   <span aria-hidden="true">&#9876;</span>
                   <div>
@@ -2737,15 +2800,6 @@ function BattleArena({
                     />
                   ))}
                 </div>
-                <div
-                  className="master-selection-portal"
-                  aria-hidden="true"
-                >
-                  <span />
-                  <span />
-                  <span />
-                </div>
-
                 <header className="master-selection-header">
                   <p>Final Destiny</p>
                   <h2 id="master-selection-title">
@@ -3188,6 +3242,14 @@ function BattleArena({
             <small>{grantedCelebiWish.pokemon.name}</small>
           </div>
         </div>
+      )}
+
+      {isMasterRoundPortalActive && (
+        <MasterPortalTravel destination="Final Destiny Selection" />
+      )}
+
+      {isMasterSelectionPortalActive && (
+        <MasterPortalTravel destination="The Final Battlefield" />
       )}
 
       {isTransformationCinematicActive &&

@@ -5638,8 +5638,7 @@ h1 {
 }
 
 .master-selection-arena.is-portal-active {
-  animation: master-selection-screen-shake 520ms ease-out both,
-    master-selection-screen-zoom 2.6s ease-in 520ms both;
+  animation: none;
 }
 
 .master-selection-arena.is-portal-active
@@ -6071,8 +6070,7 @@ h1 {
 }
 
 .master-round-activation-screen.is-portal-active {
-  animation: master-portal-screen-shake 520ms ease-out both,
-    master-portal-screen-zoom 2.6s ease-in 520ms both;
+  animation: none;
 }
 
 .master-round-activation-screen.is-portal-active
@@ -6210,6 +6208,378 @@ h1 {
   100% {
     filter: brightness(0);
   }
+}
+
+.master-dimensional-travel {
+  --master-travel-duration: 5.4s;
+  position: fixed;
+  z-index: 320;
+  display: grid;
+  inset: 0;
+  min-height: 100dvh;
+  place-items: center;
+  overflow: hidden;
+  color: #fff7ed;
+  background:
+    radial-gradient(circle at center, rgba(124, 45, 18, 0.3), transparent 34%),
+    linear-gradient(145deg, rgba(2, 2, 2, 0.88), rgba(28, 10, 0, 0.92));
+  isolation: isolate;
+  pointer-events: all;
+  animation: master-travel-screen var(--master-travel-duration) ease both;
+}
+
+.master-travel-void,
+.master-travel-cracks,
+.master-travel-debris,
+.master-travel-portal,
+.master-travel-tunnel,
+.master-travel-copy {
+  position: absolute;
+  inset: 0;
+}
+
+.master-travel-void {
+  z-index: -1;
+  background:
+    repeating-radial-gradient(
+      circle at center,
+      transparent 0 6%,
+      rgba(249, 115, 22, 0.08) 6.5% 7%,
+      transparent 7.5% 13%
+    ),
+    radial-gradient(circle at center, #431407 0, #090401 36%, #000 72%);
+  animation: master-travel-void-collapse var(--master-travel-duration) ease both;
+}
+
+.master-travel-cracks {
+  z-index: 1;
+  pointer-events: none;
+}
+
+.master-travel-cracks i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 72vmax;
+  background: linear-gradient(
+    transparent 6%,
+    rgba(251, 146, 60, 0.38) 22%,
+    #fde047 48%,
+    rgba(249, 115, 22, 0.72) 58%,
+    transparent 82%
+  );
+  box-shadow:
+    0 0 12px #f97316,
+    0 0 28px rgba(253, 224, 71, 0.54);
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--travel-angle))
+    scaleY(0);
+  transform-origin: center;
+  animation: master-travel-crack var(--master-travel-duration) ease both;
+}
+
+.master-travel-debris {
+  z-index: 2;
+  pointer-events: none;
+}
+
+.master-travel-debris i {
+  position: absolute;
+  top: var(--travel-y);
+  left: var(--travel-x);
+  width: calc(9px + (var(--travel-index) * 1px));
+  max-width: 22px;
+  aspect-ratio: 1.4;
+  background: linear-gradient(135deg, #0c0a09, #431407);
+  border: 1px solid rgba(251, 146, 60, 0.56);
+  clip-path: polygon(8% 24%, 78% 0, 100% 64%, 36% 100%);
+  box-shadow:
+    0 0 12px rgba(249, 115, 22, 0.72),
+    inset 0 0 5px rgba(253, 224, 71, 0.38);
+  opacity: 0;
+  animation: master-travel-debris var(--master-travel-duration) ease
+    var(--travel-delay) both;
+}
+
+.master-travel-portal {
+  z-index: 3;
+  top: 50%;
+  left: 50%;
+  width: min(48vw, 480px);
+  aspect-ratio: 1;
+  inset: auto;
+  border-radius: 50%;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.08);
+  animation: master-travel-portal-open var(--master-travel-duration)
+    cubic-bezier(0.16, 0.72, 0.2, 1) both;
+}
+
+.master-travel-portal span {
+  position: absolute;
+  border: clamp(2px, 0.5vw, 5px) solid #fde047;
+  border-radius: 50%;
+  inset: calc(var(--portal-ring, 0) * 9%);
+  box-shadow:
+    0 0 30px #f97316,
+    0 0 68px rgba(234, 88, 12, 0.74),
+    inset 0 0 34px rgba(251, 191, 36, 0.66);
+  animation: master-travel-portal-spin 900ms linear infinite;
+}
+
+.master-travel-portal span:nth-child(1) { --portal-ring: 0; }
+.master-travel-portal span:nth-child(2) {
+  --portal-ring: 1;
+  border-color: #fb923c;
+  animation-direction: reverse;
+}
+.master-travel-portal span:nth-child(3) {
+  --portal-ring: 2;
+  border-style: dashed;
+}
+.master-travel-portal span:nth-child(4) {
+  --portal-ring: 3;
+  border-color: #fff7ed;
+  animation-direction: reverse;
+}
+.master-travel-portal span:nth-child(5) {
+  --portal-ring: 4;
+  border-style: dotted;
+}
+
+.master-travel-portal b {
+  position: absolute;
+  background:
+    repeating-conic-gradient(
+      from 0deg,
+      #020202 0 7deg,
+      #7c2d12 9deg 13deg,
+      #f97316 15deg 18deg,
+      #020202 21deg 28deg
+    );
+  border: 3px solid #fbbf24;
+  border-radius: 50%;
+  box-shadow:
+    0 0 46px #f97316,
+    inset 0 0 52px #000;
+  inset: 22%;
+  animation: master-travel-vortex 620ms linear infinite;
+}
+
+.master-travel-tunnel {
+  z-index: 4;
+  opacity: 0;
+  perspective: 520px;
+  pointer-events: none;
+  animation: master-travel-tunnel-reveal var(--master-travel-duration) ease both;
+}
+
+.master-travel-rings,
+.master-travel-streaks {
+  position: absolute;
+  inset: 0;
+}
+
+.master-travel-rings i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(68vw, 680px);
+  aspect-ratio: 1;
+  border: 2px solid rgba(253, 224, 71, 0.7);
+  border-radius: 50%;
+  box-shadow:
+    0 0 32px rgba(249, 115, 22, 0.78),
+    inset 0 0 28px rgba(251, 191, 36, 0.32);
+  opacity: 0;
+  transform: translate(-50%, -50%) translateZ(-500px) scale(0.08);
+  animation: master-travel-ring-pass 980ms linear
+    calc(var(--travel-index) * 150ms) infinite;
+}
+
+.master-travel-streaks i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2px;
+  height: min(42vh, 340px);
+  background: linear-gradient(transparent, #fff7ed, #f97316, transparent);
+  box-shadow: 0 0 11px #fbbf24;
+  opacity: 0;
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--travel-angle))
+    translateY(-12vh)
+    scaleY(0.1);
+  transform-origin: center bottom;
+  animation: master-travel-streak 680ms linear var(--travel-delay) infinite;
+}
+
+.master-travel-copy {
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.master-travel-copy > span,
+.master-travel-copy .is-destination {
+  position: absolute;
+  opacity: 0;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.master-travel-copy > span {
+  font-size: clamp(1rem, 3.8vw, 2.2rem);
+  font-weight: 1000;
+  letter-spacing: 0.24em;
+}
+
+.master-travel-copy .is-fracture {
+  color: #fed7aa;
+  text-shadow:
+    0 0 18px #f97316,
+    0 0 42px rgba(234, 88, 12, 0.86);
+  animation: master-travel-fracture-copy var(--master-travel-duration) ease both;
+}
+
+.master-travel-copy .is-rift {
+  color: #fde68a;
+  text-shadow:
+    0 0 20px #fbbf24,
+    0 0 52px rgba(249, 115, 22, 0.9);
+  animation: master-travel-rift-copy var(--master-travel-duration) ease both;
+}
+
+.master-travel-copy .is-destination {
+  display: grid;
+  padding: 20px clamp(24px, 7vw, 80px);
+  gap: 7px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(67, 20, 7, 0.88),
+    transparent
+  );
+  border-block: 1px solid rgba(253, 224, 71, 0.62);
+  animation: master-travel-destination var(--master-travel-duration) ease both;
+}
+
+.master-travel-copy .is-destination small {
+  color: #fdba74;
+  font-size: clamp(0.68rem, 1.8vw, 0.94rem);
+  font-weight: 900;
+  letter-spacing: 0.2em;
+}
+
+.master-travel-copy .is-destination strong {
+  color: #fff7ed;
+  font-size: clamp(2rem, 8vw, 5.8rem);
+  font-weight: 1000;
+  letter-spacing: 0.08em;
+  text-shadow:
+    0 0 16px #fff,
+    0 0 36px #fbbf24,
+    0 0 82px #f97316;
+}
+
+.master-travel-copy .is-arrival {
+  top: 76%;
+  color: #fff7ed;
+  text-shadow:
+    0 0 18px #fde047,
+    0 0 46px #f97316;
+  animation: master-travel-arrival var(--master-travel-duration) ease both;
+}
+
+@keyframes master-travel-screen {
+  0% { opacity: 0; filter: brightness(1); }
+  4%, 91% { opacity: 1; }
+  16% { filter: brightness(0.72) contrast(1.16); }
+  86% { filter: brightness(1.55); }
+  100% { opacity: 0; filter: brightness(2.5); }
+}
+
+@keyframes master-travel-void-collapse {
+  0% { filter: blur(0); transform: scale(1); }
+  22% { filter: blur(1px) contrast(1.3); transform: scale(1.04); }
+  48% { transform: scale(1.22) rotate(4deg); }
+  78% { filter: blur(4px) brightness(0.72); transform: scale(1.8) rotate(16deg); }
+  100% { filter: brightness(2); transform: scale(2.4); }
+}
+
+@keyframes master-travel-crack {
+  0%, 3% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--travel-angle)) scaleY(0); }
+  12%, 21% { opacity: 1; transform: translate(-50%, -50%) rotate(var(--travel-angle)) scaleY(1); }
+  38%, 100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--travel-angle)) scaleY(1.18); }
+}
+
+@keyframes master-travel-debris {
+  0%, 5% { opacity: 0; transform: translate(0) rotate(0) scale(0.4); }
+  16% { opacity: 1; }
+  42% { opacity: 0.86; transform: translate(calc((50vw - var(--travel-x)) * 0.35), calc((50vh - var(--travel-y)) * 0.35)) rotate(160deg) scale(1.2); }
+  64%, 100% { opacity: 0; transform: translate(calc(50vw - var(--travel-x)), calc(50vh - var(--travel-y))) rotate(320deg) scale(0.1); }
+}
+
+@keyframes master-travel-portal-open {
+  0%, 12% { opacity: 0; transform: translate(-50%, -50%) scale(0.08) rotate(0); }
+  24% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(90deg); }
+  46% { opacity: 1; transform: translate(-50%, -50%) scale(1.42) rotate(210deg); }
+  68% { opacity: 1; transform: translate(-50%, -50%) scale(7) rotate(360deg); }
+  82%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(12) rotate(480deg); }
+}
+
+@keyframes master-travel-portal-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes master-travel-vortex {
+  to { transform: rotate(-360deg) scale(1.04); }
+}
+
+@keyframes master-travel-tunnel-reveal {
+  0%, 36% { opacity: 0; }
+  45%, 76% { opacity: 1; }
+  88%, 100% { opacity: 0; }
+}
+
+@keyframes master-travel-ring-pass {
+  0% { opacity: 0; transform: translate(-50%, -50%) translateZ(-500px) scale(0.08); }
+  18% { opacity: 0.84; }
+  100% { opacity: 0; transform: translate(-50%, -50%) translateZ(420px) scale(2.4); }
+}
+
+@keyframes master-travel-streak {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--travel-angle)) translateY(-8vh) scaleY(0.08); }
+  24% { opacity: 0.9; }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--travel-angle)) translateY(-46vh) scaleY(2.4); }
+}
+
+@keyframes master-travel-fracture-copy {
+  0%, 3% { opacity: 0; transform: scale(0.9); }
+  8%, 17% { opacity: 1; transform: scale(1); }
+  23%, 100% { opacity: 0; transform: scale(1.12); }
+}
+
+@keyframes master-travel-rift-copy {
+  0%, 20% { opacity: 0; transform: translateY(10px); }
+  27%, 38% { opacity: 1; transform: translateY(0); }
+  45%, 100% { opacity: 0; transform: translateY(-8px); }
+}
+
+@keyframes master-travel-destination {
+  0%, 75% { opacity: 0; filter: blur(10px); transform: scale(1.24); }
+  82%, 94% { opacity: 1; filter: blur(0); transform: scale(1); }
+  100% { opacity: 0; filter: brightness(2); transform: scale(1.08); }
+}
+
+@keyframes master-travel-arrival {
+  0%, 85% { opacity: 0; transform: translateY(12px); }
+  90%, 97% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; }
 }
 
 .battle-stage {
@@ -9367,6 +9737,18 @@ h1 {
     .master-selection-locked-ball,
   .master-selection-arena.is-portal-active
     .master-selection-portal,
+  .master-dimensional-travel,
+  .master-travel-void,
+  .master-travel-cracks i,
+  .master-travel-debris i,
+  .master-travel-portal,
+  .master-travel-portal span,
+  .master-travel-portal b,
+  .master-travel-tunnel,
+  .master-travel-rings i,
+  .master-travel-streaks i,
+  .master-travel-copy > span,
+  .master-travel-copy .is-destination,
   .battle-arena-page.is-master-world::before,
   .master-world-particles::before,
   .master-world-particles i,
