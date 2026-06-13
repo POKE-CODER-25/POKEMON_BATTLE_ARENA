@@ -175,6 +175,36 @@ const applyCelebiWish = (state, wish, isMasterRound) => {
   }
 }
 
+const applyJirachiBlessing = (state, blessing, isMasterRound) => {
+  if (
+    isMasterRound ||
+    !blessing ||
+    blessing.consumed ||
+    String(blessing.targetPokemonId) !== String(state.pokemon?.id)
+  ) {
+    return state
+  }
+
+  const amount = blessing.amount ?? 5
+  const message = `Jirachi Wish Maker: +${amount}.`
+
+  return {
+    ...state,
+    finalScore: state.finalScore + amount,
+    protectedTraitBonus:
+      (state.protectedTraitBonus || 0) + amount,
+    protectedBonuses: [
+      ...(state.protectedBonuses || []),
+      {
+        source: 'Jirachi Wish Maker',
+        amount,
+        reason: message,
+      },
+    ],
+    logs: [...(state.logs || []), message],
+  }
+}
+
 export const resolveBattleRound = ({
   pokemonA,
   pokemonB,
@@ -189,6 +219,8 @@ export const resolveBattleRound = ({
   jirachiCopyB = null,
   celebiWishA = null,
   celebiWishB = null,
+  jirachiBlessingA = null,
+  jirachiBlessingB = null,
   isMasterRound = false,
   randomFn = Math.random,
 }) => {
@@ -212,9 +244,19 @@ export const resolveBattleRound = ({
     celebiWishB,
     isMasterRound,
   )
+  const blessedPlayerAState = applyJirachiBlessing(
+    wishedPlayerAState,
+    jirachiBlessingA,
+    isMasterRound,
+  )
+  const blessedPlayerBState = applyJirachiBlessing(
+    wishedPlayerBState,
+    jirachiBlessingB,
+    isMasterRound,
+  )
   const formResult = resolveFormChanges({
-    playerAState: wishedPlayerAState,
-    playerBState: wishedPlayerBState,
+    playerAState: blessedPlayerAState,
+    playerBState: blessedPlayerBState,
     isMasterRound,
     playerAScore,
     playerBScore,

@@ -22,8 +22,10 @@ import {
 import { db } from '../firebase.js'
 import {
   assignCelebiWish,
+  assignJirachiBlessing,
   continueBattleRound,
   dismissCelebiWish,
+  dismissJirachiWish,
   initializeMasterRoundOptions,
   lockBattlePokemon,
   lockMasterRoundPokemon,
@@ -580,6 +582,15 @@ function BattleArena({
   const [pendingCelebiWishTarget, setPendingCelebiWishTarget] =
     useState(null)
   const [grantedCelebiWish, setGrantedCelebiWish] = useState(null)
+  const [isSavingJirachiBlessing, setIsSavingJirachiBlessing] =
+    useState(false)
+  const [jirachiBlessingError, setJirachiBlessingError] = useState('')
+  const [pendingJirachiBlessingTarget, setPendingJirachiBlessingTarget] =
+    useState(null)
+  const [grantedJirachiBlessing, setGrantedJirachiBlessing] =
+    useState(null)
+  const [completedJirachiAwakeningKey, setCompletedJirachiAwakeningKey] =
+    useState(null)
   const [postMatchAction, setPostMatchAction] = useState('')
   const [postMatchError, setPostMatchError] = useState('')
   const [viewedMatchResultKey, setViewedMatchResultKey] =
@@ -703,6 +714,14 @@ function BattleArena({
   const jirachiCopy =
     battleState?.jirachiCopies?.[currentUser?.uid] ?? null
   const pendingCelebiWish = battleState?.pendingCelebiWish ?? null
+  const pendingJirachiWish = battleState?.pendingJirachiWish ?? null
+  const jirachiAwakeningKey = pendingJirachiWish
+    ? `${pendingJirachiWish.playerUid}:${pendingJirachiWish.roundWon}`
+    : null
+  const isJirachiAwakeningActive = Boolean(
+    pendingJirachiWish?.playerUid === currentUser?.uid &&
+      completedJirachiAwakeningKey !== jirachiAwakeningKey,
+  )
   const celebiBlessedPokemonIds = useMemo(
     () =>
       new Set(
@@ -711,6 +730,15 @@ function BattleArena({
         ).map((wish) => String(wish.targetPokemonId)),
       ),
     [battleState?.celebiWishes, currentUser?.uid],
+  )
+  const jirachiBlessedPokemonIds = useMemo(
+    () =>
+      new Set(
+        (
+          battleState?.jirachiBlessings?.[currentUser?.uid] ?? []
+        ).map((blessing) => String(blessing.targetPokemonId)),
+      ),
+    [battleState?.jirachiBlessings, currentUser?.uid],
   )
   const currentPlayerSelection =
     battleState?.selections?.[currentUser?.uid] ?? null
@@ -761,8 +789,30 @@ function BattleArena({
       pokemon.name !== 'Celebi' &&
       !usedPokemonIds.has(String(pokemon.id)) &&
       String(pokemon.id) !== String(activeSelectedPokemonId) &&
+      !celebiBlessedPokemonIds.has(String(pokemon.id)) &&
+      !jirachiBlessedPokemonIds.has(String(pokemon.id)),
+  )
+  const validJirachiBlessingTargets = orderedDraftPicks.filter(
+    (pokemon) =>
+      pokemon.name !== 'Jirachi' &&
+      !usedPokemonIds.has(String(pokemon.id)) &&
+      String(pokemon.id) !== String(activeSelectedPokemonId) &&
+      !jirachiBlessedPokemonIds.has(String(pokemon.id)) &&
       !celebiBlessedPokemonIds.has(String(pokemon.id)),
   )
+
+  useEffect(() => {
+    if (!isJirachiAwakeningActive || !jirachiAwakeningKey) {
+      return undefined
+    }
+
+    const timer = window.setTimeout(
+      () => setCompletedJirachiAwakeningKey(jirachiAwakeningKey),
+      2500,
+    )
+
+    return () => window.clearTimeout(timer)
+  }, [isJirachiAwakeningActive, jirachiAwakeningKey])
   const selectionIsOpen =
     (battleState?.phase ?? 'choose_pokemon') === 'choose_pokemon'
   const battlePhase = battleState?.phase ?? 'choose_pokemon'
@@ -911,6 +961,24 @@ function BattleArena({
           (wish) =>
             !wish.consumed &&
             String(wish.targetPokemonId) ===
+            String(guestSelection.pokemonId),
+        ) ?? null,
+      jirachiBlessingA:
+        (
+          battleState?.jirachiBlessings?.[room?.hostUid] ?? []
+        ).find(
+          (blessing) =>
+            !blessing.consumed &&
+            String(blessing.targetPokemonId) ===
+              String(hostSelection.pokemonId),
+        ) ?? null,
+      jirachiBlessingB:
+        (
+          battleState?.jirachiBlessings?.[room?.guestUid] ?? []
+        ).find(
+          (blessing) =>
+            !blessing.consumed &&
+            String(blessing.targetPokemonId) ===
               String(guestSelection.pokemonId),
         ) ?? null,
       isMasterRound: false,
@@ -920,6 +988,7 @@ function BattleArena({
     })
   }, [
     battleState?.jirachiCopies,
+    battleState?.jirachiBlessings,
     battleState?.celebiWishes,
     bothPlayersLocked,
     currentRound,
@@ -1871,6 +1940,7 @@ function BattleArena({
       (battlePhase !== 'round_result' &&
         !continuingToMasterRound) ||
       pendingCelebiWish ||
+      pendingJirachiWish ||
       isContinuingRound
     ) {
       return
@@ -1979,6 +2049,64 @@ function BattleArena({
       )
     } finally {
       setIsSavingCelebiWish(false)
+    }
+  }
+
+  async function handleAssignJirachiBlessing(pokemon) {
+    if (!pokemon || isSavingJirachiBlessing) {
+      return
+    }
+
+    setIsSavingJirachiBlessing(true)
+    setJirachiBlessingError('')
+
+    try {
+      const blessing = await assignJirachiBlessing({
+        roomCode: displayRoomCode,
+        playerUid: currentUser.uid,
+        targetPokemonId: pokemon.id,
+      })
+      setPendingJirachiBlessingTarget(null)
+      setGrantedJirachiBlessing({
+        pokemon,
+        amount: blessing?.amount ?? 5,
+      })
+
+      window.setTimeout(() => {
+        setGrantedJirachiBlessing(null)
+      }, 2700)
+    } catch (error) {
+      setJirachiBlessingError(
+        error instanceof Error
+          ? error.message
+          : 'Could not grant Jirachi Divine Blessing.',
+      )
+    } finally {
+      setIsSavingJirachiBlessing(false)
+    }
+  }
+
+  async function handleDismissJirachiWish() {
+    if (isSavingJirachiBlessing) {
+      return
+    }
+
+    setIsSavingJirachiBlessing(true)
+    setJirachiBlessingError('')
+
+    try {
+      await dismissJirachiWish({
+        roomCode: displayRoomCode,
+        playerUid: currentUser.uid,
+      })
+    } catch (error) {
+      setJirachiBlessingError(
+        error instanceof Error
+          ? error.message
+          : 'Could not clear Jirachi Wish Maker.',
+      )
+    } finally {
+      setIsSavingJirachiBlessing(false)
     }
   }
 
@@ -2252,7 +2380,10 @@ function BattleArena({
               </div>
             </section>
 
-            {hasJirachi && (
+            {hasJirachi &&
+              !pendingCelebiWish &&
+              !pendingJirachiWish &&
+              battlePhase === 'choose_pokemon' && (
               <section className="draft-state-panel jirachi-copy-panel">
                 <p className="eyebrow">Jirachi Wish Maker</p>
                 <h2>Choose one teammate trait for Jirachi to copy.</h2>
@@ -2396,6 +2527,129 @@ function BattleArena({
                           disabled={isSavingCelebiWish}
                           onClick={() =>
                             setPendingCelebiWishTarget(null)
+                          }
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {pendingJirachiWish?.playerUid === currentUser.uid &&
+              !isJirachiAwakeningActive && (
+              <section className="draft-state-panel jirachi-wish-panel">
+                <div className="jirachi-wish-stars" aria-hidden="true">
+                  {Array.from({ length: 16 }, (_, index) => (
+                    <i key={index} />
+                  ))}
+                </div>
+                <header className="jirachi-wish-header">
+                  <div className="jirachi-wish-source">
+                    <span className="jirachi-constellation-ring" />
+                    <img
+                      src={getNormalPokemonImage({
+                        id: pendingJirachiWish.sourcePokemonId,
+                      })}
+                      alt="Jirachi"
+                      width="150"
+                      height="150"
+                    />
+                  </div>
+                  <div>
+                    <p className="eyebrow">Celestial Destiny</p>
+                    <h2>Jirachi Wish Maker</h2>
+                    <p>
+                      Choose one unused Pok&eacute;mon to receive a Divine
+                      Blessing.
+                    </p>
+                  </div>
+                </header>
+
+                {validJirachiBlessingTargets.length > 0 ? (
+                  <div className="jirachi-wish-options">
+                    {validJirachiBlessingTargets.map((pokemon) => (
+                      <button
+                        className="jirachi-wish-card"
+                        type="button"
+                        key={pokemon.id}
+                        disabled={isSavingJirachiBlessing}
+                        onClick={() =>
+                          setPendingJirachiBlessingTarget(pokemon)
+                        }
+                      >
+                        <img
+                          src={getNormalPokemonImage(pokemon)}
+                          alt=""
+                          width="140"
+                          height="140"
+                        />
+                        <strong>{pokemon.name}</strong>
+                        <span>Base Power {pokemon.score}</span>
+                        <b>Divine Blessing +5 Power</b>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="jirachi-wish-empty">
+                    <strong>No worthy wish remains.</strong>
+                    <button
+                      className="game-button"
+                      type="button"
+                      disabled={isSavingJirachiBlessing}
+                      onClick={handleDismissJirachiWish}
+                    >
+                      Continue
+                    </button>
+                  </div>
+                )}
+
+                {jirachiBlessingError && (
+                  <p className="battle-lock-error" role="alert">
+                    {jirachiBlessingError}
+                  </p>
+                )}
+
+                {pendingJirachiBlessingTarget && (
+                  <div
+                    className="jirachi-wish-confirm-backdrop"
+                    role="presentation"
+                  >
+                    <div
+                      className="jirachi-wish-confirm"
+                      role="dialog"
+                      aria-modal="true"
+                      aria-labelledby="jirachi-wish-confirm-title"
+                    >
+                      <span aria-hidden="true">&#10022;</span>
+                      <h3 id="jirachi-wish-confirm-title">
+                        Grant Divine Blessing to{' '}
+                        {pendingJirachiBlessingTarget.name}?
+                      </h3>
+                      <p>This Pok&eacute;mon will receive +5 power.</p>
+                      <div>
+                        <button
+                          className="game-button game-button-primary"
+                          type="button"
+                          disabled={isSavingJirachiBlessing}
+                          onClick={() =>
+                            handleAssignJirachiBlessing(
+                              pendingJirachiBlessingTarget,
+                            )
+                          }
+                        >
+                          {isSavingJirachiBlessing
+                            ? 'Granting...'
+                            : 'Grant Wish'}
+                        </button>
+                        <button
+                          className="game-button"
+                          type="button"
+                          disabled={isSavingJirachiBlessing}
+                          onClick={() =>
+                            setPendingJirachiBlessingTarget(null)
                           }
                         >
                           Cancel
@@ -3010,7 +3264,9 @@ function BattleArena({
                     currentRound < 6)
                 }
                 continueDisabled={
-                  isContinuingRound || Boolean(pendingCelebiWish)
+                  isContinuingRound ||
+                  Boolean(pendingCelebiWish) ||
+                  Boolean(pendingJirachiWish)
                 }
                 continueLabel={
                   hasFinalBattleResult
@@ -3019,6 +3275,8 @@ function BattleArena({
                     ? 'Continuing...'
                     : pendingCelebiWish
                       ? 'Resolve Celebi Future Wish'
+                      : pendingJirachiWish
+                        ? 'Resolve Jirachi Wish Maker'
                       : isTiedNormalRoundAwaitingContinue
                         ? 'Continue?'
                       : 'Continue to Next Round'
@@ -3116,6 +3374,29 @@ function BattleArena({
         </div>
       )}
 
+      {isJirachiAwakeningActive && (
+        <div
+          className="jirachi-awakening-cinematic"
+          role="status"
+          aria-live="assertive"
+          aria-label="Jirachi Wish Maker awakened"
+        >
+          <div className="jirachi-cosmic-ring" aria-hidden="true" />
+          <div className="jirachi-cinematic-stars" aria-hidden="true">
+            {Array.from({ length: 20 }, (_, index) => (
+              <i key={index} />
+            ))}
+          </div>
+          <img
+            src={getNormalPokemonImage({ id: 385 })}
+            alt=""
+            width="280"
+            height="280"
+          />
+          <strong>Wish Maker Awakened</strong>
+        </div>
+      )}
+
       {grantedCelebiWish && (
         <div
           className="celebi-wish-cinematic"
@@ -3150,6 +3431,46 @@ function BattleArena({
             <span>Future Wish Granted</span>
             <strong>+{grantedCelebiWish.amount} Power</strong>
             <small>{grantedCelebiWish.pokemon.name}</small>
+          </div>
+        </div>
+      )}
+
+      {grantedJirachiBlessing && (
+        <div
+          className="jirachi-blessing-cinematic"
+          role="status"
+          aria-live="assertive"
+          aria-label={`Divine Blessing granted to ${grantedJirachiBlessing.pokemon.name}`}
+        >
+          <div className="jirachi-cosmic-ring" aria-hidden="true" />
+          <div className="jirachi-cinematic-stars" aria-hidden="true">
+            {Array.from({ length: 20 }, (_, index) => (
+              <i key={index} />
+            ))}
+          </div>
+          <div className="jirachi-blessing-pokemon">
+            <img
+              className="is-jirachi"
+              src={getNormalPokemonImage({ id: 385 })}
+              alt=""
+              width="230"
+              height="230"
+            />
+            <span aria-hidden="true" />
+            <img
+              className="is-target"
+              src={getNormalPokemonImage(
+                grantedJirachiBlessing.pokemon,
+              )}
+              alt={grantedJirachiBlessing.pokemon.name}
+              width="280"
+              height="280"
+            />
+          </div>
+          <div className="jirachi-blessing-copy">
+            <span>Divine Blessing Granted</span>
+            <strong>+{grantedJirachiBlessing.amount} Power</strong>
+            <small>{grantedJirachiBlessing.pokemon.name}</small>
           </div>
         </div>
       )}

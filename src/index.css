@@ -4079,6 +4079,448 @@ h1 {
   100% { opacity: 0; }
 }
 
+.jirachi-wish-panel {
+  position: relative;
+  display: grid;
+  padding: clamp(24px, 4vw, 42px);
+  overflow: hidden;
+  gap: 24px;
+  color: #fff7ed;
+  background:
+    radial-gradient(circle at 18% 10%, rgba(253, 224, 71, 0.2), transparent 34%),
+    radial-gradient(circle at 84% 72%, rgba(251, 146, 60, 0.14), transparent 36%),
+    linear-gradient(145deg, rgba(30, 20, 55, 0.97), rgba(8, 12, 28, 0.98));
+  border: 1px solid rgba(253, 224, 71, 0.42);
+  box-shadow:
+    inset 0 0 44px rgba(251, 191, 36, 0.08),
+    0 24px 62px rgba(15, 10, 30, 0.42);
+  isolation: isolate;
+}
+
+.jirachi-wish-panel h2,
+.jirachi-wish-panel p {
+  margin: 0;
+}
+
+.jirachi-wish-stars,
+.jirachi-cinematic-stars {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.jirachi-wish-stars i,
+.jirachi-cinematic-stars i {
+  position: absolute;
+  top: calc((var(--star-index, 1) * 5%) - 8%);
+  left: calc(3% + (var(--star-index, 1) * 4.5%));
+  width: 3px;
+  height: 3px;
+  background: #fef3c7;
+  border-radius: 50%;
+  box-shadow:
+    0 0 8px #fde68a,
+    0 0 16px rgba(251, 191, 36, 0.5);
+  animation: jirachi-star-fall 4.8s linear infinite;
+  animation-delay: calc(var(--star-index, 1) * -280ms);
+}
+
+.jirachi-wish-stars i:nth-child(1),
+.jirachi-cinematic-stars i:nth-child(1) { --star-index: 1; }
+.jirachi-wish-stars i:nth-child(2),
+.jirachi-cinematic-stars i:nth-child(2) { --star-index: 2; }
+.jirachi-wish-stars i:nth-child(3),
+.jirachi-cinematic-stars i:nth-child(3) { --star-index: 3; }
+.jirachi-wish-stars i:nth-child(4),
+.jirachi-cinematic-stars i:nth-child(4) { --star-index: 4; }
+.jirachi-wish-stars i:nth-child(5),
+.jirachi-cinematic-stars i:nth-child(5) { --star-index: 5; }
+.jirachi-wish-stars i:nth-child(6),
+.jirachi-cinematic-stars i:nth-child(6) { --star-index: 6; }
+.jirachi-wish-stars i:nth-child(7),
+.jirachi-cinematic-stars i:nth-child(7) { --star-index: 7; }
+.jirachi-wish-stars i:nth-child(8),
+.jirachi-cinematic-stars i:nth-child(8) { --star-index: 8; }
+.jirachi-wish-stars i:nth-child(9),
+.jirachi-cinematic-stars i:nth-child(9) { --star-index: 9; }
+.jirachi-wish-stars i:nth-child(10),
+.jirachi-cinematic-stars i:nth-child(10) { --star-index: 10; }
+.jirachi-wish-stars i:nth-child(11),
+.jirachi-cinematic-stars i:nth-child(11) { --star-index: 11; }
+.jirachi-wish-stars i:nth-child(12),
+.jirachi-cinematic-stars i:nth-child(12) { --star-index: 12; }
+.jirachi-wish-stars i:nth-child(13),
+.jirachi-cinematic-stars i:nth-child(13) { --star-index: 13; }
+.jirachi-wish-stars i:nth-child(14),
+.jirachi-cinematic-stars i:nth-child(14) { --star-index: 14; }
+.jirachi-wish-stars i:nth-child(15),
+.jirachi-cinematic-stars i:nth-child(15) { --star-index: 15; }
+.jirachi-wish-stars i:nth-child(16),
+.jirachi-cinematic-stars i:nth-child(16) { --star-index: 16; }
+.jirachi-cinematic-stars i:nth-child(17) { --star-index: 17; }
+.jirachi-cinematic-stars i:nth-child(18) { --star-index: 18; }
+.jirachi-cinematic-stars i:nth-child(19) { --star-index: 19; }
+.jirachi-cinematic-stars i:nth-child(20) { --star-index: 20; }
+
+.jirachi-wish-header {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  align-items: center;
+  gap: 22px;
+  text-align: left;
+}
+
+.jirachi-wish-source {
+  position: relative;
+  display: grid;
+  aspect-ratio: 1;
+  place-items: center;
+}
+
+.jirachi-constellation-ring,
+.jirachi-cosmic-ring {
+  position: absolute;
+  width: min(62vw, 520px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(253, 224, 71, 0.58);
+  border-radius: 50%;
+  box-shadow:
+    0 0 52px rgba(251, 191, 36, 0.28),
+    inset 0 0 42px rgba(255, 255, 255, 0.08);
+  animation: jirachi-ring-spin 10s linear infinite;
+}
+
+.jirachi-constellation-ring {
+  width: 128px;
+}
+
+.jirachi-constellation-ring::before,
+.jirachi-cosmic-ring::before {
+  position: absolute;
+  inset: 16%;
+  content: '';
+  border: 1px dashed rgba(255, 247, 237, 0.45);
+  border-radius: 50%;
+}
+
+.jirachi-wish-source img {
+  position: relative;
+  width: 100%;
+  height: 150px;
+  object-fit: contain;
+  filter:
+    drop-shadow(0 0 20px rgba(253, 224, 71, 0.68))
+    drop-shadow(0 16px 18px rgba(2, 6, 23, 0.56));
+  animation: jirachi-divine-float 3s ease-in-out infinite;
+}
+
+.jirachi-wish-header > div:last-child {
+  display: grid;
+  gap: 8px;
+}
+
+.jirachi-wish-header .eyebrow {
+  color: #fde68a;
+  letter-spacing: 0.18em;
+}
+
+.jirachi-wish-header h2 {
+  color: #fff;
+  font-size: clamp(1.8rem, 5vw, 3.4rem);
+  line-height: 1;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 18px rgba(255, 255, 255, 0.3),
+    0 0 30px rgba(251, 191, 36, 0.45);
+}
+
+.jirachi-wish-header p:last-child {
+  color: #fed7aa;
+}
+
+.jirachi-wish-options {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+}
+
+.jirachi-wish-card {
+  display: grid;
+  min-width: 0;
+  padding: 14px;
+  place-items: center;
+  gap: 5px;
+  color: #fff7ed;
+  background:
+    linear-gradient(160deg, rgba(146, 64, 14, 0.3), rgba(15, 23, 42, 0.78));
+  border: 1px solid rgba(253, 224, 71, 0.3);
+  border-radius: 18px;
+  box-shadow: inset 0 0 24px rgba(251, 191, 36, 0.06);
+  cursor: pointer;
+  font: inherit;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.jirachi-wish-card:hover:not(:disabled),
+.jirachi-wish-card:focus-visible {
+  border-color: rgba(254, 240, 138, 0.78);
+  box-shadow:
+    inset 0 0 24px rgba(251, 191, 36, 0.12),
+    0 0 28px rgba(251, 191, 36, 0.2);
+  outline: none;
+  transform: translateY(-5px);
+}
+
+.jirachi-wish-card img {
+  width: min(100%, 140px);
+  height: 120px;
+  object-fit: contain;
+  filter: drop-shadow(0 12px 12px rgba(2, 6, 23, 0.5));
+}
+
+.jirachi-wish-card strong {
+  color: #fff;
+}
+
+.jirachi-wish-card span {
+  color: #fed7aa;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.jirachi-wish-card b {
+  margin-top: 5px;
+  padding: 6px 9px;
+  color: #422006;
+  background: linear-gradient(135deg, #fff, #fde68a 54%, #fb923c);
+  border-radius: 999px;
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.jirachi-wish-empty {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  padding: 22px;
+  gap: 14px;
+  background: rgba(67, 20, 7, 0.3);
+  border: 1px solid rgba(253, 224, 71, 0.2);
+  border-radius: 16px;
+}
+
+.jirachi-wish-confirm-backdrop {
+  position: fixed;
+  z-index: 80;
+  display: grid;
+  inset: 0;
+  padding: 20px;
+  background: rgba(7, 8, 20, 0.8);
+  place-items: center;
+  backdrop-filter: blur(8px);
+}
+
+.jirachi-wish-confirm {
+  display: grid;
+  width: min(100%, 480px);
+  padding: clamp(24px, 5vw, 38px);
+  justify-items: center;
+  gap: 12px;
+  color: #fff7ed;
+  background:
+    radial-gradient(circle at 50% 0, rgba(253, 224, 71, 0.2), transparent 46%),
+    linear-gradient(145deg, #431407, #111827);
+  border: 1px solid rgba(253, 224, 71, 0.58);
+  border-radius: 22px;
+  box-shadow: 0 28px 80px rgba(2, 6, 23, 0.66);
+  text-align: center;
+  animation: celebi-confirm-enter 240ms ease-out both;
+}
+
+.jirachi-wish-confirm > span {
+  color: #fde68a;
+  font-size: 2rem;
+  text-shadow: 0 0 22px currentColor;
+}
+
+.jirachi-wish-confirm h3 {
+  margin: 0;
+  font-size: clamp(1.35rem, 4vw, 2rem);
+}
+
+.jirachi-wish-confirm > div {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+  gap: 10px;
+}
+
+.jirachi-awakening-cinematic,
+.jirachi-blessing-cinematic {
+  position: fixed;
+  z-index: 112;
+  display: grid;
+  inset: 0;
+  overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(circle at center, rgba(251, 191, 36, 0.28), transparent 34%),
+    linear-gradient(145deg, rgba(18, 12, 38, 0.97), rgba(3, 7, 18, 0.98));
+  place-items: center;
+  isolation: isolate;
+  animation: jirachi-cinematic-screen 2.7s ease both;
+}
+
+.jirachi-awakening-cinematic .jirachi-cosmic-ring,
+.jirachi-blessing-cinematic .jirachi-cosmic-ring {
+  z-index: -1;
+}
+
+.jirachi-awakening-cinematic > img {
+  width: min(60vw, 280px);
+  object-fit: contain;
+  filter:
+    drop-shadow(0 0 30px rgba(253, 224, 71, 0.82))
+    drop-shadow(0 22px 24px rgba(2, 6, 23, 0.62));
+  animation: jirachi-descend 2.5s ease both;
+}
+
+.jirachi-awakening-cinematic > strong {
+  position: absolute;
+  bottom: 13vh;
+  color: #fff7ed;
+  font-size: clamp(1.7rem, 6vw, 4.2rem);
+  letter-spacing: 0.12em;
+  text-align: center;
+  text-shadow:
+    0 0 18px rgba(255, 255, 255, 0.55),
+    0 0 42px rgba(251, 191, 36, 0.76);
+  text-transform: uppercase;
+  animation: jirachi-copy-reveal 2.5s ease both;
+}
+
+.jirachi-blessing-pokemon {
+  display: grid;
+  grid-template-columns: minmax(130px, 230px) minmax(100px, 180px) minmax(150px, 280px);
+  align-items: center;
+  width: min(90vw, 820px);
+}
+
+.jirachi-blessing-pokemon img {
+  width: 100%;
+  object-fit: contain;
+}
+
+.jirachi-blessing-pokemon .is-jirachi {
+  filter: drop-shadow(0 0 30px rgba(253, 224, 71, 0.78));
+  animation: jirachi-blessing-source 2.7s ease both;
+}
+
+.jirachi-blessing-pokemon .is-target {
+  filter:
+    drop-shadow(0 0 32px rgba(255, 255, 255, 0.65))
+    drop-shadow(0 18px 18px rgba(2, 6, 23, 0.58));
+  animation: jirachi-blessing-target 2.7s ease both;
+}
+
+.jirachi-blessing-pokemon span {
+  height: 3px;
+  background: linear-gradient(90deg, #fde68a, #fff, #fb923c);
+  box-shadow: 0 0 20px #fbbf24;
+  transform-origin: left;
+  animation: celebi-wish-beam 2.7s ease both;
+}
+
+.jirachi-blessing-copy {
+  position: absolute;
+  bottom: clamp(34px, 8vh, 90px);
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  text-align: center;
+  text-transform: uppercase;
+  animation: jirachi-copy-reveal 2.7s ease both;
+}
+
+.jirachi-blessing-copy span {
+  color: #fde68a;
+  font-size: clamp(1.2rem, 4vw, 2.2rem);
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 26px rgba(251, 191, 36, 0.76);
+}
+
+.jirachi-blessing-copy strong {
+  font-size: clamp(2rem, 7vw, 4.8rem);
+  line-height: 1;
+  text-shadow:
+    0 0 18px rgba(255, 255, 255, 0.55),
+    0 0 42px rgba(251, 146, 60, 0.7);
+}
+
+.jirachi-blessing-copy small {
+  color: #fed7aa;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+@keyframes jirachi-star-fall {
+  0% { opacity: 0; transform: translate(-50px, -80px) scale(0.4); }
+  20%, 64% { opacity: 0.85; }
+  100% { opacity: 0; transform: translate(180px, 340px) scale(1.2); }
+}
+
+@keyframes jirachi-ring-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes jirachi-divine-float {
+  0%, 100% { transform: translateY(4px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes jirachi-cinematic-screen {
+  0% { opacity: 0; }
+  10%, 88% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes jirachi-descend {
+  0% { opacity: 0; transform: translateY(-140px) scale(0.72); }
+  42%, 82% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(10px) scale(1.08); }
+}
+
+@keyframes jirachi-copy-reveal {
+  0%, 44% { opacity: 0; transform: translateY(14px) scale(0.94); }
+  60%, 88% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; }
+}
+
+@keyframes jirachi-blessing-source {
+  0% { opacity: 0; transform: translateX(-40px) scale(0.8); }
+  22%, 80% { opacity: 1; transform: translateX(0) scale(1); }
+  100% { opacity: 0; transform: scale(1.08); }
+}
+
+@keyframes jirachi-blessing-target {
+  0%, 24% { opacity: 0; filter: brightness(0.5); transform: scale(0.78); }
+  58%, 86% { opacity: 1; filter: brightness(1.42); transform: scale(1.08); }
+  100% { opacity: 0; filter: brightness(1); transform: scale(1); }
+}
+
 .master-round-panel .eyebrow,
 .master-round-panel h2,
 .master-round-panel p {
@@ -7301,6 +7743,20 @@ h1 {
   color: #99f6e4;
 }
 
+.battle-ability-notification.is-jirachi-wish {
+  background:
+    linear-gradient(90deg, rgba(146, 64, 14, 0.96), rgba(30, 20, 55, 0.98));
+  border-color: rgba(253, 224, 71, 0.86);
+  box-shadow:
+    0 0 0 2px rgba(2, 6, 23, 0.76),
+    0 10px 28px rgba(2, 6, 23, 0.5),
+    0 0 28px rgba(251, 191, 36, 0.34);
+}
+
+.battle-ability-notification.is-jirachi-wish > span {
+  color: #fde68a;
+}
+
 .battle-ability-notification > span {
   color: #fde68a;
   font-size: 1.25rem;
@@ -8209,6 +8665,58 @@ h1 {
     bottom: 12vh;
   }
 
+  .jirachi-wish-panel {
+    padding: 22px 14px;
+  }
+
+  .jirachi-wish-header {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .jirachi-wish-source {
+    width: 120px;
+  }
+
+  .jirachi-wish-source img {
+    height: 120px;
+  }
+
+  .jirachi-wish-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .jirachi-wish-card {
+    padding: 10px 8px;
+  }
+
+  .jirachi-wish-card img {
+    height: 96px;
+  }
+
+  .jirachi-wish-confirm > div {
+    display: grid;
+    width: 100%;
+  }
+
+  .jirachi-wish-confirm .game-button {
+    width: 100%;
+  }
+
+  .jirachi-blessing-pokemon {
+    grid-template-columns: minmax(82px, 1fr) 54px minmax(105px, 1.2fr);
+    width: 94vw;
+  }
+
+  .jirachi-blessing-pokemon img {
+    height: 180px;
+  }
+
+  .jirachi-blessing-copy {
+    bottom: 12vh;
+  }
+
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -8309,6 +8817,20 @@ h1 {
   .celebi-wish-cinematic-pokemon .is-target,
   .celebi-wish-cinematic-pokemon span,
   .celebi-wish-cinematic-copy,
+  .jirachi-wish-stars i,
+  .jirachi-wish-source img,
+  .jirachi-constellation-ring,
+  .jirachi-wish-confirm,
+  .jirachi-awakening-cinematic,
+  .jirachi-blessing-cinematic,
+  .jirachi-cosmic-ring,
+  .jirachi-cinematic-stars i,
+  .jirachi-awakening-cinematic > img,
+  .jirachi-awakening-cinematic > strong,
+  .jirachi-blessing-pokemon .is-jirachi,
+  .jirachi-blessing-pokemon .is-target,
+  .jirachi-blessing-pokemon span,
+  .jirachi-blessing-copy,
   .battle-analysis-card,
   .battle-analysis-card::after,
   .battle-stage-final-score.is-visible {
@@ -8324,7 +8846,9 @@ h1 {
   }
 
   .celebi-wish-atmosphere i,
-  .celebi-wish-cinematic-particles {
+  .celebi-wish-cinematic-particles,
+  .jirachi-wish-stars,
+  .jirachi-cinematic-stars {
     display: none;
   }
 }
