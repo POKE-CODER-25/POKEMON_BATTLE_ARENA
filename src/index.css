@@ -3262,6 +3262,559 @@ h1 {
   border-radius: 50%;
 }
 
+.master-selection-arena {
+  position: relative;
+  display: grid;
+  min-height: min(76vh, 780px);
+  padding: clamp(34px, 7vw, 80px) clamp(18px, 5vw, 58px);
+  overflow: hidden;
+  align-content: center;
+  justify-items: center;
+  gap: clamp(26px, 5vw, 52px);
+  color: #fff7ed;
+  background:
+    radial-gradient(circle at 50% 54%, rgba(251, 191, 36, 0.2), transparent 24%),
+    radial-gradient(ellipse at 50% 112%, rgba(249, 115, 22, 0.72), transparent 48%),
+    linear-gradient(145deg, #020202, #140805 48%, #020202);
+  border: 1px solid rgba(251, 146, 60, 0.5);
+  border-radius: 24px;
+  box-shadow:
+    inset 0 0 110px rgba(127, 29, 29, 0.38),
+    0 0 52px rgba(249, 115, 22, 0.18);
+  isolation: isolate;
+}
+
+.master-selection-arena::before,
+.master-selection-arena::after {
+  position: absolute;
+  z-index: -1;
+  content: '';
+  pointer-events: none;
+}
+
+.master-selection-arena::before {
+  width: min(82vw, 720px);
+  aspect-ratio: 1;
+  border: 2px solid rgba(251, 191, 36, 0.4);
+  border-radius: 50%;
+  box-shadow:
+    0 0 46px rgba(249, 115, 22, 0.38),
+    0 0 86px rgba(234, 88, 12, 0.22),
+    inset 0 0 56px rgba(253, 224, 71, 0.14);
+  animation: master-selection-ring-pulse 2.3s ease-in-out infinite alternate;
+}
+
+.master-selection-arena::after {
+  inset: 0;
+  background:
+    linear-gradient(118deg, transparent 47%, rgba(251, 146, 60, 0.24) 48% 49%, transparent 50%),
+    linear-gradient(63deg, transparent 42%, rgba(253, 224, 71, 0.16) 43% 44%, transparent 45%),
+    linear-gradient(154deg, transparent 57%, rgba(239, 68, 68, 0.18) 58% 59%, transparent 60%);
+  opacity: 0.55;
+  animation: master-selection-cracks 1.8s ease-in-out infinite alternate;
+}
+
+.master-selection-header {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.master-selection-header p {
+  margin: 0;
+  color: #fb923c;
+  font-size: 0.72rem;
+  font-weight: 1000;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.master-selection-header h2 {
+  margin: 0;
+  color: #fff7ed;
+  font-size: clamp(2.2rem, 7vw, 5rem);
+  font-style: italic;
+  line-height: 0.95;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 22px rgba(255, 255, 255, 0.22),
+    0 0 38px rgba(251, 146, 60, 0.68),
+    0 0 70px rgba(234, 88, 12, 0.4);
+}
+
+.master-selection-header strong {
+  color: #fde68a;
+  font-size: clamp(0.9rem, 2vw, 1.16rem);
+}
+
+.master-selection-pokeballs {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: min(100%, 850px);
+  align-items: center;
+  justify-items: center;
+  gap: clamp(16px, 4vw, 42px);
+}
+
+.master-selection-pokeball {
+  display: grid;
+  min-width: 0;
+  padding: 16px 10px;
+  place-items: center;
+  gap: 16px;
+  color: #fde68a;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.master-selection-pokeball > span,
+.master-selection-locked-ball {
+  position: relative;
+  display: block;
+  width: clamp(130px, 19vw, 190px);
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: linear-gradient(
+    to bottom,
+    #f97316 0 43%,
+    #1c0a00 43% 57%,
+    #fff7ed 57%
+  );
+  border: clamp(7px, 1vw, 11px) solid #1c0a00;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 4px rgba(253, 224, 71, 0.68),
+    0 0 34px rgba(251, 146, 60, 0.78),
+    0 0 72px rgba(234, 88, 12, 0.46),
+    inset 0 0 30px rgba(255, 247, 237, 0.36);
+  animation: master-selection-ball-float 1.8s ease-in-out infinite alternate;
+  transition:
+    filter 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.master-selection-pokeball:nth-child(2) > span {
+  animation-delay: 180ms;
+}
+
+.master-selection-pokeball:nth-child(3) > span {
+  animation-delay: 360ms;
+}
+
+.master-selection-pokeball > span::before,
+.master-selection-locked-ball::before {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 29%;
+  aspect-ratio: 1;
+  content: '';
+  background: radial-gradient(circle, #fff7ed 0 34%, #fbbf24 35% 50%, #1c0a00 51%);
+  border: 5px solid #1c0a00;
+  border-radius: 50%;
+  box-shadow: 0 0 20px rgba(253, 224, 71, 0.88);
+  transform: translate(-50%, -50%);
+}
+
+.master-selection-pokeball > span i {
+  position: absolute;
+  inset: -28%;
+  background: conic-gradient(
+    transparent,
+    rgba(253, 224, 71, 0.64),
+    transparent 24%
+  );
+  animation: master-selection-ball-aura 2.2s linear infinite;
+}
+
+.master-selection-pokeball small {
+  color: #fed7aa;
+  font-size: 0.7rem;
+  font-weight: 1000;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.master-selection-pokeball:not(:disabled):hover > span,
+.master-selection-pokeball:focus-visible > span {
+  filter: brightness(1.16);
+  box-shadow:
+    0 0 0 5px rgba(254, 240, 138, 0.86),
+    0 0 48px rgba(251, 146, 60, 0.96),
+    0 0 92px rgba(234, 88, 12, 0.62),
+    inset 0 0 36px rgba(255, 247, 237, 0.48);
+  transform: translateY(-8px) scale(1.055);
+}
+
+.master-selection-preparing {
+  position: relative;
+  z-index: 2;
+  margin: 0;
+  color: #fed7aa;
+  font-weight: 800;
+}
+
+.master-selection-locked {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.master-selection-locked-choices {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(10px, 3vw, 24px);
+}
+
+.master-selection-locked-ball {
+  width: clamp(90px, 14vw, 132px);
+  animation: none;
+  transition:
+    filter 220ms ease,
+    opacity 220ms ease,
+    transform 220ms ease;
+}
+
+.master-selection-locked-ball.is-selected {
+  box-shadow:
+    0 0 0 5px rgba(254, 240, 138, 0.84),
+    0 0 58px rgba(251, 146, 60, 1),
+    0 0 112px rgba(234, 88, 12, 0.68),
+    inset 0 0 42px rgba(255, 247, 237, 0.5);
+  animation:
+    master-selection-locked-shake 620ms ease-out both,
+    master-selection-locked-glow 1.2s ease-in-out 620ms infinite alternate;
+}
+
+.master-selection-locked-ball.is-selected::after {
+  position: absolute;
+  inset: 13%;
+  content: '';
+  background:
+    linear-gradient(118deg, transparent 46%, #fff7ae 47% 50%, transparent 51%),
+    linear-gradient(62deg, transparent 44%, #fde047 45% 48%, transparent 49%),
+    linear-gradient(154deg, transparent 54%, #fff7ed 55% 58%, transparent 59%);
+  filter: drop-shadow(0 0 9px #fbbf24);
+}
+
+.master-selection-locked-ball.is-dimmed {
+  filter: grayscale(0.72) brightness(0.4);
+  opacity: 0.46;
+  transform: scale(0.86);
+}
+
+.master-selection-locked > strong {
+  color: #fde68a;
+  font-size: clamp(1.25rem, 3vw, 1.8rem);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.master-selection-locked > span {
+  color: #fed7aa;
+}
+
+.master-selection-flames {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.master-selection-flames i {
+  --flame-index: 0;
+  position: absolute;
+  left: calc(2% + var(--flame-index) * 5%);
+  bottom: -8%;
+  width: calc(4px + (var(--flame-index) % 3) * 2px);
+  height: calc(10px + (var(--flame-index) % 4) * 4px);
+  background: #fb923c;
+  border-radius: 60% 40% 60% 40%;
+  box-shadow:
+    0 0 10px #f97316,
+    0 0 20px #fde047;
+  opacity: 0;
+  animation: master-selection-flame-rise 2.7s ease-out var(--flame-delay)
+    infinite;
+}
+
+.master-selection-confirm-backdrop {
+  position: fixed;
+  z-index: 240;
+  display: grid;
+  inset: 0;
+  padding: 20px;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+}
+
+.master-selection-confirm {
+  display: grid;
+  width: min(100%, 480px);
+  padding: clamp(28px, 6vw, 48px);
+  place-items: center;
+  gap: 10px;
+  color: #fff7ed;
+  background:
+    radial-gradient(circle at 50% 0, rgba(251, 191, 36, 0.2), transparent 42%),
+    linear-gradient(145deg, #1c0a00, #020202);
+  border: 2px solid rgba(251, 146, 60, 0.76);
+  border-radius: 22px;
+  box-shadow:
+    0 0 46px rgba(249, 115, 22, 0.46),
+    inset 0 0 46px rgba(127, 29, 29, 0.26);
+  text-align: center;
+  animation: master-selection-confirm-in 320ms ease-out both;
+}
+
+.master-selection-confirm > span {
+  color: #fbbf24;
+  font-size: 2.4rem;
+  filter: drop-shadow(0 0 14px #f97316);
+}
+
+.master-selection-confirm p {
+  margin: 0;
+  color: #fb923c;
+  font-size: 0.7rem;
+  font-weight: 1000;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.master-selection-confirm h2 {
+  margin: 0;
+  color: #fde68a;
+  font-size: clamp(2rem, 7vw, 3.4rem);
+  text-transform: uppercase;
+}
+
+.master-selection-confirm > strong {
+  color: #fed7aa;
+}
+
+.master-selection-confirm > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+  margin-top: 18px;
+  gap: 12px;
+}
+
+.master-selection-confirm-button,
+.master-selection-cancel-button {
+  min-height: 52px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-weight: 1000;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.master-selection-confirm-button {
+  color: #1c0a00;
+  background: linear-gradient(135deg, #fde047, #f97316);
+  border: 1px solid #ffedd5;
+  box-shadow: 0 0 22px rgba(249, 115, 22, 0.5);
+}
+
+.master-selection-cancel-button {
+  color: #fed7aa;
+  background: rgba(28, 10, 0, 0.82);
+  border: 1px solid rgba(251, 146, 60, 0.42);
+}
+
+.master-selection-portal {
+  position: absolute;
+  z-index: 7;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  width: min(18vw, 150px);
+  aspect-ratio: 1;
+  place-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0.1);
+}
+
+.master-selection-portal span {
+  position: absolute;
+  inset: 0;
+  border: 5px solid #fde047;
+  border-radius: 50%;
+  box-shadow:
+    0 0 38px #f97316,
+    0 0 78px rgba(234, 88, 12, 0.78),
+    inset 0 0 34px #fbbf24;
+}
+
+.master-selection-portal span:nth-child(2) {
+  inset: 14%;
+  border-color: #fff7ed;
+}
+
+.master-selection-portal span:nth-child(3) {
+  inset: 31%;
+  background: #020202;
+  border-color: #fb923c;
+}
+
+.master-selection-arena.is-portal-active {
+  animation: master-selection-screen-shake 520ms ease-out both,
+    master-selection-screen-zoom 2.6s ease-in 520ms both;
+}
+
+.master-selection-arena.is-portal-active
+  .master-selection-locked-ball.is-selected {
+  animation: master-selection-ball-burst 720ms ease-in both;
+}
+
+.master-selection-arena.is-portal-active
+  .master-selection-portal {
+  animation: master-selection-portal-open 2.6s
+    cubic-bezier(0.16, 0.72, 0.2, 1) both;
+}
+
+@keyframes master-selection-ring-pulse {
+  to {
+    box-shadow:
+      0 0 62px rgba(249, 115, 22, 0.54),
+      0 0 108px rgba(234, 88, 12, 0.3),
+      inset 0 0 72px rgba(253, 224, 71, 0.2);
+    transform: scale(1.035);
+  }
+}
+
+@keyframes master-selection-cracks {
+  to {
+    opacity: 0.82;
+    filter: brightness(1.35);
+  }
+}
+
+@keyframes master-selection-ball-float {
+  to {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes master-selection-ball-aura {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes master-selection-locked-shake {
+  25% {
+    transform: translateX(-6px);
+  }
+
+  55% {
+    transform: translateX(6px);
+  }
+}
+
+@keyframes master-selection-locked-glow {
+  to {
+    filter: brightness(1.16);
+    transform: translateY(-6px) scale(1.025);
+  }
+}
+
+@keyframes master-selection-flame-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.5) rotate(0);
+  }
+
+  18% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-74vh) translateX(22px) scale(1.15)
+      rotate(170deg);
+  }
+}
+
+@keyframes master-selection-confirm-in {
+  from {
+    opacity: 0;
+    filter: brightness(1.8);
+    transform: translateY(14px) scale(0.92);
+  }
+}
+
+@keyframes master-selection-screen-shake {
+  20% {
+    transform: translate3d(-3px, 1px, 0);
+  }
+
+  45% {
+    transform: translate3d(3px, -1px, 0);
+  }
+}
+
+@keyframes master-selection-ball-burst {
+  45% {
+    filter: brightness(2.4);
+    transform: scale(1.1);
+  }
+
+  100% {
+    opacity: 0;
+    filter: brightness(3);
+    transform: scale(1.45);
+  }
+}
+
+@keyframes master-selection-portal-open {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.1) rotate(0);
+  }
+
+  24% {
+    opacity: 1;
+  }
+
+  72% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(3) rotate(220deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(8) rotate(360deg);
+  }
+}
+
+@keyframes master-selection-screen-zoom {
+  70% {
+    filter: brightness(1.18);
+  }
+
+  100% {
+    filter: brightness(0);
+  }
+}
+
 .battle-reveal-fighters {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -6192,6 +6745,36 @@ h1 {
     gap: 6px;
   }
 
+  .master-selection-arena {
+    min-height: 680px;
+    padding: 38px 14px;
+    gap: 28px;
+    border-radius: 18px;
+  }
+
+  .master-selection-pokeballs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .master-selection-pokeball {
+    padding-inline: 2px;
+  }
+
+  .master-selection-pokeball > span {
+    width: clamp(86px, 27vw, 118px);
+    border-width: 6px;
+  }
+
+  .master-selection-pokeball small {
+    font-size: 0.52rem;
+    letter-spacing: 0.08em;
+  }
+
+  .master-selection-confirm > div {
+    grid-template-columns: 1fr;
+  }
+
   .battle-analysis-sequence > header {
     align-items: flex-start;
     flex-direction: column;
@@ -6320,6 +6903,18 @@ h1 {
     .master-round-activation-button,
   .master-round-activation-screen.is-portal-active
     .master-round-portal,
+  .master-selection-arena::before,
+  .master-selection-arena::after,
+  .master-selection-pokeball > span,
+  .master-selection-pokeball > span i,
+  .master-selection-locked-ball,
+  .master-selection-flames i,
+  .master-selection-confirm,
+  .master-selection-arena.is-portal-active,
+  .master-selection-arena.is-portal-active
+    .master-selection-locked-ball,
+  .master-selection-arena.is-portal-active
+    .master-selection-portal,
   .battle-stage-matchup.is-master-round,
   .battle-stage-header.is-master-round::after,
   .battle-stage.is-master-round .battle-team-tracker.is-visible,

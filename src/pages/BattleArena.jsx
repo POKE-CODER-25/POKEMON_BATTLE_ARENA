@@ -246,6 +246,12 @@ function BattleArena({
   const [continueErrorMessage, setContinueErrorMessage] = useState('')
   const [isLockingMasterRound, setIsLockingMasterRound] =
     useState(false)
+  const [pendingMasterRoundOption, setPendingMasterRoundOption] =
+    useState(null)
+  const [
+    completedMasterSelectionPortalKey,
+    setCompletedMasterSelectionPortalKey,
+  ] = useState(null)
   const [masterRoundError, setMasterRoundError] = useState('')
   const [isActivatingMasterRound, setIsActivatingMasterRound] =
     useState(false)
@@ -458,6 +464,18 @@ function BattleArena({
   const bothMasterRoundPlayersSelected = Boolean(
     masterRoundSelection && opponentMasterRoundSelection,
   )
+  const masterSelectionPortalKey = bothMasterRoundPlayersSelected
+    ? [
+        masterRoundSelection.pokemonId,
+        opponentMasterRoundSelection.pokemonId,
+      ].join(':')
+    : null
+  const masterSelectionPortalComplete =
+    !bothMasterRoundPlayersSelected ||
+    completedMasterSelectionPortalKey === masterSelectionPortalKey
+  const isMasterSelectionPortalActive =
+    bothMasterRoundPlayersSelected &&
+    !masterSelectionPortalComplete
   const masterRoundResult = battleState?.masterRound?.result ?? null
   const bothRoundPlayersContinued = Boolean(
     room?.hostUid &&
@@ -730,7 +748,8 @@ function BattleArena({
   )
   const battleStageReady = Boolean(
     masterRoundResult
-      ? battlePhase === 'match_over'
+      ? battlePhase === 'match_over' &&
+          masterSelectionPortalComplete
       : bothPlayersLocked &&
           savedRoundResult &&
           hasRevealData &&
@@ -1350,6 +1369,29 @@ function BattleArena({
 
   useEffect(() => {
     if (
+      !isMasterSelectionPortalActive ||
+      completedMasterSelectionPortalKey === masterSelectionPortalKey
+    ) {
+      return undefined
+    }
+
+    const timer = window.setTimeout(
+      () =>
+        setCompletedMasterSelectionPortalKey(
+          masterSelectionPortalKey,
+        ),
+      2600,
+    )
+
+    return () => window.clearTimeout(timer)
+  }, [
+    completedMasterSelectionPortalKey,
+    isMasterSelectionPortalActive,
+    masterSelectionPortalKey,
+  ])
+
+  useEffect(() => {
+    if (
       battlePhase !== 'master_round_pending' ||
       !bothMasterRoundPlayersSelected ||
       masterRoundResult ||
@@ -1566,6 +1608,29 @@ function BattleArena({
     } finally {
       setIsLockingMasterRound(false)
     }
+  }
+
+  function handleMasterRoundOptionClick(option) {
+    if (
+      masterRoundSelection ||
+      isLockingMasterRound ||
+      !option?.pokemonId
+    ) {
+      return
+    }
+
+    setPendingMasterRoundOption(option)
+    setMasterRoundError('')
+  }
+
+  async function handleConfirmMasterRoundSelection() {
+    if (!pendingMasterRoundOption) {
+      return
+    }
+
+    const option = pendingMasterRoundOption
+    setPendingMasterRoundOption(null)
+    await handleMasterRoundSelection(option)
   }
 
   async function handleJirachiCopy(option) {
@@ -2092,28 +2157,69 @@ function BattleArena({
               </section>
             )}
 
-            {isMasterRoundPending && (
-              <section className="draft-state-panel master-round-panel">
-                <p className="eyebrow">MASTER ROUND</p>
-                <h2>
-                  Score tied 3 - 3. Choose one hidden Pok&eacute;ball.
-                </h2>
+            {(isMasterRoundPending ||
+              isMasterSelectionPortalActive) && (
+              <section
+                className={`master-selection-arena ${
+                  masterRoundSelection ? 'is-locked' : ''
+                } ${
+                  isMasterSelectionPortalActive
+                    ? 'is-portal-active'
+                    : ''
+                }`}
+                aria-labelledby="master-selection-title"
+              >
+                <div
+                  className="master-selection-flames"
+                  aria-hidden="true"
+                >
+                  {Array.from({ length: 20 }, (_, index) => (
+                    <i
+                      key={index}
+                      style={{
+                        '--flame-index': index,
+                        '--flame-delay': `${(index % 7) * 110}ms`,
+                      }}
+                    />
+                  ))}
+                </div>
+                <div
+                  className="master-selection-portal"
+                  aria-hidden="true"
+                >
+                  <span />
+                  <span />
+                  <span />
+                </div>
+
+                <header className="master-selection-header">
+                  <p>Final Destiny</p>
+                  <h2 id="master-selection-title">
+                    Master Round Selection
+                  </h2>
+                  <strong>
+                    Only one choice decides the match.
+                  </strong>
+                </header>
 
                 {!masterRoundSelection &&
                   masterRoundOptions.length === 3 && (
-                  <div className="master-round-pokeballs">
+                  <div className="master-selection-pokeballs">
                     {masterRoundOptions.map((option, index) => (
                       <button
-                        className="master-round-pokeball"
+                        className="master-selection-pokeball"
                         type="button"
                         key={`${option.pokemonId}-${index}`}
                         disabled={isLockingMasterRound}
                         aria-label={`Choose hidden Pokeball ${index + 1}`}
                         onClick={() =>
-                          handleMasterRoundSelection(option)
+                          handleMasterRoundOptionClick(option)
                         }
                       >
-                        <span aria-hidden="true" />
+                        <span aria-hidden="true">
+                          <i />
+                        </span>
+                        <small>Destiny {index + 1}</small>
                       </button>
                     ))}
                   </div>
@@ -2121,19 +2227,41 @@ function BattleArena({
 
                 {!masterRoundSelection &&
                   masterRoundOptions.length !== 3 && (
-                  <p>Preparing Master Round Pok&eacute;balls...</p>
+                  <p className="master-selection-preparing">
+                    Preparing final destiny Pok&eacute;balls...
+                  </p>
                 )}
 
-                {bothMasterRoundPlayersSelected ? (
-                  <p>
-                    Both trainers selected. Master Round reveal ready.
-                  </p>
-                ) : masterRoundSelection ? (
-                  <p>
-                    Master Round Pok&eacute;mon locked. Waiting for
-                    opponent...
-                  </p>
-                ) : null}
+                {masterRoundSelection && (
+                  <div className="master-selection-locked">
+                    <div className="master-selection-locked-choices">
+                      {masterRoundOptions.map((option, index) => (
+                        <div
+                          className={`master-selection-locked-ball ${
+                            String(option.pokemonId) ===
+                            String(masterRoundSelection.pokemonId)
+                              ? 'is-selected'
+                              : 'is-dimmed'
+                          }`}
+                          key={`${option.pokemonId}-${index}-locked`}
+                          aria-hidden="true"
+                        >
+                          <span />
+                        </div>
+                      ))}
+                    </div>
+                    <strong>
+                      {isMasterSelectionPortalActive
+                        ? 'Destinies Aligned'
+                        : 'Final Choice Locked'}
+                    </strong>
+                    <span>
+                      {isMasterSelectionPortalActive
+                        ? 'Entering the Master Round...'
+                        : 'Waiting for opponent...'}
+                    </span>
+                  </div>
+                )}
 
                 {masterRoundError && (
                   <p className="battle-lock-error" role="alert">
@@ -2143,8 +2271,52 @@ function BattleArena({
               </section>
             )}
 
+            {pendingMasterRoundOption && (
+              <div
+                className="master-selection-confirm-backdrop"
+                role="presentation"
+              >
+                <section
+                  className="master-selection-confirm"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="master-selection-confirm-title"
+                >
+                  <span aria-hidden="true">&#9876;</span>
+                  <p>Final Destiny</p>
+                  <h2 id="master-selection-confirm-title">
+                    Are You Sure?
+                  </h2>
+                  <strong>This choice decides the match.</strong>
+                  <div>
+                    <button
+                      className="master-selection-confirm-button"
+                      type="button"
+                      disabled={isLockingMasterRound}
+                      onClick={handleConfirmMasterRoundSelection}
+                    >
+                      {isLockingMasterRound
+                        ? 'Locking...'
+                        : 'Confirm Destiny'}
+                    </button>
+                    <button
+                      className="master-selection-cancel-button"
+                      type="button"
+                      disabled={isLockingMasterRound}
+                      onClick={() =>
+                        setPendingMasterRoundOption(null)
+                      }
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </section>
+              </div>
+            )}
+
             {!isMasterRoundPending &&
               !isMasterRoundActivationScreen &&
+              !isMasterSelectionPortalActive &&
               !showBattleStage &&
               !isBattleCountdownActive && (
               <section className="battle-arena-summary">
