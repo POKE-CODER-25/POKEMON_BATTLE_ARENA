@@ -452,6 +452,12 @@ function BattleArena({
     masterRoundSelection && opponentMasterRoundSelection,
   )
   const masterRoundResult = battleState?.masterRound?.result ?? null
+  const bothRoundPlayersContinued = Boolean(
+    room?.hostUid &&
+      room?.guestUid &&
+      battleState?.roundContinue?.[room.hostUid] &&
+      battleState?.roundContinue?.[room.guestUid],
+  )
   const postMatch = battleState?.postMatch ?? {
     playAgainRequests: {},
     returnedHome: {},
@@ -469,10 +475,12 @@ function BattleArena({
   const isSurrenderMatch = Boolean(battleState?.surrender)
   const opponentSurrendered =
     battleState?.surrender?.surrenderedBy === opponentUid
-  const isMasterRoundPending =
+  const masterRoundActivationReady =
     !masterRoundResult &&
     (battlePhase === 'master_round_pending' ||
-      battleState?.masterRound?.phase === 'choose_master_pokeball')
+      battleState?.masterRound?.phase === 'choose_master_pokeball') &&
+    bothRoundPlayersContinued
+  const isMasterRoundPending = masterRoundActivationReady
   const hostBattlefieldEffects =
     battleState?.battlefieldEffects?.[room?.hostUid] ??
     EMPTY_BATTLEFIELD_EFFECTS
@@ -555,6 +563,14 @@ function BattleArena({
   )
   const currentPlayerContinued = Boolean(
     battleState?.roundContinue?.[currentUser?.uid],
+  )
+  const isTiedNormalRoundAwaitingContinue = Boolean(
+    savedRoundResult &&
+      !masterRoundResult &&
+      battlePhase === 'master_round_pending' &&
+      hostScore === 3 &&
+      guestScore === 3 &&
+      !bothRoundPlayersContinued,
   )
   const savedPlayerAPokemonId =
     savedRoundResult?.playerAPokemon?.pokemonId ??
@@ -682,7 +698,7 @@ function BattleArena({
       : bothPlayersLocked &&
           savedRoundResult &&
           hasRevealData &&
-          !isMasterRoundPending,
+          !masterRoundActivationReady,
   )
   const isMasterRoundBattle = Boolean(
     masterRoundResult && hostScore === 3 && guestScore === 3,
@@ -1224,6 +1240,7 @@ function BattleArena({
 
     if (
       battlePhase !== 'master_round_pending' ||
+      !bothRoundPlayersContinued ||
       hasBothPlayersOptions ||
       masterRoundInitializationRef.current ||
       !room?.hostUid ||
@@ -1261,6 +1278,7 @@ function BattleArena({
     battlePhase,
     battleState?.jirachiCopies,
     battleState?.masterRound?.options,
+    bothRoundPlayersContinued,
     displayRoomCode,
     room?.guestUid,
     room?.hostUid,
@@ -1343,11 +1361,17 @@ function BattleArena({
   }
 
   async function handleContinueRound() {
+    const continuingToMasterRound =
+      battlePhase === 'master_round_pending' &&
+      hostScore === 3 &&
+      guestScore === 3
+
     if (
       !savedRoundResult ||
-      currentRound >= 6 ||
+      (currentRound >= 6 && !continuingToMasterRound) ||
       currentPlayerContinued ||
-      battlePhase !== 'round_result' ||
+      (battlePhase !== 'round_result' &&
+        !continuingToMasterRound) ||
       pendingCelebiWish ||
       isContinuingRound
     ) {
@@ -2096,6 +2120,7 @@ function BattleArena({
                 masterRound={isMasterRoundBattle}
                 showContinue={
                   hasFinalBattleResult ||
+                  isTiedNormalRoundAwaitingContinue ||
                   (Boolean(savedRoundResult) &&
                     battlePhase === 'round_result' &&
                     currentRound < 6)
@@ -2110,12 +2135,15 @@ function BattleArena({
                     ? 'Continuing...'
                     : pendingCelebiWish
                       ? 'Resolve Celebi Future Wish'
+                      : isTiedNormalRoundAwaitingContinue
+                        ? 'Continue to Master Round'
                       : 'Continue to Next Round'
                 }
                 currentPlayerContinued={
                   Boolean(savedRoundResult) &&
                   !hasFinalBattleResult &&
-                  battlePhase === 'round_result' &&
+                  (battlePhase === 'round_result' ||
+                    isTiedNormalRoundAwaitingContinue) &&
                   currentPlayerContinued
                 }
                 onContinue={

@@ -2470,6 +2470,14 @@ export async function continueBattleRound({
     const roundNumber = Number(expectedRound)
     const currentRound =
       battleState.currentRound ?? battleState.round ?? 1
+    const isMasterRoundContinuation =
+      battleState.phase === 'master_round_pending' &&
+      (battleState.playerScores?.[room.hostUid] ??
+        battleState.hostScore ??
+        0) === 3 &&
+      (battleState.playerScores?.[room.guestUid] ??
+        battleState.guestScore ??
+        0) === 3
 
     if (!room.players?.[playerUid]) {
       throw new Error('You are not a player in this room.')
@@ -2486,11 +2494,14 @@ export async function continueBattleRound({
       throw new Error('This battle round is no longer current.')
     }
 
-    if (roundNumber >= 6) {
+    if (roundNumber >= 6 && !isMasterRoundContinuation) {
       throw new Error('Normal rounds are already complete.')
     }
 
-    if (battleState.phase !== 'round_result') {
+    if (
+      battleState.phase !== 'round_result' &&
+      !isMasterRoundContinuation
+    ) {
       throw new Error('Normal round continuation is not available.')
     }
 
@@ -2514,6 +2525,19 @@ export async function continueBattleRound({
       Boolean(roundContinue[room.hostUid]) &&
       Boolean(roundContinue[room.guestUid])
     const timestamp = serverTimestamp()
+
+    if (isMasterRoundContinuation) {
+      transaction.update(battleStateReference, {
+        roundContinue,
+        updatedAt: timestamp,
+      })
+
+      return {
+        advanced: bothPlayersContinued,
+        currentRound: roundNumber,
+        masterRoundReady: bothPlayersContinued,
+      }
+    }
 
     if (bothPlayersContinued) {
       const nextRound = roundNumber + 1
