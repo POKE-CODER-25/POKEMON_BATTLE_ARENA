@@ -1,85 +1,82 @@
-const ANALYSIS_CARD_TYPES = [
+const CARD_DEFINITIONS = [
   {
     id: 'base',
     label: 'Base Power',
     icon: '\u2694',
-    matches: (log) => /^Base score:/i.test(log),
+    valueKeys: ['baseScore'],
   },
   {
     id: 'transformation',
-    label: 'Transformation',
+    label: 'Mega Bonus',
     icon: '\u2726',
-    matches: (log) =>
-      /mega evol|ash greninja|battle bond|transformed form/i.test(log),
+    valueKeys: ['formBonus'],
   },
   {
     id: 'type',
     label: 'Type Advantage',
     icon: '\u25c6',
-    matches: (log) => /type (bonus|advantage|effect)/i.test(log),
+    valueKeys: ['typeBonus'],
   },
   {
     id: 'trait',
     label: 'Trait Bonus',
     icon: '\u2605',
-    matches: (log) =>
-      /trait|aura|awakening|blaze|torrent|growth|determination|killer|wish|warp|priority/i.test(
-        log,
-      ),
+    valueKeys: ['traitBonus', 'protectedTraitBonus'],
   },
   {
     id: 'battlefield',
     label: 'Arena Effect',
     icon: '\u25ce',
-    matches: (log) => /battlefield|arena|field|weather|terrain/i.test(log),
+    valueKeys: ['battlefieldBonus'],
+    penaltyKeys: ['battlefieldPenalty'],
   },
 ]
 
-function getAnalysisValue(log) {
-  const valueMatch = log.match(
-    /([+-]\d+|\d+)(?:\s*\(protected\))?\.?$/i,
+function sumStateValues(state, keys = []) {
+  return keys.reduce(
+    (total, key) => total + (Number(state?.[key]) || 0),
+    0,
   )
-
-  return valueMatch?.[1] ?? ''
 }
 
-export function createBattleAnalysisCards(logs = []) {
-  const uniqueLogs = [...new Set(logs.filter(Boolean))]
-  const assignedLogs = new Set()
-  const cards = ANALYSIS_CARD_TYPES.map((type) => {
-    const entries = uniqueLogs
-      .filter((log) => type.matches(log))
-      .map((log) => {
-        assignedLogs.add(log)
+function getBaseScoreFromLogs(logs, playerIndex) {
+  const baseScores = logs
+    .map((log) => log.match(/^Base score:\s*(\d+)/i)?.[1])
+    .filter(Boolean)
 
-        return {
-          text: log,
-          value: getAnalysisValue(log),
+  return Number(baseScores[playerIndex]) || null
+}
+
+export function createFighterAnalysis({
+  state,
+  pokemon,
+  finalScore,
+  logs = [],
+  playerIndex = 0,
+}) {
+  const fallbackBaseScore =
+    Number(pokemon?.score) || getBaseScoreFromLogs(logs, playerIndex)
+
+  return CARD_DEFINITIONS.map((definition) => {
+    const positiveValue = sumStateValues(state, definition.valueKeys)
+    const penaltyValue = sumStateValues(state, definition.penaltyKeys)
+    const value =
+      definition.id === 'base'
+        ? Number(state?.baseScore) || fallbackBaseScore
+        : positiveValue - penaltyValue
+
+    return value
+      ? {
+          id: definition.id,
+          label: definition.label,
+          icon: definition.icon,
+          value,
         }
-      })
-
-    return entries.length > 0 ? { ...type, entries } : null
-  }).filter(Boolean)
-  const otherEntries = uniqueLogs
-    .filter(
-      (log) =>
-        !assignedLogs.has(log) &&
-        !/\bwins?\b|round draw|higher final score/i.test(log),
-    )
-    .slice(0, 3)
-    .map((log) => ({
-      text: log,
-      value: getAnalysisValue(log),
-    }))
-
-  if (otherEntries.length > 0) {
-    cards.push({
-      id: 'battle',
-      label: 'Battle Effect',
-      icon: '\u2727',
-      entries: otherEntries,
-    })
-  }
-
-  return cards.slice(0, 6)
+      : null
+  }).filter(Boolean).concat({
+    id: 'final',
+    label: 'Final Score',
+    icon: '\u2606',
+    value: Number(finalScore) || 0,
+  })
 }

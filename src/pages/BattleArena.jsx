@@ -8,7 +8,7 @@ import { resolveBattleRound } from '../data/battleRoundResolver.js'
 import { getJirachiCopyableTraits } from '../data/advancedTraitInteractionResolver.js'
 import { allBattlePokemon } from '../data/pokemonBattleData.js'
 import { getBattleArena } from '../data/battleArenas.js'
-import { createBattleAnalysisCards } from '../data/battlePresentation.js'
+import { createFighterAnalysis } from '../data/battlePresentation.js'
 import {
   getDisplayPokemonImage,
   getNormalPokemonImage,
@@ -259,13 +259,13 @@ function BattleArena({
     useState(null)
   const [transformationCinematicIndex, setTransformationCinematicIndex] =
     useState(null)
-  const [
-    transformationCinematicCompletedRound,
-    setTransformationCinematicCompletedRound,
-  ] = useState(null)
-  const [visibleAnalysisCardCount, setVisibleAnalysisCardCount] =
-    useState(0)
-  const [showFinalBattleScores, setShowFinalBattleScores] =
+  const [battleEntranceStep, setBattleEntranceStep] = useState(0)
+  const [battleTeamsVisible, setBattleTeamsVisible] = useState(false)
+  const [activeAnalysisSide, setActiveAnalysisSide] = useState(null)
+  const [battleNotification, setBattleNotification] = useState(null)
+  const [revealedScoreSides, setRevealedScoreSides] = useState([])
+  const [transformedSides, setTransformedSides] = useState([])
+  const [showScoreComparison, setShowScoreComparison] =
     useState(false)
   const [showBattleWinner, setShowBattleWinner] = useState(false)
   const [presentationCompletedRound, setPresentationCompletedRound] =
@@ -795,9 +795,6 @@ function BattleArena({
     opponentUid,
     revealedOpponentPokemon,
   ])
-  const transformationCinematicCompleted =
-    !transformationCinematicRequired ||
-    transformationCinematicCompletedRound === battleStageKey
   const activeTransformationEvent =
     transformationCinematicIndex === null
       ? null
@@ -805,7 +802,6 @@ function BattleArena({
   const isTransformationCinematicActive = Boolean(
     battleStageReady &&
       countdownCompletedRound === battleStageKey &&
-      !transformationCinematicCompleted &&
       activeTransformationEvent,
   )
   const showBattleStage =
@@ -875,9 +871,57 @@ function BattleArena({
   const battleStageResultText =
     masterRoundResult?.reason ?? revealReason
   const battleStageLogs = masterRoundResult?.logs ?? revealLogs
-  const battleAnalysisCards = useMemo(
-    () => createBattleAnalysisCards(battleStageLogs),
-    [battleStageLogs],
+  const battleStageYourState = masterRoundResult
+    ? null
+    : currentUserIsPlayerA
+      ? canonicalBattleResult?.playerAState
+      : canonicalBattleResult?.playerBState
+  const battleStageOpponentState = masterRoundResult
+    ? null
+    : currentUserIsPlayerA
+      ? canonicalBattleResult?.playerBState
+      : canonicalBattleResult?.playerAState
+  const fullBattleStageYourPokemon =
+    findSelectedPokemon(battleStageYourPokemon, allBattlePokemon) ??
+    battleStageYourPokemon
+  const fullBattleStageOpponentPokemon =
+    findSelectedPokemon(
+      battleStageOpponentPokemon,
+      allBattlePokemon,
+    ) ?? battleStageOpponentPokemon
+  const yourBattleAnalysis = useMemo(
+    () =>
+      createFighterAnalysis({
+        state: battleStageYourState,
+        pokemon: fullBattleStageYourPokemon,
+        finalScore: battleStageYourScore,
+        logs: battleStageLogs,
+        playerIndex: currentUserIsPlayerA ? 0 : 1,
+      }),
+    [
+      battleStageLogs,
+      battleStageYourScore,
+      battleStageYourState,
+      currentUserIsPlayerA,
+      fullBattleStageYourPokemon,
+    ],
+  )
+  const opponentBattleAnalysis = useMemo(
+    () =>
+      createFighterAnalysis({
+        state: battleStageOpponentState,
+        pokemon: fullBattleStageOpponentPokemon,
+        finalScore: battleStageOpponentScore,
+        logs: battleStageLogs,
+        playerIndex: currentUserIsPlayerA ? 1 : 0,
+      }),
+    [
+      battleStageLogs,
+      battleStageOpponentScore,
+      battleStageOpponentState,
+      currentUserIsPlayerA,
+      fullBattleStageOpponentPokemon,
+    ],
   )
 
   useEffect(() => {
@@ -913,98 +957,144 @@ function BattleArena({
       return undefined
     }
 
-    const timers = [
-      window.setTimeout(() => {
-        setVisibleAnalysisCardCount(0)
-        setShowFinalBattleScores(false)
-        setShowBattleWinner(false)
-        setTransformationCinematicIndex(null)
-      }, 0),
+    const timers = []
+    const schedule = (callback, delay) => {
+      timers.push(window.setTimeout(callback, delay))
+    }
+    const getTransformationIndex = (pokemon) =>
+      transformationEvents.findIndex((event) =>
+        isSamePokemonSelection(event.pokemon, pokemon),
+      )
+    const analyses = [
+      {
+        side: 'your',
+        pokemon: battleStageYourPokemon,
+        cards: yourBattleAnalysis,
+      },
+      {
+        side: 'opponent',
+        pokemon: battleStageOpponentPokemon,
+        cards: opponentBattleAnalysis,
+      },
     ]
-    const firstCardDelay = 650
-    const transformationStart = 1300
+
+    schedule(() => {
+      setBattleEntranceStep(0)
+      setBattleTeamsVisible(false)
+      setActiveAnalysisSide(null)
+      setBattleNotification(null)
+      setRevealedScoreSides([])
+      setTransformedSides([])
+      setShowScoreComparison(false)
+      setShowBattleWinner(false)
+      setTransformationCinematicIndex(null)
+    }, 0)
+
+    schedule(() => setBattleEntranceStep(1), 250)
+    schedule(() => setBattleEntranceStep(2), 1000)
+    schedule(() => setBattleTeamsVisible(true), 1750)
+
+    let cursor = 2450
+    const notificationDuration = 1050
+    const notificationGap = 160
     const transformationDuration = 1600
-    const hasTransformations =
-      transformationCinematicRequired && transformationEvents.length > 0
-    const remainingCardsStart = hasTransformations
-      ? transformationStart +
-        transformationEvents.length * transformationDuration +
-        120
-      : firstCardDelay + 700
 
-    if (battleAnalysisCards.length > 0) {
-      timers.push(
-        window.setTimeout(
-          () => setVisibleAnalysisCardCount(1),
-          firstCardDelay,
-        ),
+    analyses.forEach(({ side, pokemon, cards }) => {
+      const transformationIndex = transformationCinematicRequired
+        ? getTransformationIndex(pokemon)
+        : -1
+      const baseCard = cards.find((card) => card.id === 'base')
+      const remainingCards = cards.filter(
+        (card) => card.id !== 'base',
       )
-    }
 
-    if (hasTransformations) {
-      transformationEvents.forEach((_, index) => {
-        timers.push(
-          window.setTimeout(
-            () => setTransformationCinematicIndex(index),
-            transformationStart + index * transformationDuration,
-          ),
-        )
-      })
-      timers.push(
-        window.setTimeout(() => {
-          setTransformationCinematicCompletedRound(battleStageKey)
-          setTransformationCinematicIndex(null)
-        }, transformationStart +
-          transformationEvents.length * transformationDuration),
-      )
-    } else {
-      timers.push(
-        window.setTimeout(
+      schedule(() => setActiveAnalysisSide(side), cursor)
+
+      if (baseCard) {
+        schedule(
           () =>
-            setTransformationCinematicCompletedRound(battleStageKey),
-          0,
-        ),
-      )
-    }
+            setBattleNotification({
+              ...baseCard,
+              side,
+              key: `${side}-base`,
+            }),
+          cursor,
+        )
+        schedule(() => setBattleNotification(null), cursor + 900)
+        cursor += notificationDuration + notificationGap
+      }
 
-    for (
-      let index = battleAnalysisCards.length > 0 ? 1 : 0;
-      index < battleAnalysisCards.length;
-      index += 1
-    ) {
-      timers.push(
-        window.setTimeout(
-          () => setVisibleAnalysisCardCount(index + 1),
-          remainingCardsStart +
-            (index - (battleAnalysisCards.length > 0 ? 1 : 0)) * 700,
-        ),
-      )
-    }
+      if (transformationIndex >= 0) {
+        const event = transformationEvents[transformationIndex]
+        schedule(
+          () =>
+            setBattleNotification({
+              id: 'transformation-activation',
+              icon: '\u26a1',
+              label: event.succeeded
+                ? event.type === 'battle-bond'
+                  ? 'Battle Bond Activated'
+                  : 'Mega Evolution Activated'
+                : event.type === 'battle-bond'
+                  ? 'Battle Bond Failed'
+                  : 'Mega Evolution Failed',
+              side,
+              key: `${side}-transformation-activation`,
+            }),
+          cursor,
+        )
+        schedule(() => setBattleNotification(null), cursor + 900)
+        cursor += notificationDuration
+        schedule(
+          () => setTransformationCinematicIndex(transformationIndex),
+          cursor,
+        )
+        schedule(() => {
+          setTransformationCinematicIndex(null)
+          if (event.succeeded) {
+            setTransformedSides((current) => [...current, side])
+          }
+        }, cursor + transformationDuration)
+        cursor += transformationDuration + notificationGap
+      }
 
-    const cardsFinishedAt =
-      battleAnalysisCards.length <= 1
-        ? hasTransformations
-          ? remainingCardsStart
-          : firstCardDelay
-        : remainingCardsStart +
-          (battleAnalysisCards.length - 2) * 700
-    const scoreRevealAt = cardsFinishedAt + 650
-    const winnerRevealAt = scoreRevealAt + 950
-    const presentationCompleteAt = winnerRevealAt + 650
+      remainingCards.forEach((card) => {
+        schedule(
+          () =>
+            setBattleNotification({
+              ...card,
+              side,
+              key: `${side}-${card.id}`,
+            }),
+          cursor,
+        )
 
-    timers.push(
-      window.setTimeout(
-        () => setShowFinalBattleScores(true),
-        scoreRevealAt,
-      ),
-      window.setTimeout(
-        () => setShowBattleWinner(true),
-        winnerRevealAt,
-      ),
-      window.setTimeout(
-        () => setPresentationCompletedRound(battleStageKey),
-        presentationCompleteAt,
-      ),
+        if (card.id === 'final') {
+          schedule(
+            () =>
+              setRevealedScoreSides((current) => [
+                ...current,
+                side,
+              ]),
+            cursor,
+          )
+        }
+
+        schedule(() => setBattleNotification(null), cursor + 900)
+        cursor += notificationDuration + notificationGap
+      })
+
+      schedule(() => setActiveAnalysisSide(null), cursor)
+      cursor += 350
+    })
+
+    schedule(() => setShowScoreComparison(true), cursor)
+    cursor += 2400
+    schedule(() => setShowBattleWinner(true), cursor)
+    cursor += 750
+    schedule(
+      () => setPresentationCompletedRound(battleStageKey),
+      cursor,
     )
 
     return () => {
@@ -1013,11 +1103,14 @@ function BattleArena({
   }, [
     battleStageReady,
     battleStageKey,
-    battleAnalysisCards.length,
+    battleStageOpponentPokemon,
+    battleStageYourPokemon,
     countdownCompletedRound,
+    opponentBattleAnalysis,
     presentationCompletedRound,
     transformationCinematicRequired,
     transformationEvents,
+    yourBattleAnalysis,
   ])
 
   useEffect(() => {
@@ -1924,13 +2017,13 @@ function BattleArena({
                 opponentFinalScore={battleStageOpponentScore}
                 yourTransformation={
                   masterRoundResult ||
-                  !transformationCinematicCompleted
+                  !transformedSides.includes('your')
                     ? null
                     : yourTransformation
                 }
                 opponentTransformation={
                   masterRoundResult ||
-                  !transformationCinematicCompleted
+                  !transformedSides.includes('opponent')
                     ? null
                     : opponentTransformation
                 }
@@ -1986,9 +2079,12 @@ function BattleArena({
                   continueErrorMessage,
                 ]}
                 countdownBackdrop={isBattleCountdownActive}
-                analysisCards={battleAnalysisCards}
-                visibleAnalysisCardCount={visibleAnalysisCardCount}
-                showFinalScores={showFinalBattleScores}
+                entranceStep={battleEntranceStep}
+                teamsVisible={battleTeamsVisible}
+                activeAnalysisSide={activeAnalysisSide}
+                notification={battleNotification}
+                revealedScoreSides={revealedScoreSides}
+                showScoreComparison={showScoreComparison}
                 showWinner={showBattleWinner}
                 presentationComplete={
                   presentationCompletedRound === battleStageKey
