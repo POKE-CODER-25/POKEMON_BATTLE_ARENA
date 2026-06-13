@@ -306,11 +306,11 @@ function getTransformationPresentation(event) {
       bonus: 'Battle Bond Bonus',
     },
     'god-killer': {
-      title: 'God Killer',
-      activated: 'God Killer Awakened',
+      title: '\u2694 God Killer Awakening \u2694',
+      activated: 'God Killer Awakening',
       failed: 'God Killer Failed',
-      success: 'Legendary Form Awakened',
-      bonus: 'God Killer Bonus',
+      success: 'God Killer Awakened',
+      bonus: 'God Killer Awakened',
     },
     'sleeping-monster': {
       title: 'Sleeping Monster',
@@ -1573,8 +1573,6 @@ function BattleArena({
     let cursor = isMasterRoundBattle ? 2250 : 2450
     const notificationDuration = 1050
     const notificationGap = 160
-    const transformationDuration = 1600
-
     analyses.forEach(({ side, pokemon, cards }) => {
       const transformationIndex = transformationCinematicRequired
         ? getTransformationIndex(pokemon)
@@ -1606,6 +1604,12 @@ function BattleArena({
         const event = transformationEvents[transformationIndex]
         const transformationPresentation =
           getTransformationPresentation(event)
+        const transformationDuration =
+          event.type === 'god-killer'
+            ? event.succeeded
+              ? 3600
+              : 2800
+            : 1600
         schedule(
           () =>
             setBattleNotification({
@@ -1632,6 +1636,22 @@ function BattleArena({
           }
         }, cursor + transformationDuration)
         cursor += transformationDuration + notificationGap
+
+        if (event.type === 'god-killer' && !event.succeeded) {
+          schedule(
+            () =>
+              setBattleNotification({
+                id: 'god-killer-failure',
+                icon: '\u26a0',
+                label: 'God Killer Failed',
+                side,
+                key: `${side}-god-killer-failure`,
+              }),
+            cursor,
+          )
+          schedule(() => setBattleNotification(null), cursor + 1050)
+          cursor += notificationDuration + notificationGap
+        }
       }
 
       remainingCards.forEach((card) => {
@@ -3483,6 +3503,12 @@ function BattleArena({
                 ? 'is-success'
                 : 'is-failure'
             } is-${activeTransformationEvent.type} ${
+              activeTransformationEvent.type === 'god-killer'
+                ? activeTransformationEvent.pokemonName === 'Rayquaza'
+                  ? 'is-emerald-god'
+                  : 'is-light-devourer'
+                : ''
+            } ${
               isMasterRoundBattle ? 'is-master-round' : ''
             }`}
             role="status"
@@ -3490,6 +3516,28 @@ function BattleArena({
             aria-label={`${getTransformationPresentation(activeTransformationEvent).title} ${activeTransformationEvent.succeeded ? 'succeeded' : 'failed'} for ${activeTransformationEvent.pokemonName}`}
             key={`${battleStageKey}-${transformationCinematicIndex}`}
           >
+            {activeTransformationEvent.type === 'god-killer' && (
+              <>
+                <div
+                  className="god-killer-distortion"
+                  aria-hidden="true"
+                >
+                  <span />
+                  <span />
+                  <span />
+                </div>
+                <div className="god-killer-cracks" aria-hidden="true">
+                  {Array.from({ length: 8 }, (_, index) => (
+                    <i key={index} />
+                  ))}
+                </div>
+                <div className="god-killer-storm" aria-hidden="true">
+                  {Array.from({ length: 14 }, (_, index) => (
+                    <i key={index} />
+                  ))}
+                </div>
+              </>
+            )}
             <div className="mega-cinematic-energy" aria-hidden="true" />
             <p className="mega-cinematic-title">
               {
@@ -3545,6 +3593,14 @@ function BattleArena({
                     : 'Mega Form')}
               </span>
             )}
+            {activeTransformationEvent.type === 'god-killer' &&
+              !activeTransformationEvent.succeeded && (
+                <span className="god-killer-rejection">
+                  {activeTransformationEvent.pokemonName === 'Necrozma'
+                    ? 'Divine Ascension Failed'
+                    : 'God Killer Rejected'}
+                </span>
+              )}
           </div>
           <div className="mega-cinematic-name">
             <strong>
