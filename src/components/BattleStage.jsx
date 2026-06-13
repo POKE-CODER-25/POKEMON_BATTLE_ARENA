@@ -163,7 +163,7 @@ function Fighter({
         <span
           className={`battle-stage-score ${
             scoreVisible ? 'is-revealed' : 'is-hidden'
-          }`}
+          } ${outcome === 'winner' ? 'is-winning-score' : ''}`}
         >
           <small>Final Score</small>
           <b>
@@ -201,6 +201,33 @@ function BattleNotification({ notification }) {
   )
 }
 
+function VictoryCelebration({ arenaId, winnerSide, active }) {
+  if (!active || !winnerSide) {
+    return null
+  }
+
+  return (
+    <div
+      className={`battle-victory-celebration is-${arenaId} is-${winnerSide}`}
+      aria-hidden="true"
+    >
+      <div className="battle-victory-spotlight" />
+      <div className="battle-victory-burst">
+        {Array.from({ length: 14 }, (_, index) => (
+          <i
+            key={index}
+            style={{
+              '--burst-index': index,
+              '--burst-angle': `${index * 25.7}deg`,
+              '--burst-delay': `${(index % 5) * 70}ms`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function BattleStage({
   roundNumber,
   yourTrainerScore,
@@ -232,6 +259,7 @@ function BattleStage({
   revealedScoreSides = [],
   showScoreComparison = false,
   showWinner = false,
+  showVictoryCelebration = false,
   presentationComplete = false,
 }) {
   const yourOutcome = showWinner && winnerPokemon
@@ -244,6 +272,12 @@ function BattleStage({
       ? 'winner'
       : 'loser'
     : ''
+  const winnerSide =
+    yourOutcome === 'winner'
+      ? 'your'
+      : opponentOutcome === 'winner'
+        ? 'opponent'
+        : null
   const arenaUiVisible = !countdownBackdrop
 
   return (
@@ -303,6 +337,7 @@ function BattleStage({
                 entranceStep >= 2 ? 'is-visible' : ''
               } ${
                 showScoreComparison ? 'is-comparison' : ''
+              } ${showWinner ? 'is-victory-react' : ''
               }`}
               aria-label="versus"
             >
@@ -333,13 +368,18 @@ function BattleStage({
               visible={teamsVisible}
             />
             <BattleNotification notification={notification} />
+            <VictoryCelebration
+              arenaId={arena.id}
+              winnerSide={winnerSide}
+              active={showVictoryCelebration}
+            />
             <div
               className={`battle-stage-result is-arena-result ${
                 showWinner ? 'is-visible' : ''
               }`}
               aria-hidden={!showWinner}
             >
-              <span>Winner</span>
+              <span>Round Winner</span>
               <strong>
                 {winnerPokemon
                   ? getPokemonName(winnerPokemon)

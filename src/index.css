@@ -4096,6 +4096,17 @@ h1 {
   animation: battle-score-pop 520ms ease-out both;
 }
 
+.battle-stage-score.is-winning-score {
+  border: 1px solid rgba(253, 224, 71, 0.92);
+  background:
+    radial-gradient(circle at 50% 0, rgba(253, 224, 71, 0.22), transparent 70%),
+    rgba(15, 23, 42, 0.82);
+  box-shadow:
+    0 0 0 2px rgba(146, 64, 14, 0.28),
+    0 0 24px rgba(251, 191, 36, 0.52);
+  animation: battle-winning-score-pulse 900ms ease-in-out infinite alternate;
+}
+
 .battle-stage-winner-badge {
   position: absolute;
   z-index: 3;
@@ -4116,10 +4127,11 @@ h1 {
 
 .battle-stage-fighter.is-winner img {
   filter:
-    brightness(1.1)
-    saturate(1.08)
-    drop-shadow(0 0 22px rgba(251, 191, 36, 0.62))
+    brightness(1.18)
+    saturate(1.12)
+    drop-shadow(0 0 28px rgba(251, 191, 36, 0.76))
     drop-shadow(0 20px 16px rgba(2, 6, 23, 0.58));
+  animation: battle-winner-float 1.5s ease-in-out infinite alternate;
 }
 
 .battle-stage-fighter.is-winner .battle-stage-fighter-identity {
@@ -4129,10 +4141,24 @@ h1 {
     0 12px 30px rgba(2, 6, 23, 0.38);
 }
 
+.battle-stage-fighter.is-winner::before {
+  border-color: rgba(254, 240, 138, 0.9);
+  background: radial-gradient(
+    circle,
+    rgba(253, 224, 71, 0.3),
+    rgba(59, 130, 246, 0.12) 48%,
+    transparent 70%
+  );
+  box-shadow:
+    0 0 72px rgba(251, 191, 36, 0.58),
+    inset 0 0 46px rgba(254, 240, 138, 0.26);
+  animation: battle-winner-spotlight-pulse 1.2s ease-in-out infinite alternate;
+}
+
 .battle-stage-fighter.is-loser img {
   filter:
-    brightness(0.78)
-    saturate(0.82)
+    brightness(0.64)
+    saturate(0.72)
     drop-shadow(0 20px 16px rgba(2, 6, 23, 0.58));
 }
 
@@ -4491,6 +4517,112 @@ h1 {
   vertical-align: middle;
 }
 
+.battle-stage-versus.is-victory-react {
+  animation: battle-vs-victory-react 760ms ease-out both;
+}
+
+.battle-stage-versus.is-comparison.is-victory-react {
+  animation: battle-vs-comparison-react 760ms ease-out both;
+}
+
+.battle-victory-celebration {
+  --victory-primary: #fde047;
+  --victory-secondary: #60a5fa;
+  position: absolute;
+  z-index: 6;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.battle-victory-spotlight {
+  position: absolute;
+  top: -18%;
+  bottom: 8%;
+  width: 44%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.26),
+    color-mix(in srgb, var(--victory-primary) 22%, transparent) 58%,
+    transparent
+  );
+  clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%);
+  filter: blur(4px);
+  opacity: 0;
+  animation: battle-victory-spotlight-in 1.8s ease-out both;
+}
+
+.battle-victory-celebration.is-your .battle-victory-spotlight {
+  left: 7%;
+}
+
+.battle-victory-celebration.is-opponent .battle-victory-spotlight {
+  right: 7%;
+}
+
+.battle-victory-burst {
+  position: absolute;
+  top: 42%;
+  width: 38%;
+  aspect-ratio: 1;
+}
+
+.battle-victory-celebration.is-your .battle-victory-burst {
+  left: 10%;
+}
+
+.battle-victory-celebration.is-opponent .battle-victory-burst {
+  right: 10%;
+}
+
+.battle-victory-burst i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  background: var(--victory-primary);
+  border-radius: 50%;
+  box-shadow:
+    0 0 10px var(--victory-primary),
+    0 0 18px var(--victory-secondary);
+  opacity: 0;
+  transform: rotate(var(--burst-angle)) translateX(20px);
+  animation: battle-victory-particle 1.45s ease-out var(--burst-delay) both;
+}
+
+.battle-victory-celebration.is-inferno-colosseum {
+  --victory-primary: #fb923c;
+  --victory-secondary: #ef4444;
+}
+
+.battle-victory-celebration.is-inferno-colosseum .battle-victory-burst i {
+  width: 5px;
+  height: 11px;
+  border-radius: 60% 40% 60% 40%;
+}
+
+.battle-victory-celebration.is-crystal-cavern {
+  --victory-primary: #a5f3fc;
+  --victory-secondary: #c4b5fd;
+}
+
+.battle-victory-celebration.is-crystal-cavern .battle-victory-burst i {
+  border-radius: 1px;
+  transform: rotate(calc(var(--burst-angle) + 45deg)) translateX(20px);
+}
+
+.battle-victory-celebration.is-moonlit-forest-shrine {
+  --victory-primary: #93c5fd;
+  --victory-secondary: #818cf8;
+}
+
+.battle-victory-celebration.is-celestial-sky-temple,
+.battle-victory-celebration.is-royal-champion-stadium {
+  --victory-primary: #fde68a;
+  --victory-secondary: #fbbf24;
+}
+
 .battle-ability-notification {
   position: absolute;
   z-index: 7;
@@ -4653,6 +4785,79 @@ h1 {
     box-shadow:
       0 0 44px rgba(255, 212, 71, 0.3),
       0 14px 34px rgba(2, 6, 23, 0.3);
+  }
+}
+
+@keyframes battle-winner-float {
+  to {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes battle-winner-spotlight-pulse {
+  to {
+    box-shadow:
+      0 0 88px rgba(251, 191, 36, 0.7),
+      inset 0 0 54px rgba(254, 240, 138, 0.34);
+    transform: scale(1.045);
+  }
+}
+
+@keyframes battle-winning-score-pulse {
+  to {
+    box-shadow:
+      0 0 0 2px rgba(146, 64, 14, 0.36),
+      0 0 34px rgba(251, 191, 36, 0.72);
+    transform: scale(1.04);
+  }
+}
+
+@keyframes battle-vs-victory-react {
+  40% {
+    filter: brightness(1.6);
+    transform: translateY(-82px) scale(1.12);
+  }
+}
+
+@keyframes battle-vs-comparison-react {
+  40% {
+    filter: brightness(1.55);
+    box-shadow:
+      0 0 64px rgba(251, 191, 36, 0.52),
+      inset 0 0 32px rgba(96, 165, 250, 0.28);
+    transform: translateY(-82px) scale(1.06);
+  }
+}
+
+@keyframes battle-victory-spotlight-in {
+  0% {
+    opacity: 0;
+  }
+
+  22%,
+  78% {
+    opacity: 0.72;
+  }
+
+  100% {
+    opacity: 0.38;
+  }
+}
+
+@keyframes battle-victory-particle {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--burst-angle)) translateX(12px) scale(0.4);
+  }
+
+  18% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: rotate(var(--burst-angle)) translateX(clamp(90px, 13vw, 180px))
+      scale(1.1);
   }
 }
 
@@ -5154,6 +5359,22 @@ h1 {
     width: auto;
   }
 
+  .battle-stage-result.is-arena-result {
+    top: 3%;
+    width: calc(100% - 28px);
+  }
+
+  .battle-victory-burst {
+    top: 32%;
+    width: 72%;
+  }
+
+  .battle-victory-celebration.is-your .battle-victory-burst,
+  .battle-victory-celebration.is-opponent .battle-victory-burst {
+    right: 14%;
+    left: 14%;
+  }
+
   .battle-stage-header {
     align-items: flex-start;
     flex-direction: column;
@@ -5274,7 +5495,14 @@ h1 {
   .battle-team-tracker.is-visible,
   .battle-ability-notification,
   .battle-stage-versus.is-comparison,
+  .battle-stage-versus.is-victory-react,
+  .battle-stage-versus.is-comparison.is-victory-react,
   .battle-stage-score.is-revealed,
+  .battle-stage-score.is-winning-score,
+  .battle-stage-fighter.is-winner img,
+  .battle-stage-fighter.is-winner::before,
+  .battle-victory-spotlight,
+  .battle-victory-burst i,
   .battle-analysis-card,
   .battle-analysis-card::after,
   .battle-stage-final-score.is-visible {

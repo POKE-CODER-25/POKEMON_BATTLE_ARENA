@@ -268,6 +268,8 @@ function BattleArena({
   const [showScoreComparison, setShowScoreComparison] =
     useState(false)
   const [showBattleWinner, setShowBattleWinner] = useState(false)
+  const [showVictoryCelebration, setShowVictoryCelebration] =
+    useState(false)
   const [presentationCompletedRound, setPresentationCompletedRound] =
     useState(null)
   const masterRoundInitializationRef = useRef(false)
@@ -987,6 +989,7 @@ function BattleArena({
       setTransformedSides([])
       setShowScoreComparison(false)
       setShowBattleWinner(false)
+      setShowVictoryCelebration(false)
       setTransformationCinematicIndex(null)
     }, 0)
 
@@ -1091,7 +1094,8 @@ function BattleArena({
     schedule(() => setShowScoreComparison(true), cursor)
     cursor += 2400
     schedule(() => setShowBattleWinner(true), cursor)
-    cursor += 750
+    schedule(() => setShowVictoryCelebration(true), cursor + 900)
+    cursor += 2600
     schedule(
       () => setPresentationCompletedRound(battleStageKey),
       cursor,
@@ -2086,6 +2090,7 @@ function BattleArena({
                 revealedScoreSides={revealedScoreSides}
                 showScoreComparison={showScoreComparison}
                 showWinner={showBattleWinner}
+                showVictoryCelebration={showVictoryCelebration}
                 presentationComplete={
                   presentationCompletedRound === battleStageKey
                 }
