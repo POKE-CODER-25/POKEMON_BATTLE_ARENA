@@ -60,17 +60,71 @@ function getTransformationEvents({
   logs = [],
   playerAPokemon,
   playerBPokemon,
+  playerATransformedForm,
+  playerBTransformedForm,
+  isMasterRound = false,
 }) {
   const events = []
   const eventKeys = new Set()
   const battlePokemon = [playerAPokemon, playerBPokemon]
+  const getEventType = (source, transformedForm) => {
+    const normalizedSource = source.toLowerCase()
+    const normalizedForm = transformedForm.toLowerCase()
+
+    if (
+      normalizedSource.includes('ash greninja') ||
+      normalizedSource.includes('battle bond') ||
+      normalizedForm === 'ash greninja'
+    ) {
+      return 'battle-bond'
+    }
+
+    if (
+      normalizedSource.includes('god killer') ||
+      normalizedForm === 'mega rayquaza' ||
+      normalizedForm === 'ultra necrozma'
+    ) {
+      return 'god-killer'
+    }
+
+    if (
+      normalizedSource.includes('sleeping monster') ||
+      normalizedForm === 'gigantamax snorlax'
+    ) {
+      return 'sleeping-monster'
+    }
+
+    return 'mega'
+  }
+  const getFallbackAmount = (type, pokemon) => {
+    if (type === 'battle-bond') {
+      return isMasterRound ? 6 : 3
+    }
+
+    if (type === 'god-killer') {
+      return 20
+    }
+
+    if (type === 'sleeping-monster') {
+      return isMasterRound ? 25 : 20
+    }
+
+    return getTransformationFormForPokemon(pokemon) ? 3 : 0
+  }
 
   const addEvent = (event) => {
     const key = `${event.type}:${event.pokemonName.toLowerCase()}`
 
     if (!eventKeys.has(key)) {
       eventKeys.add(key)
-      events.push(event)
+      events.push({
+        ...event,
+        amount:
+          Number(event.amount) ||
+          (event.succeeded
+            ? getFallbackAmount(event.type, event.pokemon)
+            : 0),
+      })
     }
   }
 
@@ -78,17 +132,19 @@ function getTransformationEvents({
     const source = String(effect?.source ?? '')
     const trait = String(effect?.trait ?? '')
     const transformedForm = String(effect?.transformedForm ?? '')
-    const isMegaEvolution =
-      source.toLowerCase().includes('mega evolution') ||
-      trait.toLowerCase().includes('mega evolution')
-    const isBattleBond =
-      source.toLowerCase().includes('ash greninja') ||
-      source.toLowerCase().includes('battle bond') ||
-      trait.toLowerCase().includes('ash greninja') ||
-      trait.toLowerCase().includes('battle bond') ||
-      transformedForm.toLowerCase() === 'ash greninja'
+    const effectIdentity = `${source} ${trait} ${transformedForm}`.toLowerCase()
+    const isTransformation = [
+      'mega evolution',
+      'ash greninja',
+      'battle bond',
+      'god killer',
+      'sleeping monster',
+      'mega rayquaza',
+      'ultra necrozma',
+      'gigantamax snorlax',
+    ].some((identity) => effectIdentity.includes(identity))
 
-    if (!isMegaEvolution && !isBattleBond) {
+    if (!isTransformation) {
       return
     }
 
@@ -100,11 +156,12 @@ function getTransformationEvents({
         : playerBPokemon)
 
     addEvent({
-      type: isMegaEvolution ? 'mega' : 'battle-bond',
+      type: getEventType(`${source} ${trait}`, transformedForm),
       pokemon,
       pokemonName: getPokemonName(pokemon),
       image: getNormalPokemonImage(pokemon),
       succeeded: Boolean(effect.applied),
+      amount: effect.amount,
       transformedForm:
         effect.transformedForm ??
         (effect.applied
@@ -124,42 +181,177 @@ function getTransformationEvents({
     const battleBondFailureMatch = log.match(
       /^(.+?) failed to become Ash Greninja\.?$/i,
     )
+    const godKillerSuccessMatch = log.match(
+      /^God Killer awakened (Mega Rayquaza|Ultra Necrozma)\.?$/i,
+    )
+    const godKillerFailureMatch = log.match(/^God Killer failed\.?$/i)
+    const sleepingMonsterSuccessMatch = log.match(
+      /^Sleeping Monster awakened\.?$/i,
+    )
+    const sleepingMonsterFailureMatch = log.match(
+      /^Sleeping Monster stayed asleep\.?$/i,
+    )
     const match =
       megaSuccessMatch ??
       megaFailureMatch ??
       battleBondSuccessMatch ??
-      battleBondFailureMatch
+      battleBondFailureMatch ??
+      godKillerSuccessMatch ??
+      godKillerFailureMatch ??
+      sleepingMonsterSuccessMatch ??
+      sleepingMonsterFailureMatch
 
     if (!match) {
       return
     }
 
-    const pokemonName = match[1]
-    const pokemon = battlePokemon.find(
-      (candidate) =>
-        getPokemonName(candidate).toLowerCase() ===
-        pokemonName.toLowerCase(),
+    const transformedForm = godKillerSuccessMatch?.[1] ?? null
+    const expectedPokemonName =
+      transformedForm === 'Mega Rayquaza'
+        ? 'Rayquaza'
+        : transformedForm === 'Ultra Necrozma'
+          ? 'Necrozma'
+          : sleepingMonsterSuccessMatch ||
+              sleepingMonsterFailureMatch
+            ? 'Snorlax'
+            : null
+    const pokemonName =
+      megaSuccessMatch?.[1] ??
+      megaFailureMatch?.[1] ??
+      battleBondSuccessMatch?.[1] ??
+      battleBondFailureMatch?.[1] ??
+      expectedPokemonName
+    const eligibleGodKillers = battlePokemon.filter((candidate) =>
+      ['Rayquaza', 'Necrozma'].includes(getPokemonName(candidate)),
+    )
+    const pokemon =
+      battlePokemon.find(
+        (candidate) =>
+          getPokemonName(candidate).toLowerCase() ===
+          pokemonName?.toLowerCase(),
+      ) ??
+      (godKillerFailureMatch
+        ? eligibleGodKillers.find(
+            (candidate) =>
+              !eventKeys.has(
+                `god-killer:${getPokemonName(candidate).toLowerCase()}`,
+              ),
+          )
+        : null)
+
+    if (!pokemon) {
+      return
+    }
+
+    const type =
+      battleBondSuccessMatch || battleBondFailureMatch
+        ? 'battle-bond'
+        : godKillerSuccessMatch || godKillerFailureMatch
+          ? 'god-killer'
+          : sleepingMonsterSuccessMatch ||
+              sleepingMonsterFailureMatch
+            ? 'sleeping-monster'
+            : 'mega'
+    const succeeded = Boolean(
+      megaSuccessMatch ||
+      battleBondSuccessMatch ||
+      godKillerSuccessMatch ||
+      sleepingMonsterSuccessMatch,
     )
 
     addEvent({
-      type:
-        megaSuccessMatch || megaFailureMatch
-          ? 'mega'
-          : 'battle-bond',
+      type,
       pokemon,
-      pokemonName,
+      pokemonName: getPokemonName(pokemon),
       image: getNormalPokemonImage(pokemon),
-      succeeded: Boolean(
-        megaSuccessMatch || battleBondSuccessMatch,
-      ),
+      succeeded,
       transformedForm:
-        megaSuccessMatch || battleBondSuccessMatch
-          ? getTransformationFormForPokemon(pokemon)
+        succeeded
+          ? transformedForm ??
+            getTransformationFormForPokemon(pokemon)
           : null,
     })
   })
 
+  ;[
+    [playerAPokemon, playerATransformedForm],
+    [playerBPokemon, playerBTransformedForm],
+  ].forEach(([pokemon, transformedForm]) => {
+    if (!pokemon || !transformedForm) {
+      return
+    }
+
+    addEvent({
+      type: getEventType('', transformedForm),
+      pokemon,
+      pokemonName: getPokemonName(pokemon),
+      image: getNormalPokemonImage(pokemon),
+      succeeded: true,
+      transformedForm,
+    })
+  })
+
   return events
+}
+
+function getTransformationPresentation(event) {
+  const presentations = {
+    'battle-bond': {
+      title: 'Battle Bond',
+      activated: 'Battle Bond Activated',
+      failed: 'Battle Bond Failed',
+      success: 'Ash-Greninja Awakened',
+      bonus: 'Battle Bond Bonus',
+    },
+    'god-killer': {
+      title: 'God Killer',
+      activated: 'God Killer Awakened',
+      failed: 'God Killer Failed',
+      success: 'Legendary Form Awakened',
+      bonus: 'God Killer Bonus',
+    },
+    'sleeping-monster': {
+      title: 'Sleeping Monster',
+      activated: 'Sleeping Monster Awakened',
+      failed: 'Sleeping Monster Stayed Asleep',
+      success: 'Gigantamax Awakened',
+      bonus: 'G-Max Bonus',
+    },
+    mega: {
+      title: 'Mega Evolution',
+      activated: 'Mega Evolution Activated',
+      failed: 'Mega Evolution Failed',
+      success: 'Mega Evolution Success',
+      bonus: 'Mega Bonus',
+    },
+  }
+
+  return presentations[event?.type] ?? presentations.mega
+}
+
+function addTransformationAnalysisCard(cards, event) {
+  if (
+    !event?.succeeded ||
+    !event.amount ||
+    cards.some((card) => card.id === 'transformation')
+  ) {
+    return cards
+  }
+
+  const baseCardIndex = cards.findIndex((card) => card.id === 'base')
+  const insertIndex = baseCardIndex >= 0 ? baseCardIndex + 1 : 0
+  const transformationCard = {
+    id: 'transformation',
+    label: getTransformationPresentation(event).bonus,
+    icon: '\u2726',
+    value: event.amount,
+  }
+
+  return [
+    ...cards.slice(0, insertIndex),
+    transformationCard,
+    ...cards.slice(insertIndex),
+  ]
 }
 
 function findSelectedPokemon(selection, team = []) {
@@ -858,17 +1050,29 @@ function BattleArena({
   const transformationEvents = useMemo(
     () =>
       getTransformationEvents({
-        appliedEffects: canonicalBattleResult?.appliedEffects,
-        logs: revealLogs,
+        appliedEffects:
+          masterRoundResult?.appliedEffects ??
+          canonicalBattleResult?.appliedEffects,
+        logs: masterRoundResult?.logs ?? revealLogs,
         playerAPokemon:
+          masterRoundResult?.playerAPokemon ??
           savedRoundResult?.playerAPokemon ??
           canonicalBattleResult?.playerAState?.pokemon,
         playerBPokemon:
+          masterRoundResult?.playerBPokemon ??
           savedRoundResult?.playerBPokemon ??
           canonicalBattleResult?.playerBState?.pokemon,
+        playerATransformedForm:
+          masterRoundResult?.playerATransformedForm ??
+          masterRoundResult?.playerAState?.transformedForm,
+        playerBTransformedForm:
+          masterRoundResult?.playerBTransformedForm ??
+          masterRoundResult?.playerBState?.transformedForm,
+        isMasterRound: Boolean(masterRoundResult),
       }),
     [
       canonicalBattleResult,
+      masterRoundResult,
       revealLogs,
       savedRoundResult?.playerAPokemon,
       savedRoundResult?.playerBPokemon,
@@ -906,7 +1110,7 @@ function BattleArena({
   const isBattleCountdownActive =
     battleStageReady && countdownValue !== null
   const transformationCinematicRequired =
-    !masterRoundResult && transformationEvents.length > 0
+    transformationEvents.length > 0
   const successfulTransformationByPokemon = useMemo(() => {
     const transformations = new Map()
 
@@ -926,18 +1130,46 @@ function BattleArena({
 
     return transformations
   }, [transformationEvents])
-  const getSuccessfulTransformation = (pokemon) => {
+  const getTransformationKey = (pokemon) => {
     const pokemonId = pokemon?.id ?? pokemon?.pokemonId
-    const key = pokemonId
+
+    return pokemonId
       ? `id:${pokemonId}`
       : `name:${getPokemonName(pokemon).toLowerCase()}`
-
-    return successfulTransformationByPokemon.get(key) ?? null
   }
-  const yourTransformation =
-    getSuccessfulTransformation(revealedYourPokemon)
-  const opponentTransformation =
-    getSuccessfulTransformation(revealedOpponentPokemon)
+  const getTransformationEvent = (pokemon) => {
+    const pokemonId = pokemon?.id ?? pokemon?.pokemonId
+
+    return (
+      transformationEvents.find((event) => {
+        const eventPokemonId =
+          event.pokemon?.id ?? event.pokemon?.pokemonId
+
+        return pokemonId && eventPokemonId
+          ? String(pokemonId) === String(eventPokemonId)
+          : event.pokemonName.toLowerCase() ===
+              getPokemonName(pokemon).toLowerCase()
+      }) ?? null
+    )
+  }
+  const transformationYourPokemon = currentUserIsPlayerA
+    ? masterRoundResult?.playerAPokemon ?? revealedYourPokemon
+    : masterRoundResult?.playerBPokemon ?? revealedYourPokemon
+  const transformationOpponentPokemon = currentUserIsPlayerA
+    ? masterRoundResult?.playerBPokemon ?? revealedOpponentPokemon
+    : masterRoundResult?.playerAPokemon ?? revealedOpponentPokemon
+  const yourTransformationEvent = getTransformationEvent(
+    transformationYourPokemon,
+  )
+  const opponentTransformationEvent = getTransformationEvent(
+    transformationOpponentPokemon,
+  )
+  const yourTransformation = successfulTransformationByPokemon.get(
+    getTransformationKey(transformationYourPokemon),
+  )
+  const opponentTransformation = successfulTransformationByPokemon.get(
+    getTransformationKey(transformationOpponentPokemon),
+  )
   const revealedWinnerPokemon = savedRoundResult
     ? savedRoundResult.resultType === 'PLAYER_A_WIN'
       ? savedRoundResult.playerAPokemon
@@ -1111,36 +1343,44 @@ function BattleArena({
     ) ?? battleStageOpponentPokemon
   const yourBattleAnalysis = useMemo(
     () =>
-      createFighterAnalysis({
-        state: battleStageYourState,
-        pokemon: fullBattleStageYourPokemon,
-        finalScore: battleStageYourScore,
-        logs: battleStageLogs,
-        playerIndex: currentUserIsPlayerA ? 0 : 1,
-      }),
+      addTransformationAnalysisCard(
+        createFighterAnalysis({
+          state: battleStageYourState,
+          pokemon: fullBattleStageYourPokemon,
+          finalScore: battleStageYourScore,
+          logs: battleStageLogs,
+          playerIndex: currentUserIsPlayerA ? 0 : 1,
+        }),
+        yourTransformationEvent,
+      ),
     [
       battleStageLogs,
       battleStageYourScore,
       battleStageYourState,
       currentUserIsPlayerA,
       fullBattleStageYourPokemon,
+      yourTransformationEvent,
     ],
   )
   const opponentBattleAnalysis = useMemo(
     () =>
-      createFighterAnalysis({
-        state: battleStageOpponentState,
-        pokemon: fullBattleStageOpponentPokemon,
-        finalScore: battleStageOpponentScore,
-        logs: battleStageLogs,
-        playerIndex: currentUserIsPlayerA ? 1 : 0,
-      }),
+      addTransformationAnalysisCard(
+        createFighterAnalysis({
+          state: battleStageOpponentState,
+          pokemon: fullBattleStageOpponentPokemon,
+          finalScore: battleStageOpponentScore,
+          logs: battleStageLogs,
+          playerIndex: currentUserIsPlayerA ? 1 : 0,
+        }),
+        opponentTransformationEvent,
+      ),
     [
       battleStageLogs,
       battleStageOpponentScore,
       battleStageOpponentState,
       currentUserIsPlayerA,
       fullBattleStageOpponentPokemon,
+      opponentTransformationEvent,
     ],
   )
 
@@ -1292,18 +1532,16 @@ function BattleArena({
 
       if (transformationIndex >= 0) {
         const event = transformationEvents[transformationIndex]
+        const transformationPresentation =
+          getTransformationPresentation(event)
         schedule(
           () =>
             setBattleNotification({
               id: 'transformation-activation',
               icon: '\u26a1',
               label: event.succeeded
-                ? event.type === 'battle-bond'
-                  ? 'Battle Bond Activated'
-                  : 'Mega Evolution Activated'
-                : event.type === 'battle-bond'
-                  ? 'Battle Bond Failed'
-                  : 'Mega Evolution Failed',
+                ? transformationPresentation.activated
+                : transformationPresentation.failed,
               side,
               key: `${side}-transformation-activation`,
             }),
@@ -2659,13 +2897,11 @@ function BattleArena({
                 yourFinalScore={battleStageYourScore}
                 opponentFinalScore={battleStageOpponentScore}
                 yourTransformation={
-                  masterRoundResult ||
                   !transformedSides.includes('your')
                     ? null
                     : yourTransformation
                 }
                 opponentTransformation={
-                  masterRoundResult ||
                   !transformedSides.includes('opponent')
                     ? null
                     : opponentTransformation
@@ -2797,26 +3033,26 @@ function BattleArena({
 
       {isTransformationCinematicActive &&
         !showFinalMatchScreen && (
-        <div
-          className={`mega-cinematic-overlay ${
-            activeTransformationEvent.succeeded
-              ? 'is-success'
-              : 'is-failure'
-          } ${
-            activeTransformationEvent.type === 'battle-bond'
-              ? 'is-battle-bond'
-              : 'is-mega'
-          } ${isMasterRoundBattle ? 'is-master-round' : ''}`}
-          role="status"
-          aria-live="assertive"
-          aria-label={`${activeTransformationEvent.type === 'battle-bond' ? 'Battle Bond' : 'Mega Evolution'} ${activeTransformationEvent.succeeded ? 'succeeded' : 'failed'} for ${activeTransformationEvent.pokemonName}`}
-          key={`${currentRound}-${transformationCinematicIndex}`}
-        >
-          <div className="mega-cinematic-energy" aria-hidden="true" />
-          <p className="mega-cinematic-title">
-            {activeTransformationEvent.type === 'battle-bond'
-              ? 'Battle Bond'
-              : 'Mega Evolution'}
+          <div
+            className={`mega-cinematic-overlay ${
+              activeTransformationEvent.succeeded
+                ? 'is-success'
+                : 'is-failure'
+            } is-${activeTransformationEvent.type} ${
+              isMasterRoundBattle ? 'is-master-round' : ''
+            }`}
+            role="status"
+            aria-live="assertive"
+            aria-label={`${getTransformationPresentation(activeTransformationEvent).title} ${activeTransformationEvent.succeeded ? 'succeeded' : 'failed'} for ${activeTransformationEvent.pokemonName}`}
+            key={`${battleStageKey}-${transformationCinematicIndex}`}
+          >
+            <div className="mega-cinematic-energy" aria-hidden="true" />
+            <p className="mega-cinematic-title">
+              {
+                getTransformationPresentation(
+                  activeTransformationEvent,
+                ).title
+              }
           </p>
           <div className="mega-cinematic-pokemon">
             {activeTransformationEvent.image && (
@@ -2877,13 +3113,13 @@ function BattleArena({
             )}
           </div>
           <strong className="mega-cinematic-status">
-            {activeTransformationEvent.type === 'battle-bond'
-              ? activeTransformationEvent.succeeded
-                ? 'Ash-Greninja Awakened'
-                : 'Battle Bond Failed'
-              : activeTransformationEvent.succeeded
-                ? 'Mega Evolution Success'
-                : 'Mega Evolution Failed'}
+            {activeTransformationEvent.succeeded
+              ? getTransformationPresentation(
+                  activeTransformationEvent,
+                ).success
+              : getTransformationPresentation(
+                  activeTransformationEvent,
+                ).failed}
           </strong>
         </div>
       )}
