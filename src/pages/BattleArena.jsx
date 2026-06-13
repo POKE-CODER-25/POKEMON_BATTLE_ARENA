@@ -61,6 +61,7 @@ function getTransformationEvents({
   playerATransformedForm,
   playerBTransformedForm,
   isMasterRound = false,
+  roundNumber = null,
 }) {
   const events = []
   const eventKeys = new Set()
@@ -92,6 +93,13 @@ function getTransformationEvents({
       return 'sleeping-monster'
     }
 
+    if (
+      normalizedSource.includes('titan awakening') ||
+      normalizedForm === 'titan regigigas'
+    ) {
+      return 'titan-awakening'
+    }
+
     return 'mega'
   }
   const getFallbackAmount = (type, pokemon) => {
@@ -107,6 +115,10 @@ function getTransformationEvents({
       return isMasterRound ? 25 : 20
     }
 
+    if (type === 'titan-awakening') {
+      return isMasterRound ? 15 : 7
+    }
+
     return getTransformationFormForPokemon(pokemon) ? 3 : 0
   }
 
@@ -117,6 +129,7 @@ function getTransformationEvents({
       eventKeys.add(key)
       events.push({
         ...event,
+        isMasterRound,
         amount:
           Number(event.amount) ||
           (event.succeeded
@@ -137,9 +150,11 @@ function getTransformationEvents({
       'battle bond',
       'god killer',
       'sleeping monster',
+      'titan awakening',
       'mega rayquaza',
       'ultra necrozma',
       'gigantamax snorlax',
+      'titan regigigas',
     ].some((identity) => effectIdentity.includes(identity))
 
     if (!isTransformation) {
@@ -167,6 +182,32 @@ function getTransformationEvents({
           : null),
     })
   })
+
+  const regigigas = battlePokemon.find(
+    (pokemon) => getPokemonName(pokemon) === 'Regigigas',
+  )
+  const titanIsEligible =
+    Boolean(regigigas) &&
+    (isMasterRound || Number(roundNumber) === 6)
+
+  if (titanIsEligible) {
+    const titanLogPattern = isMasterRound
+      ? /^Titan Awakening:\s*([+-]?\d+)/i
+      : /^Slow Start:\s*([+-]?\d+)/i
+    const loggedAmount = logs
+      .map((log) => log.match(titanLogPattern)?.[1])
+      .find((amount) => amount !== undefined)
+
+    addEvent({
+      type: 'titan-awakening',
+      pokemon: regigigas,
+      pokemonName: 'Regigigas',
+      image: getNormalPokemonImage(regigigas),
+      succeeded: true,
+      amount: Number(loggedAmount) || (isMasterRound ? 15 : 7),
+      transformedForm: 'Titan Regigigas',
+    })
+  }
 
   logs.forEach((log) => {
     const megaSuccessMatch = log.match(/^(.+?) Mega Evolved\.?$/i)
@@ -309,11 +350,22 @@ function getTransformationPresentation(event) {
       bonus: 'God Killer Awakened',
     },
     'sleeping-monster': {
-      title: 'Sleeping Monster',
-      activated: 'Sleeping Monster Awakened',
+      title: 'Sleeping Monster Awakening',
+      activated: 'The Sleeping Monster Stirs',
       failed: 'Sleeping Monster Stayed Asleep',
-      success: 'Gigantamax Awakened',
-      bonus: 'G-Max Bonus',
+      success: 'Sleeping Monster Awakened',
+      bonus: 'Sleeping Monster Awakened',
+    },
+    'titan-awakening': {
+      title: event?.isMasterRound
+        ? '\u2694 Final Titan Awakening \u2694'
+        : '\u2694 Titan Awakening \u2694',
+      activated: 'Ancient Titan Awakening',
+      failed: 'Titan Awakening Failed',
+      success: event?.isMasterRound
+        ? 'Final Titan Awakening'
+        : 'Titan Awakened',
+      bonus: 'Titan Awakened',
     },
     mega: {
       title: 'Mega Evolution',
@@ -338,6 +390,19 @@ function addTransformationAnalysisCard(cards, event) {
 
   const baseCardIndex = cards.findIndex((card) => card.id === 'base')
   const insertIndex = baseCardIndex >= 0 ? baseCardIndex + 1 : 0
+  const presentationCards =
+    event.type === 'titan-awakening'
+      ? cards
+          .map((card) =>
+            card.id === 'trait'
+              ? {
+                  ...card,
+                  value: card.value - event.amount,
+                }
+              : card,
+          )
+          .filter((card) => card.id !== 'trait' || card.value)
+      : cards
   const transformationCard = {
     id: 'transformation',
     label: getTransformationPresentation(event).bonus,
@@ -346,9 +411,9 @@ function addTransformationAnalysisCard(cards, event) {
   }
 
   return [
-    ...cards.slice(0, insertIndex),
+    ...presentationCards.slice(0, insertIndex),
     transformationCard,
-    ...cards.slice(insertIndex),
+    ...presentationCards.slice(insertIndex),
   ]
 }
 
@@ -1054,11 +1119,13 @@ function BattleArena({
           masterRoundResult?.playerBTransformedForm ??
           masterRoundResult?.playerBState?.transformedForm,
         isMasterRound: Boolean(masterRoundResult),
+        roundNumber: masterRoundResult ? 7 : currentRound,
       }),
     [
       canonicalBattleResult,
       masterRoundResult,
       revealLogs,
+      currentRound,
       savedRoundResult?.playerAPokemon,
       savedRoundResult?.playerBPokemon,
     ],
@@ -1522,13 +1589,23 @@ function BattleArena({
             ? event.succeeded
               ? 3600
               : 2800
-            : 1600
+            : event.type === 'sleeping-monster'
+              ? event.succeeded
+                ? 3600
+                : 2600
+              : event.type === 'titan-awakening'
+                ? isMasterRoundBattle
+                  ? 5400
+                  : 4000
+                : 1600
         schedule(
           () =>
             setBattleNotification({
               id: 'transformation-activation',
               icon: '\u26a1',
-              label: event.succeeded
+              label:
+                event.succeeded ||
+                event.type === 'sleeping-monster'
                 ? transformationPresentation.activated
                 : transformationPresentation.failed,
               side,
@@ -1559,6 +1636,25 @@ function BattleArena({
                 label: 'God Killer Failed',
                 side,
                 key: `${side}-god-killer-failure`,
+              }),
+            cursor,
+          )
+          schedule(() => setBattleNotification(null), cursor + 1050)
+          cursor += notificationDuration + notificationGap
+        }
+
+        if (
+          event.type === 'sleeping-monster' &&
+          !event.succeeded
+        ) {
+          schedule(
+            () =>
+              setBattleNotification({
+                id: 'sleeping-monster-failure',
+                icon: '\u26a0',
+                label: 'Sleeping Monster Stayed Asleep',
+                side,
+                key: `${side}-sleeping-monster-failure`,
               }),
             cursor,
           )
@@ -3137,6 +3233,39 @@ function BattleArena({
                 </div>
               </>
             )}
+            {activeTransformationEvent.type === 'sleeping-monster' && (
+              <div
+                className="monster-awakening-effects"
+                aria-hidden="true"
+              >
+                <span className="monster-awakening-shadow" />
+                <span className="monster-awakening-eyes" />
+                <span className="monster-awakening-ground" />
+              </div>
+            )}
+            {activeTransformationEvent.type === 'titan-awakening' && (
+              <div
+                className="titan-awakening-effects"
+                aria-hidden="true"
+              >
+                <span className="titan-awakening-silhouette" />
+                <div className="titan-awakening-runes">
+                  {Array.from({ length: 8 }, (_, index) => (
+                    <i key={index} />
+                  ))}
+                </div>
+                <div className="titan-awakening-cracks">
+                  {Array.from({ length: 10 }, (_, index) => (
+                    <i key={index} />
+                  ))}
+                </div>
+                <div className="titan-awakening-footsteps">
+                  <i />
+                  <i />
+                  <i />
+                </div>
+              </div>
+            )}
             <div className="mega-cinematic-energy" aria-hidden="true" />
             <p className="mega-cinematic-title">
               {
@@ -3198,6 +3327,12 @@ function BattleArena({
                   {activeTransformationEvent.pokemonName === 'Necrozma'
                     ? 'Divine Ascension Failed'
                     : 'God Killer Rejected'}
+                </span>
+              )}
+            {activeTransformationEvent.type === 'sleeping-monster' &&
+              !activeTransformationEvent.succeeded && (
+                <span className="monster-awakening-rejection">
+                  Sleeping Monster Stayed Asleep
                 </span>
               )}
           </div>

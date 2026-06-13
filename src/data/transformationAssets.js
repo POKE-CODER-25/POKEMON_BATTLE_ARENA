@@ -12,6 +12,7 @@ const TRANSFORMATION_POKEMON_IDS = {
   'Ash Greninja': 10117,
   'Ultra Necrozma': 10155,
   'Gigantamax Snorlax': 10206,
+  'Titan Regigigas': 486,
 }
 
 const TRANSFORMED_FORM_BY_POKEMON = {
@@ -25,6 +26,7 @@ const TRANSFORMED_FORM_BY_POKEMON = {
   Rayquaza: 'Mega Rayquaza',
   Necrozma: 'Ultra Necrozma',
   Snorlax: 'Gigantamax Snorlax',
+  Regigigas: 'Titan Regigigas',
 }
 
 export const TRANSFORMATION_IMAGES = Object.fromEntries(
