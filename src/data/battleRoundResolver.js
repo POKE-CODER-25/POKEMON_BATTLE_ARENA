@@ -175,36 +175,6 @@ const applyCelebiWish = (state, wish, isMasterRound) => {
   }
 }
 
-const applyJirachiBlessing = (state, blessing, isMasterRound) => {
-  if (
-    isMasterRound ||
-    !blessing ||
-    blessing.consumed ||
-    String(blessing.targetPokemonId) !== String(state.pokemon?.id)
-  ) {
-    return state
-  }
-
-  const amount = blessing.amount ?? 5
-  const message = `Jirachi Wish Maker: +${amount}.`
-
-  return {
-    ...state,
-    finalScore: state.finalScore + amount,
-    protectedTraitBonus:
-      (state.protectedTraitBonus || 0) + amount,
-    protectedBonuses: [
-      ...(state.protectedBonuses || []),
-      {
-        source: 'Jirachi Wish Maker',
-        amount,
-        reason: message,
-      },
-    ],
-    logs: [...(state.logs || []), message],
-  }
-}
-
 export const resolveBattleRound = ({
   pokemonA,
   pokemonB,
@@ -213,14 +183,8 @@ export const resolveBattleRound = ({
   playerBScore = 0,
   battlefieldEffectsA = [],
   battlefieldEffectsB = [],
-  teamA = [],
-  teamB = [],
-  jirachiCopyA = null,
-  jirachiCopyB = null,
   celebiWishA = null,
   celebiWishB = null,
-  jirachiBlessingA = null,
-  jirachiBlessingB = null,
   isMasterRound = false,
   randomFn = Math.random,
 }) => {
@@ -244,19 +208,9 @@ export const resolveBattleRound = ({
     celebiWishB,
     isMasterRound,
   )
-  const blessedPlayerAState = applyJirachiBlessing(
-    wishedPlayerAState,
-    jirachiBlessingA,
-    isMasterRound,
-  )
-  const blessedPlayerBState = applyJirachiBlessing(
-    wishedPlayerBState,
-    jirachiBlessingB,
-    isMasterRound,
-  )
   const formResult = resolveFormChanges({
-    playerAState: blessedPlayerAState,
-    playerBState: blessedPlayerBState,
+    playerAState: wishedPlayerAState,
+    playerBState: wishedPlayerBState,
     isMasterRound,
     playerAScore,
     playerBScore,
@@ -269,11 +223,6 @@ export const resolveBattleRound = ({
   const advancedResult = resolveAdvancedTraitInteractions({
     playerAState: coreResult.playerAState,
     playerBState: coreResult.playerBState,
-    teamA,
-    teamB,
-    jirachiCopyA,
-    jirachiCopyB,
-    isMasterRound,
     randomFn,
   })
   const typeAndScoreResult = resolveTypeAndScoreTraits({

@@ -30,14 +30,6 @@ export const SPECIAL_TRAIT_CONFLICTS = [
     result: 'Aura Master unaffected.',
   },
   {
-    pokemonAName: 'Jirachi',
-    pokemonBName: 'Snorlax',
-    isOrderIndependent: true,
-    result: 'Half Sleeping Monster.',
-    normalBonus: 10,
-    masterRoundBonus: 12,
-  },
-  {
     pokemonAName: 'Yveltal',
     pokemonBName: 'Arceus',
     result: 'Curse persists even against Arceus.',

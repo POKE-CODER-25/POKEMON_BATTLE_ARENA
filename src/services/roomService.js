@@ -18,7 +18,6 @@ import {
   supportPool,
 } from '../data/draftPools.js'
 import { resolveBattleRound } from '../data/battleRoundResolver.js'
-import { getJirachiCopyableTraits } from '../data/advancedTraitInteractionResolver.js'
 import { DRAFT_ROUND_NAMES } from '../data/draftTeamStructure.js'
 import { createMasterRoundOptions } from '../data/masterRoundSelector.js'
 import { allBattlePokemon } from '../data/pokemonBattleData.js'
@@ -603,7 +602,6 @@ export async function finalizeAfkWin({
       matchWinnerUid: winnerUid,
       matchOverReason: 'Opponent was AFK for more than 2 minutes.',
       pendingCelebiWish: null,
-      pendingJirachiWish: null,
       updatedAt: timestamp,
     })
 
@@ -1112,24 +1110,12 @@ function getBattleStateBackfill(battleState, room) {
     backfill.roundContinue = {}
   }
 
-  if (!battleState.jirachiCopies) {
-    backfill.jirachiCopies = {}
-  }
-
   if (!battleState.celebiWishes) {
     backfill.celebiWishes = {}
   }
 
   if (battleState.pendingCelebiWish === undefined) {
     backfill.pendingCelebiWish = null
-  }
-
-  if (!battleState.jirachiBlessings) {
-    backfill.jirachiBlessings = {}
-  }
-
-  if (battleState.pendingJirachiWish === undefined) {
-    backfill.pendingJirachiWish = null
   }
 
   if (battleState.surrender === undefined) {
@@ -1263,97 +1249,6 @@ export async function lockBattlePokemon(roomCode, playerUid, pokemon) {
   })
 }
 
-export async function saveJirachiCopy({
-  roomCode,
-  playerUid,
-  sourcePokemonId,
-  traitName,
-}) {
-  if (!playerUid || !traitName) {
-    throw new Error('Choose a valid teammate trait for Jirachi.')
-  }
-
-  const normalizedRoomCode = roomCode.trim().toUpperCase()
-  const roomReference = doc(db, 'rooms', normalizedRoomCode)
-  const battleStateReference = doc(roomReference, 'battle', 'state')
-  const draftTeamReference = doc(
-    roomReference,
-    'draftTeams',
-    playerUid,
-  )
-
-  return runTransaction(db, async (transaction) => {
-    const [roomSnapshot, battleStateSnapshot, draftTeamSnapshot] =
-      await Promise.all([
-        transaction.get(roomReference),
-        transaction.get(battleStateReference),
-        transaction.get(draftTeamReference),
-      ])
-
-    if (!roomSnapshot.exists()) {
-      throw new Error('Room not found')
-    }
-
-    if (!battleStateSnapshot.exists()) {
-      throw new Error('Battle state is not initialized.')
-    }
-
-    if (!draftTeamSnapshot.exists()) {
-      throw new Error('Draft team not found.')
-    }
-
-    const room = roomSnapshot.data()
-    const battleState = battleStateSnapshot.data()
-    const team = draftTeamSnapshot.data().picks ?? []
-
-    if (!room.players?.[playerUid]) {
-      throw new Error('You are not a player in this room.')
-    }
-
-    if (!team.some((pokemon) => pokemon.name === 'Jirachi')) {
-      throw new Error('Jirachi is not part of your drafted team.')
-    }
-
-    if (battleState.phase === 'match_over') {
-      throw new Error('Jirachi selection is closed.')
-    }
-
-    if (battleState.jirachiCopies?.[playerUid]) {
-      throw new Error("Jirachi's copied trait is already locked.")
-    }
-
-    const selectedTrait = getJirachiCopyableTraits(team).find(
-      (option) =>
-        String(option.sourcePokemon?.id) === String(sourcePokemonId) &&
-        option.traitName === traitName,
-    )
-
-    if (!selectedTrait) {
-      throw new Error('That trait cannot be copied by Jirachi.')
-    }
-
-    const timestamp = serverTimestamp()
-    const savedCopy = {
-      sourcePokemonId: selectedTrait.sourcePokemon.id,
-      sourcePokemonName: selectedTrait.sourcePokemonName,
-      traitName: selectedTrait.traitName,
-      normalBonus: selectedTrait.normalBonus ?? null,
-      masterRoundBonus: selectedTrait.masterRoundBonus ?? null,
-      selectedAt: timestamp,
-    }
-
-    transaction.update(battleStateReference, {
-      jirachiCopies: {
-        ...(battleState.jirachiCopies ?? {}),
-        [playerUid]: savedCopy,
-      },
-      updatedAt: timestamp,
-    })
-
-    return savedCopy
-  })
-}
-
 function getPokemonId(entry) {
   return typeof entry === 'object'
     ? entry?.id ?? entry?.pokemonId
@@ -1364,15 +1259,12 @@ function findAvailableCelebiWishTargets({
   team,
   usedPokemon,
   existingWishes,
-  otherBlessings = [],
 }) {
   const usedIds = new Set(
     usedPokemon.map((entry) => String(getPokemonId(entry))),
   )
   const blessedIds = new Set(
-    [...existingWishes, ...otherBlessings].map((wish) =>
-      String(wish.targetPokemonId),
-    ),
+    existingWishes.map((wish) => String(wish.targetPokemonId)),
   )
 
   return team.filter(
@@ -1435,8 +1327,6 @@ export async function assignCelebiWish({
       team: draftTeamSnapshot.data().picks ?? [],
       usedPokemon: battleState.usedPokemon?.[playerUid] ?? [],
       existingWishes,
-      otherBlessings:
-        battleState.jirachiBlessings?.[playerUid] ?? [],
     })
     const target = validTargets.find(
       (pokemon) => String(pokemon.id) === String(targetPokemonId),
@@ -1498,8 +1388,6 @@ export async function dismissCelebiWish({ roomCode, playerUid }) {
       team: draftTeamSnapshot.data().picks ?? [],
       usedPokemon: battleState.usedPokemon?.[playerUid] ?? [],
       existingWishes: battleState.celebiWishes?.[playerUid] ?? [],
-      otherBlessings:
-        battleState.jirachiBlessings?.[playerUid] ?? [],
     })
 
     if (validTargets.length > 0) {
@@ -1508,139 +1396,6 @@ export async function dismissCelebiWish({ roomCode, playerUid }) {
 
     transaction.update(battleStateReference, {
       pendingCelebiWish: null,
-      updatedAt: serverTimestamp(),
-    })
-
-    return true
-  })
-}
-
-export async function assignJirachiBlessing({
-  roomCode,
-  playerUid,
-  targetPokemonId,
-}) {
-  if (!playerUid || targetPokemonId === undefined) {
-    throw new Error('Choose a valid Pokemon for Jirachi Wish Maker.')
-  }
-
-  const normalizedRoomCode = roomCode.trim().toUpperCase()
-  const roomReference = doc(db, 'rooms', normalizedRoomCode)
-  const battleStateReference = doc(roomReference, 'battle', 'state')
-  const draftTeamReference = doc(
-    roomReference,
-    'draftTeams',
-    playerUid,
-  )
-
-  return runTransaction(db, async (transaction) => {
-    const [roomSnapshot, battleStateSnapshot, draftTeamSnapshot] =
-      await Promise.all([
-        transaction.get(roomReference),
-        transaction.get(battleStateReference),
-        transaction.get(draftTeamReference),
-      ])
-
-    if (
-      !roomSnapshot.exists() ||
-      !battleStateSnapshot.exists() ||
-      !draftTeamSnapshot.exists()
-    ) {
-      throw new Error('Jirachi Wish Maker data is unavailable.')
-    }
-
-    const room = roomSnapshot.data()
-    const battleState = battleStateSnapshot.data()
-    const pendingWish = battleState.pendingJirachiWish
-
-    if (!room.players?.[playerUid]) {
-      throw new Error('You are not a player in this room.')
-    }
-
-    if (pendingWish?.playerUid !== playerUid) {
-      throw new Error('Jirachi Wish Maker is not pending for you.')
-    }
-
-    const existingBlessings =
-      battleState.jirachiBlessings?.[playerUid] ?? []
-    const validTargets = findAvailableCelebiWishTargets({
-      team: draftTeamSnapshot.data().picks ?? [],
-      usedPokemon: battleState.usedPokemon?.[playerUid] ?? [],
-      existingWishes: existingBlessings,
-      otherBlessings:
-        battleState.celebiWishes?.[playerUid] ?? [],
-    })
-    const target = validTargets.find(
-      (pokemon) => String(pokemon.id) === String(targetPokemonId),
-    )
-
-    if (!target) {
-      throw new Error('That Pokemon cannot receive Divine Blessing.')
-    }
-
-    const blessing = {
-      targetPokemonId: target.id,
-      targetPokemonName: target.name,
-      amount: pendingWish.amount ?? 5,
-      grantedAtRound: pendingWish.roundWon,
-      consumed: false,
-      sourcePokemonName: 'Jirachi',
-    }
-
-    transaction.update(battleStateReference, {
-      jirachiBlessings: {
-        ...(battleState.jirachiBlessings ?? {}),
-        [playerUid]: [...existingBlessings, blessing],
-      },
-      pendingJirachiWish: null,
-      updatedAt: serverTimestamp(),
-    })
-
-    return blessing
-  })
-}
-
-export async function dismissJirachiWish({ roomCode, playerUid }) {
-  const normalizedRoomCode = roomCode.trim().toUpperCase()
-  const roomReference = doc(db, 'rooms', normalizedRoomCode)
-  const battleStateReference = doc(roomReference, 'battle', 'state')
-  const draftTeamReference = doc(
-    roomReference,
-    'draftTeams',
-    playerUid,
-  )
-
-  return runTransaction(db, async (transaction) => {
-    const [battleStateSnapshot, draftTeamSnapshot] = await Promise.all([
-      transaction.get(battleStateReference),
-      transaction.get(draftTeamReference),
-    ])
-
-    if (!battleStateSnapshot.exists() || !draftTeamSnapshot.exists()) {
-      throw new Error('Jirachi Wish Maker data is unavailable.')
-    }
-
-    const battleState = battleStateSnapshot.data()
-
-    if (battleState.pendingJirachiWish?.playerUid !== playerUid) {
-      throw new Error('Jirachi Wish Maker is not pending for you.')
-    }
-
-    const validTargets = findAvailableCelebiWishTargets({
-      team: draftTeamSnapshot.data().picks ?? [],
-      usedPokemon: battleState.usedPokemon?.[playerUid] ?? [],
-      existingWishes:
-        battleState.jirachiBlessings?.[playerUid] ?? [],
-      otherBlessings:
-        battleState.celebiWishes?.[playerUid] ?? [],
-    })
-
-    if (validTargets.length > 0) {
-      throw new Error('A worthy Pokemon remains for Divine Blessing.')
-    }
-
-    transaction.update(battleStateReference, {
-      pendingJirachiWish: null,
       updatedAt: serverTimestamp(),
     })
 
@@ -1925,7 +1680,6 @@ export async function surrenderRoom({
       matchOverReason: `${username || room.players[playerUid].username} surrendered.`,
       surrender: surrenderState,
       pendingCelebiWish: null,
-      pendingJirachiWish: null,
       postMatch: {
         playAgainRequests: {},
         returnedHome: {},
@@ -2321,8 +2075,6 @@ export async function resolveAndSaveMasterRound(roomCode) {
       playerBScore,
       teamA: playerATeamSnapshot.data().picks ?? [],
       teamB: playerBTeamSnapshot.data().picks ?? [],
-      jirachiCopyA: battleState.jirachiCopies?.[playerAUid] ?? null,
-      jirachiCopyB: battleState.jirachiCopies?.[playerBUid] ?? null,
       isMasterRound: true,
       randomFn: createSeededRandom(
         `${normalizedRoomCode}:master:${playerASelection.pokemonId}:${playerBSelection.pokemonId}`,
@@ -2594,9 +2346,6 @@ export async function saveBattleRoundResult({
     const celebiWishes = {
       ...(battleState.celebiWishes ?? {}),
     }
-    const jirachiBlessings = {
-      ...(battleState.jirachiBlessings ?? {}),
-    }
     const consumeWish = (wishes, playerUid, pokemonId) => {
       let consumed = false
 
@@ -2620,8 +2369,6 @@ export async function saveBattleRoundResult({
 
     consumeWish(celebiWishes, playerAUid, playerAPokemon.id)
     consumeWish(celebiWishes, playerBUid, playerBPokemon.id)
-    consumeWish(jirachiBlessings, playerAUid, playerAPokemon.id)
-    consumeWish(jirachiBlessings, playerBUid, playerBPokemon.id)
 
     const celebiWinnerUid =
       winnerUid &&
@@ -2643,35 +2390,12 @@ export async function saveBattleRoundResult({
             amount: 10,
           }
         : battleState.pendingCelebiWish ?? null
-    const jirachiWinnerUid =
-      winnerUid &&
-      battleResult.winnerResult?.resultType !== 'TIE' &&
-      battleResult.winnerResult?.winnerPokemon?.name === 'Jirachi'
-        ? winnerUid
-        : null
-    const pendingJirachiWish =
-      !battleState.pendingJirachiWish &&
-      jirachiWinnerUid &&
-      roundNumber < 6 &&
-      matchState.phase === 'round_result'
-        ? {
-            playerUid: jirachiWinnerUid,
-            sourcePokemonId:
-              battleResult.winnerResult.winnerPokemon.id,
-            sourcePokemonName: 'Jirachi',
-            roundWon: roundNumber,
-            amount: 5,
-          }
-        : battleState.pendingJirachiWish ?? null
-
     transaction.update(battleStateReference, {
       roundResults: [...roundResults, savedResult],
       playerScores,
       usedPokemon,
       celebiWishes,
       pendingCelebiWish,
-      jirachiBlessings,
-      pendingJirachiWish,
       ...matchState,
       updatedAt: serverTimestamp(),
     })
@@ -2752,10 +2476,6 @@ export async function continueBattleRound({
 
     if (battleState.pendingCelebiWish) {
       throw new Error('Celebi Future Wish must be resolved first.')
-    }
-
-    if (battleState.pendingJirachiWish) {
-      throw new Error('Jirachi Wish Maker must be resolved first.')
     }
 
     const roundResultExists = (battleState.roundResults ?? []).some(
@@ -2887,11 +2607,8 @@ function createInitialBattleState(timestamp, hostUid, guestUid) {
     },
     roundResults: [],
     roundContinue: {},
-    jirachiCopies: {},
     celebiWishes: {},
     pendingCelebiWish: null,
-    jirachiBlessings: {},
-    pendingJirachiWish: null,
     surrender: null,
     postMatch: {
       playAgainRequests: {},

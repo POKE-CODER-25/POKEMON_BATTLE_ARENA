@@ -18,7 +18,6 @@ const PRIORITY = {
   xerneas: priorityFor('Xerneas'),
   darkrai: priorityFor('Darkrai'),
   cresselia: priorityFor('Cresselia'),
-  jirachi: priorityFor('Jirachi'),
   normal: priorityFor('Normal special traits'),
   none: priorityFor('No trait'),
 }
@@ -745,36 +744,7 @@ export const legendaryPokemon = [
     category: POKEMON_CATEGORIES.B_LEGEND,
     score: 86,
     types: ['Steel', 'Psychic'],
-    priority: PRIORITY.jirachi,
-    traitEffects: [
-      'Jirachi may select one trait from any teammate currently in the team',
-    ],
-    specialRules: [
-      'Cannot copy Mega Evolutions',
-      'Cannot copy Ash Greninja',
-      'Cannot copy God Killer',
-      'Can only copy traits from teammates actually drafted in the current team',
-      'If Jirachi copies Snorlax, normal rounds = +10 instead of +20',
-      'If Jirachi copies Snorlax, Master Round = +12 instead of +25',
-    ],
-    traits: [
-      trait(
-        'Wish Maker',
-        'Jirachi may select one trait from any teammate currently in the team.',
-        PRIORITY.jirachi,
-        [
-          'Jirachi may select one trait from any teammate currently in the team',
-        ],
-        [
-          'Cannot copy Mega Evolutions',
-          'Cannot copy Ash Greninja',
-          'Cannot copy God Killer',
-          'Can only copy traits from teammates actually drafted in the current team',
-          'If Jirachi copies Snorlax, normal rounds = +10 instead of +20',
-          'If Jirachi copies Snorlax, Master Round = +12 instead of +25',
-        ],
-      ),
-    ],
+    priority: PRIORITY.none,
   }),
 ]
 

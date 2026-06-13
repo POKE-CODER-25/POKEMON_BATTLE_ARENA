@@ -39,7 +39,6 @@ export const TRAIT_PRIORITIES = {
   7: ['Xerneas'],
   8: ['Darkrai'],
   9: ['Cresselia'],
-  10: ['Jirachi'],
   11: ['Normal special traits'],
   99: ['No trait'],
 }

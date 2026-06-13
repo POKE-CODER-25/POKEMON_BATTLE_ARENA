@@ -55,14 +55,6 @@ function getCelebiWishAmount(state) {
   return Number(wish?.amount) || 0
 }
 
-function getJirachiBlessingAmount(state) {
-  const blessing = state?.protectedBonuses?.find(
-    (bonus) => bonus?.source === 'Jirachi Wish Maker',
-  )
-
-  return Number(blessing?.amount) || 0
-}
-
 export function createFighterAnalysis({
   state,
   pokemon,
@@ -73,7 +65,6 @@ export function createFighterAnalysis({
   const fallbackBaseScore =
     Number(pokemon?.score) || getBaseScoreFromLogs(logs, playerIndex)
   const celebiWishAmount = getCelebiWishAmount(state)
-  const jirachiBlessingAmount = getJirachiBlessingAmount(state)
 
   const cards = CARD_DEFINITIONS.map((definition) => {
     const positiveValue = sumStateValues(state, definition.valueKeys)
@@ -83,9 +74,7 @@ export function createFighterAnalysis({
         ? Number(state?.baseScore) || fallbackBaseScore
         : positiveValue -
           penaltyValue -
-          (definition.id === 'trait'
-            ? celebiWishAmount + jirachiBlessingAmount
-            : 0)
+          (definition.id === 'trait' ? celebiWishAmount : 0)
 
     return value
       ? {
@@ -106,15 +95,6 @@ export function createFighterAnalysis({
       label: 'Celebi Future Wish',
       icon: '\u2727',
       value: celebiWishAmount,
-    })
-  }
-
-  if (jirachiBlessingAmount) {
-    cards.splice(wishInsertIndex, 0, {
-      id: 'jirachi-wish',
-      label: 'Jirachi Wish Maker',
-      icon: '\u2606',
-      value: jirachiBlessingAmount,
     })
   }
 
