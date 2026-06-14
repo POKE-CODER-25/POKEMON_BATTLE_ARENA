@@ -11,7 +11,7 @@ function Home({ username, onManualNavigation }) {
         <span className="arena-circle" />
       </div>
 
-      <section className="game-card home-card">
+      <section className="game-card home-card premium-home-card">
         <div className="brand-mark">
           <span className="brand-line" aria-hidden="true" />
           <div className="pokeball" aria-hidden="true">
@@ -23,11 +23,12 @@ function Home({ username, onManualNavigation }) {
         <p className="eyebrow">Welcome, {username}</p>
         <h1 className="game-title">
           <span>Pok&eacute;mon</span>
-          <span className="title-accent">Draft Arena</span>
+          <span className="title-accent">Battle Cards</span>
         </h1>
-        <p className="subtitle">
-          Draft 5 Pok&eacute;mon, battle automatically, and defeat your friend.
-        </p>
+        <div className="game-badges" aria-label="Game features">
+          <span>Fan Made</span>
+          <span>Online Multiplayer</span>
+        </div>
 
         <div className="action-list">
           <Link
@@ -46,11 +47,6 @@ function Home({ username, onManualNavigation }) {
           </Link>
         </div>
 
-        <p className="status-text">
-          <span className="status-dot" />
-          Trainer account connected
-        </p>
-
         <button
           className="logout-button"
           type="button"
@@ -60,9 +56,7 @@ function Home({ username, onManualNavigation }) {
         </button>
       </section>
 
-      <footer className="site-footer">
-        Fan-made Pok&eacute;mon Draft Strategy Game
-      </footer>
+      <footer className="site-footer">Pok&eacute;mon Battle Cards</footer>
     </main>
   )
 }

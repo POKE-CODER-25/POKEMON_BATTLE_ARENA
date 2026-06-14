@@ -33,12 +33,12 @@ function JoinRoom({
   }
 
   return (
-    <main className="page-shell">
-      <section className="game-card placeholder-card">
-        <div className="page-icon" aria-hidden="true">#</div>
-        <p className="eyebrow">Trainer Lobby</p>
+    <main className="page-shell matchmaking-page">
+      <section className="game-card placeholder-card matchmaking-card">
+        <div className="page-icon matchmaking-icon" aria-hidden="true">#</div>
+        <p className="eyebrow">Private Match</p>
         <h1>Join Room</h1>
-        <p className="subtitle">Enter the 6-character code from the host.</p>
+        <p className="subtitle">Enter the host&apos;s arena code.</p>
 
         <form className="join-room-form" onSubmit={handleJoinRoom}>
           <label htmlFor="room-code">Room Code</label>
@@ -79,9 +79,7 @@ function JoinRoom({
           &larr; Back to Home
         </Link>
       </section>
-      <footer className="site-footer">
-        Fan-made Pok&eacute;mon Draft Strategy Game
-      </footer>
+      <footer className="site-footer">Pok&eacute;mon Battle Cards</footer>
     </main>
   )
 }

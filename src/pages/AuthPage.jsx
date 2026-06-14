@@ -111,18 +111,19 @@ function AuthPage() {
         <span className="arena-circle" />
       </div>
 
-      <section className="game-card auth-card">
+      <section className="game-card auth-card premium-auth-card">
         <div className="pokeball auth-pokeball" aria-hidden="true">
           <span />
         </div>
 
-        <p className="eyebrow">Trainer Account</p>
+        <p className="eyebrow">Online Arena</p>
         <h1 className="auth-title">
-          Pok&eacute;mon <span>Draft Arena</span>
+          Pok&eacute;mon <span>Battle Cards</span>
         </h1>
-        <p className="auth-subtitle">
-          Sign in or create a trainer account to enter the arena.
-        </p>
+        <div className="game-badges" aria-label="Game features">
+          <span>Fan Made</span>
+          <span>Online Multiplayer</span>
+        </div>
 
         <form
           className="auth-form"
@@ -180,9 +181,7 @@ function AuthPage() {
         </form>
       </section>
 
-      <footer className="site-footer">
-        Fan-made Pok&eacute;mon Draft Strategy Game
-      </footer>
+      <footer className="site-footer">Pok&eacute;mon Battle Cards</footer>
     </main>
   )
 }

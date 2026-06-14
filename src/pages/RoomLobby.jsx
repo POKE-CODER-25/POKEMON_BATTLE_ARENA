@@ -30,6 +30,7 @@ function RoomLobby({
   const [isLoading, setIsLoading] = useState(true)
   const [pendingAction, setPendingAction] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [codeCopied, setCodeCopied] = useState(false)
 
   useEffect(() => {
     const roomReference = doc(db, 'rooms', displayRoomCode)
@@ -125,6 +126,16 @@ function RoomLobby({
     }
   }
 
+  async function handleCopyRoomCode() {
+    try {
+      await navigator.clipboard.writeText(displayRoomCode)
+      setCodeCopied(true)
+      window.setTimeout(() => setCodeCopied(false), 1600)
+    } catch {
+      setErrorMessage('Could not copy the room code.')
+    }
+  }
+
   const hasGuest = Boolean(room?.guestUid)
   const hostReady = Boolean(room?.players?.[room?.hostUid]?.ready)
   const guestReady = Boolean(room?.players?.[room?.guestUid]?.ready)
@@ -148,13 +159,23 @@ function RoomLobby({
         <span className="arena-circle" />
       </div>
 
-      <section className="game-card lobby-card">
+      <section className="game-card lobby-card premium-lobby-card">
         <div className="pokeball small-pokeball" aria-hidden="true">
           <span />
         </div>
-        <p className="eyebrow">Pok&eacute;mon Draft Arena Lobby</p>
-        <h1 className="lobby-title">Room Code</h1>
-        <div className="room-code">{displayRoomCode}</div>
+        <p className="eyebrow">Multiplayer Lobby</p>
+        <h1 className="lobby-title">Arena Ready</h1>
+        <div className="room-code-panel">
+          <span>Room Code</span>
+          <div className="room-code">{displayRoomCode}</div>
+          <button
+            className="room-copy-button"
+            type="button"
+            onClick={handleCopyRoomCode}
+          >
+            {codeCopied ? 'Copied' : 'Copy Code'}
+          </button>
+        </div>
 
         {isLoading && <p className="waiting-message">Loading room...</p>}
 
@@ -288,9 +309,7 @@ function RoomLobby({
         </>
       )}
 
-      <footer className="site-footer">
-        Fan-made Pok&eacute;mon Draft Strategy Game
-      </footer>
+      <footer className="site-footer">Pok&eacute;mon Battle Cards</footer>
     </main>
   )
 }

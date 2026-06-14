@@ -29,14 +29,12 @@ function CreateRoom({
   }
 
   return (
-    <main className="page-shell">
-      <section className="game-card placeholder-card">
-        <div className="page-icon" aria-hidden="true">+</div>
-        <p className="eyebrow">Trainer Lobby</p>
+    <main className="page-shell matchmaking-page">
+      <section className="game-card placeholder-card matchmaking-card">
+        <div className="page-icon matchmaking-icon" aria-hidden="true">+</div>
+        <p className="eyebrow">Private Match</p>
         <h1>Create Room</h1>
-        <p className="subtitle">
-          Start a private arena and invite another trainer.
-        </p>
+        <p className="subtitle">Open a private arena for two trainers.</p>
 
         <div className="room-action">
           <button
@@ -61,9 +59,7 @@ function CreateRoom({
           &larr; Back to Home
         </Link>
       </section>
-      <footer className="site-footer">
-        Fan-made Pok&eacute;mon Draft Strategy Game
-      </footer>
+      <footer className="site-footer">Pok&eacute;mon Battle Cards</footer>
     </main>
   )
 }

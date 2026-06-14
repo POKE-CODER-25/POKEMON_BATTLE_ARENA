@@ -14,10 +14,7 @@ import {
   getPokemonName,
   getTransformationFormForPokemon,
 } from '../data/transformationAssets.js'
-import {
-  getDraftPickLabel,
-  getOrderedDraftPicks,
-} from '../data/draftTeamStructure.js'
+import { getOrderedDraftPicks } from '../data/draftTeamStructure.js'
 import { db } from '../firebase.js'
 import {
   assignCelebiWish,
@@ -3026,7 +3023,7 @@ function BattleArena({
                   <div className="battle-section-heading">
                     <div>
                       <p className="eyebrow">Battle Preparation</p>
-                      <h2>Choose Your Fighter</h2>
+                      <h2>Choose Your Pok&eacute;mon</h2>
                     </div>
                   </div>
 
@@ -3085,7 +3082,6 @@ function BattleArena({
                             height="120"
                           />
                           <strong>{pokemon.name}</strong>
-                          <small>{getDraftPickLabel(pokemon)}</small>
                           <div className="battle-type-list">
                             {pokemon.types.map((type) => (
                               <span key={type}>{type}</span>
@@ -3117,7 +3113,7 @@ function BattleArena({
                       }
                       onClick={handleLockFighter}
                     >
-                      {isLockingFighter ? 'Locking...' : 'Lock Fighter'}
+                      {isLockingFighter ? 'Sending...' : 'Send To Battle'}
                     </button>
 
                     {bothPlayersLocked ? (
@@ -3139,7 +3135,7 @@ function BattleArena({
                         <span>Waiting For Opponent...</span>
                       </div>
                     ) : (
-                      <p>Select Fighter</p>
+                      <p>Select Pok&eacute;mon</p>
                     )}
 
                     {lockErrorMessage && (
