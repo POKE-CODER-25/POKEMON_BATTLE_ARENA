@@ -1147,7 +1147,7 @@ function getBattleStateBackfill(battleState, room) {
 
 export async function lockBattlePokemon(roomCode, playerUid, pokemon) {
   if (!playerUid) {
-    throw new Error('You must be logged in to lock a fighter.')
+    throw new Error('You must be logged in to choose a Pokemon.')
   }
 
   if (!pokemon?.id || !pokemon?.name) {
@@ -1200,7 +1200,7 @@ export async function lockBattlePokemon(roomCode, playerUid, pokemon) {
     }
 
     if (battleState.selections?.[playerUid]) {
-      throw new Error('Your fighter is already locked for this round.')
+      throw new Error('Your Pokemon is already ready for this round.')
     }
 
     const selectedPokemon = (draftTeam.picks ?? []).find(
@@ -1321,6 +1321,13 @@ export async function assignCelebiWish({
       throw new Error('Celebi Future Wish is not pending for you.')
     }
 
+    if (
+      battleState.phase !== 'round_result' ||
+      battleState.masterRound?.result
+    ) {
+      throw new Error('Celebi Future Wish is no longer available.')
+    }
+
     const existingWishes =
       battleState.celebiWishes?.[playerUid] ?? []
     const validTargets = findAvailableCelebiWishTargets({
@@ -1382,6 +1389,13 @@ export async function dismissCelebiWish({ roomCode, playerUid }) {
 
     if (battleState.pendingCelebiWish?.playerUid !== playerUid) {
       throw new Error('Celebi Future Wish is not pending for you.')
+    }
+
+    if (
+      battleState.phase !== 'round_result' ||
+      battleState.masterRound?.result
+    ) {
+      throw new Error('Celebi Future Wish is no longer available.')
     }
 
     const validTargets = findAvailableCelebiWishTargets({
@@ -2275,7 +2289,7 @@ export async function saveBattleRoundResult({
       String(playerBPokemon?.id) !==
         String(playerBSelection.pokemonId)
     ) {
-      throw new Error('Battle result does not match the locked fighters.')
+      throw new Error('Battle result does not match the selected Pokemon.')
     }
 
     const pointAwardedTo =

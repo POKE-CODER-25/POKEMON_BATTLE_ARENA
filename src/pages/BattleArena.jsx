@@ -837,6 +837,11 @@ function BattleArena({
     [draftTeam?.picks],
   )
   const pendingCelebiWish = battleState?.pendingCelebiWish ?? null
+  const canResolveCelebiWish = Boolean(
+    pendingCelebiWish &&
+      battleState?.phase === 'round_result' &&
+      !battleState?.masterRound?.result,
+  )
   const celebiBlessedPokemonIds = useMemo(
     () =>
       new Set(
@@ -1010,6 +1015,27 @@ function BattleArena({
         isHost ? [] : orderedDraftPicks,
       )
     : null
+  const currentSavedRoundResult = battleState?.roundResults?.find(
+    (result) => result.roundNumber === currentRound,
+  )
+  const savedPointAwardedTo =
+    currentSavedRoundResult?.pointAwardedTo ?? null
+  const resolverHostScore = Math.max(
+    0,
+    hostScore -
+      (savedPointAwardedTo === 'PLAYER_A' ||
+      savedPointAwardedTo === 'BOTH'
+        ? 1
+        : 0),
+  )
+  const resolverGuestScore = Math.max(
+    0,
+    guestScore -
+      (savedPointAwardedTo === 'PLAYER_B' ||
+      savedPointAwardedTo === 'BOTH'
+        ? 1
+        : 0),
+  )
   const canonicalBattleResult = useMemo(() => {
     if (!bothPlayersLocked || !hostPokemon || !guestPokemon) {
       return null
@@ -1019,8 +1045,8 @@ function BattleArena({
       pokemonA: hostPokemon,
       pokemonB: guestPokemon,
       roundNumber: currentRound,
-      playerAScore: hostScore,
-      playerBScore: guestScore,
+      playerAScore: resolverHostScore,
+      playerBScore: resolverGuestScore,
       battlefieldEffectsA: hostBattlefieldEffects,
       battlefieldEffectsB: guestBattlefieldEffects,
       teamA: [],
@@ -1059,14 +1085,12 @@ function BattleArena({
     hostBattlefieldEffects,
     hostPokemon,
     hostSelection,
-    hostScore,
-    guestScore,
+    resolverGuestScore,
+    resolverHostScore,
     room?.guestUid,
     room?.hostUid,
   ])
-  const savedRoundResult = battleState?.roundResults?.find(
-    (result) => result.roundNumber === currentRound,
-  )
+  const savedRoundResult = currentSavedRoundResult
   const currentPlayerContinued = Boolean(
     battleState?.roundContinue?.[currentUser?.uid],
   )
@@ -1183,8 +1207,9 @@ function BattleArena({
     () =>
       getTransformationEvents({
         appliedEffects:
-          masterRoundResult?.appliedEffects ??
-          canonicalBattleResult?.appliedEffects,
+          masterRoundResult
+            ? masterRoundResult.appliedEffects ?? []
+            : canonicalBattleResult?.appliedEffects,
         logs: masterRoundResult?.logs ?? revealLogs,
         playerAPokemon:
           masterRoundResult?.playerAPokemon ??
@@ -1236,6 +1261,36 @@ function BattleArena({
   const battleStageKey = masterRoundResult
     ? `master:${masterRoundAnnouncementKey}`
     : currentRound
+  const presentationComplete =
+    presentationCompletedRound === battleStageKey
+  const hideCurrentRoundScore = Boolean(
+    savedRoundResult &&
+      !masterRoundResult &&
+      !presentationComplete &&
+      !showFinalMatchScreen,
+  )
+  const pointAwardedTo = savedRoundResult?.pointAwardedTo
+  const yourPointIsHidden =
+    hideCurrentRoundScore &&
+    (pointAwardedTo === 'BOTH' ||
+      (currentUserIsPlayerA && pointAwardedTo === 'PLAYER_A') ||
+      (!currentUserIsPlayerA && pointAwardedTo === 'PLAYER_B'))
+  const opponentPointIsHidden =
+    hideCurrentRoundScore &&
+    (pointAwardedTo === 'BOTH' ||
+      (currentUserIsPlayerA && pointAwardedTo === 'PLAYER_B') ||
+      (!currentUserIsPlayerA && pointAwardedTo === 'PLAYER_A'))
+  const displayedYourScore = Math.max(
+    0,
+    yourScore - (yourPointIsHidden ? 1 : 0),
+  )
+  const displayedOpponentScore = Math.max(
+    0,
+    opponentScore - (opponentPointIsHidden ? 1 : 0),
+  )
+  const displayedBattlePhaseLabel = hideCurrentRoundScore
+    ? 'Battle In Progress'
+    : battlePhaseLabel
   const isMasterRoundAnnouncementActive =
     battleStageReady &&
     isMasterRoundBattle &&
@@ -1394,6 +1449,24 @@ function BattleArena({
       countdownCompletedRound === battleStageKey &&
       activeTransformationEvent,
   )
+
+  useEffect(() => {
+    const resetTimer = window.setTimeout(() => {
+      setTransformationCinematicIndex(null)
+      setBattleEntranceStep(0)
+      setBattleTeamsVisible(false)
+      setActiveAnalysisSide(null)
+      setBattleNotification(null)
+      setRevealedScoreSides([])
+      setTransformedSides([])
+      setShowScoreComparison(false)
+      setShowBattleWinner(false)
+      setShowVictoryCelebration(false)
+    }, 0)
+
+    return () => window.clearTimeout(resetTimer)
+  }, [battleStageKey])
+
   const showBattleStage =
     battleStageReady &&
     countdownCompletedRound === battleStageKey &&
@@ -1729,7 +1802,7 @@ function BattleArena({
                 ? isMasterRoundBattle
                   ? 5400
                   : 4000
-                : 1600
+                : 2200
         schedule(
           () =>
             setBattleNotification({
@@ -2080,7 +2153,7 @@ function BattleArena({
       setLockErrorMessage(
         error instanceof Error
           ? error.message
-          : 'Could not lock this fighter.',
+          : 'Could not send this Pokemon to battle.',
       )
     } finally {
       setIsLockingFighter(false)
@@ -2439,23 +2512,27 @@ function BattleArena({
                 <div>
                   <span>Trainer Score</span>
                   <strong>
-                    {yourScore} - {opponentScore}
+                    {displayedYourScore} - {displayedOpponentScore}
                   </strong>
                 </div>
                 <div>
                   <span>Battle Phase</span>
-                  <strong>{battlePhaseLabel}</strong>
+                  <strong>{displayedBattlePhaseLabel}</strong>
                 </div>
               </div>
 
               <div className="round-score">
                 <h2>&#9876; Round Score</h2>
-                <RoundScoreRow label="You" score={yourScore} />
-                <RoundScoreRow label="Opponent" score={opponentScore} />
+                <RoundScoreRow label="You" score={displayedYourScore} />
+                <RoundScoreRow
+                  label="Opponent"
+                  score={displayedOpponentScore}
+                />
               </div>
             </section>
 
-            {pendingCelebiWish?.playerUid === currentUser.uid && (
+            {canResolveCelebiWish &&
+              pendingCelebiWish?.playerUid === currentUser.uid && (
               <section className="draft-state-panel celebi-wish-panel">
                 <div className="celebi-wish-atmosphere" aria-hidden="true">
                   <span className="celebi-time-circle" />
@@ -3122,7 +3199,7 @@ function BattleArena({
                           className="battle-ready-indicator"
                           aria-hidden="true"
                         />
-                        <strong>&#10003; Fighter Locked</strong>
+                        <strong>&#10003; Pok&eacute;mon Ready</strong>
                         <span>Battle reveal ready.</span>
                       </div>
                     ) : currentPlayerHasLocked ? (
@@ -3131,7 +3208,7 @@ function BattleArena({
                           className="battle-ready-indicator"
                           aria-hidden="true"
                         />
-                        <strong>&#10003; Fighter Locked</strong>
+                        <strong>&#10003; Pok&eacute;mon Ready</strong>
                         <span>Waiting For Opponent...</span>
                       </div>
                     ) : (
@@ -3154,8 +3231,8 @@ function BattleArena({
               !showFinalMatchScreen && (
               <BattleStage
                 roundNumber={masterRoundResult ? 'Master' : currentRound}
-                yourTrainerScore={yourScore}
-                opponentTrainerScore={opponentScore}
+                yourTrainerScore={displayedYourScore}
+                opponentTrainerScore={displayedOpponentScore}
                 yourPokemon={battleStageYourPokemon}
                 opponentPokemon={battleStageOpponentPokemon}
                 yourFinalScore={battleStageYourScore}
@@ -3182,22 +3259,24 @@ function BattleArena({
                 arena={battleArena}
                 masterRound={isMasterRoundBattle}
                 showContinue={
-                  hasFinalBattleResult ||
-                  isTiedNormalRoundAwaitingContinue ||
-                  (Boolean(savedRoundResult) &&
-                    battlePhase === 'round_result' &&
-                    currentRound < 6)
+                  !grantedCelebiWish &&
+                  (hasFinalBattleResult ||
+                    isTiedNormalRoundAwaitingContinue ||
+                    (Boolean(savedRoundResult) &&
+                      battlePhase === 'round_result' &&
+                      currentRound < 6))
                 }
                 continueDisabled={
                   isContinuingRound ||
-                  Boolean(pendingCelebiWish)
+                  canResolveCelebiWish ||
+                  Boolean(grantedCelebiWish)
                 }
                 continueLabel={
                   hasFinalBattleResult
                     ? 'View Match Result'
                     : isContinuingRound
                     ? 'Continuing...'
-                    : pendingCelebiWish
+                    : canResolveCelebiWish
                       ? 'Resolve Celebi Future Wish'
                       : isTiedNormalRoundAwaitingContinue
                         ? 'Continue?'
@@ -3239,9 +3318,7 @@ function BattleArena({
                 showScoreComparison={showScoreComparison}
                 showWinner={showBattleWinner}
                 showVictoryCelebration={showVictoryCelebration}
-                presentationComplete={
-                  presentationCompletedRound === battleStageKey
-                }
+                presentationComplete={presentationComplete}
               />
             )}
 

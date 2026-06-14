@@ -11565,3 +11565,172 @@ h1 {
     animation: none;
   }
 }
+
+/* Final mobile stabilization: prioritize layout and frame consistency. */
+@media (max-width: 560px) {
+  html,
+  body,
+  #root {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .page-shell:not(.is-master-world)::before {
+    opacity: 0.1;
+    animation-duration: 36s;
+  }
+
+  .page-shell:not(.is-master-world)::after {
+    display: none;
+  }
+
+  .arena-effects,
+  .battle-victory-burst i:nth-child(n + 7),
+  .champion-result-particles i:nth-child(n + 7),
+  .master-world-particles i:nth-child(n + 11),
+  .master-round-activation-particles i:nth-child(n + 9),
+  .master-selection-flames i:nth-child(n + 9),
+  .celebi-wish-atmosphere i:nth-child(n + 7),
+  .celebi-wish-cinematic-particles i:nth-child(n + 9),
+  .god-killer-storm i:nth-child(n + 7),
+  .god-killer-cracks i:nth-child(n + 5),
+  .titan-awakening-runes i:nth-child(n + 5),
+  .titan-awakening-cracks i:nth-child(n + 6) {
+    display: none;
+  }
+
+  .game-card,
+  .draft-header,
+  .draft-state-panel,
+  .starter-choice-panel,
+  .draft-complete-panel,
+  .battle-arena-your-team,
+  .battle-stage,
+  .master-round-activation-screen,
+  .master-selection-arena,
+  .champion-result-screen {
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+  }
+
+  .battle-lock-area,
+  .battle-stage-fighter-identity,
+  .battle-stage-result.is-arena-result,
+  .battle-ability-notification,
+  .master-selection-confirm-backdrop,
+  .celebi-wish-confirm-backdrop,
+  .surrender-modal-backdrop {
+    backdrop-filter: none;
+  }
+
+  .battle-stage-fighter.is-you.is-entered,
+  .battle-stage-fighter.is-opponent.is-entered {
+    animation-duration: 360ms;
+    animation-timing-function: ease-out;
+  }
+
+  .battle-stage-fighter.is-active-analysis::before,
+  .battle-stage-fighter.is-active-analysis img,
+  .battle-stage-fighter.is-winner img,
+  .battle-stage-fighter.is-winner::before {
+    animation-duration: 700ms;
+  }
+
+  .battle-stage-matchup {
+    contain: layout paint;
+  }
+
+  .battle-stage-fighter,
+  .battle-stage-fighter:first-of-type,
+  .battle-stage-fighter:last-of-type {
+    min-height: 292px;
+  }
+
+  .battle-stage-fighter img {
+    width: min(76vw, 238px);
+    height: 210px;
+    filter: drop-shadow(0 10px 12px rgba(2, 6, 23, 0.46));
+  }
+
+  .battle-ability-notification {
+    bottom: 36%;
+    max-height: 88px;
+    overflow: hidden;
+  }
+
+  .mega-cinematic-overlay {
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    min-height: 100svh;
+    padding: 20px 12px max(18px, env(safe-area-inset-bottom));
+  }
+
+  .mega-cinematic-overlay::before,
+  .mega-cinematic-overlay::after {
+    width: min(82vw, 340px);
+    box-shadow: 0 0 24px rgba(168, 85, 247, 0.34);
+  }
+
+  .mega-cinematic-overlay::after {
+    width: min(62vw, 260px);
+  }
+
+  .mega-cinematic-pokemon {
+    width: min(64vw, 250px);
+  }
+
+  .mega-cinematic-energy,
+  .monster-awakening-shadow {
+    filter: blur(4px);
+  }
+
+  .mega-cinematic-title {
+    font-size: clamp(1rem, 6vw, 1.55rem);
+    letter-spacing: 0.12em;
+  }
+
+  .mega-cinematic-name strong {
+    font-size: clamp(1.35rem, 8vw, 2.2rem);
+  }
+
+  .mega-cinematic-status {
+    max-width: 94vw;
+    overflow-wrap: anywhere;
+    font-size: clamp(1.15rem, 7vw, 2rem);
+    letter-spacing: 0.08em;
+  }
+
+  .celebi-wish-cinematic-circle {
+    width: min(82vw, 340px);
+    box-shadow: 0 0 28px rgba(45, 212, 191, 0.24);
+  }
+
+  .celebi-wish-cinematic-pokemon {
+    grid-template-columns: minmax(72px, 1fr) 42px minmax(88px, 1.15fr);
+    width: 92vw;
+  }
+
+  .celebi-wish-cinematic-pokemon img {
+    height: 150px;
+  }
+
+  .celebi-wish-cinematic-copy {
+    bottom: max(42px, 8svh);
+    width: calc(100% - 24px);
+  }
+
+  .presence-alert {
+    top: max(10px, env(safe-area-inset-top));
+    right: 10px;
+    bottom: auto;
+    left: 10px;
+    padding: 9px 12px;
+    text-align: center;
+  }
+
+  .presence-alert span {
+    font-size: 0.74rem;
+  }
+
+  .champion-result-screen .post-match-actions {
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+}
